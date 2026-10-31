@@ -1,4 +1,4 @@
-# SentinelFlow — The Self-Directed Fraud Investigation Platform
+# SentinelFlow - The Self-Directed Fraud Investigation Platform
 
 [![CI Pipeline](https://github.com/sentinelflow/sentinelflow-ai/actions/workflows/ci.yml/badge.svg)](https://github.com/sentinelflow/sentinelflow-ai/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
