@@ -2,7 +2,7 @@ from fastapi import APIRouter
 from app.api.v1 import (
     health, auth, dashboard, transactions, alerts,
     investigations, entities, graph, intelligence,
-    feedback, analytics, rules, audit, reports, streaming,
+    feedback, learning, analytics, rules, audit, reports, streaming,
     datasets, evaluation
 )
 
@@ -19,8 +19,9 @@ api_router.include_router(investigations.router, prefix="/investigations", tags=
 api_router.include_router(entities.router, prefix="/entities", tags=["Entities"])
 api_router.include_router(graph.router, prefix="/graph", tags=["Graph Intelligence"])
 api_router.include_router(intelligence.router, prefix="/intelligence", tags=["Intelligence & Copilot"])
+api_router.include_router(learning.router, prefix="/learning", tags=["Model Intelligence & Learning"])
+api_router.include_router(learning.router, prefix="/model-intelligence", tags=["Model Intelligence"])
 api_router.include_router(feedback.router, prefix="/feedback", tags=["Feedback & Learning"])
-api_router.include_router(feedback.router, prefix="/learning", tags=["Learning Engine"])
 api_router.include_router(analytics.router, prefix="/analytics", tags=["Analytics"])
 api_router.include_router(rules.router, prefix="/rules", tags=["Detection Rules"])
 api_router.include_router(audit.router, prefix="/audit", tags=["Audit Trail"])

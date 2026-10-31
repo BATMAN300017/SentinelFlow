@@ -441,6 +441,108 @@ CREATE TABLE IF NOT EXISTS model_promotion_audit (
     created_at TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS model_training_runs (
+    id TEXT PRIMARY KEY,
+    run_id TEXT UNIQUE NOT NULL,
+    model_name TEXT NOT NULL,
+    version TEXT NOT NULL,
+    algorithm TEXT NOT NULL,
+    training_dataset TEXT NOT NULL,
+    training_record_count INTEGER NOT NULL,
+    positive_samples INTEGER NOT NULL,
+    negative_samples INTEGER NOT NULL,
+    feature_version TEXT NOT NULL DEFAULT 'v1.0-6d',
+    hyperparameters_json TEXT DEFAULT '{}',
+    evaluation_metrics_json TEXT DEFAULT '{}',
+    previous_version_comparison_json TEXT DEFAULT '{}',
+    status TEXT NOT NULL DEFAULT 'COMPLETED',
+    trained_by TEXT NOT NULL,
+    created_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS model_evaluations (
+    id TEXT PRIMARY KEY,
+    model_version TEXT NOT NULL,
+    model_name TEXT NOT NULL,
+    evaluation_type TEXT NOT NULL,
+    dataset_name TEXT NOT NULL,
+    sample_size INTEGER NOT NULL,
+    positive_samples INTEGER NOT NULL,
+    negative_samples INTEGER NOT NULL,
+    precision REAL,
+    recall REAL,
+    f1_score REAL,
+    pr_auc REAL,
+    roc_auc REAL,
+    false_positive_rate REAL,
+    false_negative_rate REAL,
+    confusion_matrix_json TEXT NOT NULL,
+    typology_breakdown_json TEXT DEFAULT '{}',
+    risk_category_metrics_json TEXT DEFAULT '{}',
+    status TEXT NOT NULL DEFAULT 'EVALUATED',
+    evaluated_by TEXT NOT NULL,
+    created_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS investigator_feedback (
+    id TEXT PRIMARY KEY,
+    alert_id TEXT,
+    transaction_id TEXT,
+    account_id TEXT,
+    investigation_id TEXT,
+    investigator_decision TEXT NOT NULL,
+    explanation TEXT,
+    supporting_evidence TEXT,
+    reviewer_id TEXT NOT NULL,
+    reviewer_name TEXT,
+    model_version TEXT DEFAULT 'v1.0.0',
+    is_eligible_for_training INTEGER DEFAULT 0,
+    training_label INTEGER,
+    exclusion_reason TEXT,
+    validation_status TEXT NOT NULL DEFAULT 'PENDING_VALIDATION',
+    validated_by TEXT,
+    validated_at TEXT,
+    created_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS feedback_validation (
+    id TEXT PRIMARY KEY,
+    feedback_id TEXT NOT NULL,
+    validator_id TEXT NOT NULL,
+    validator_name TEXT NOT NULL,
+    status TEXT NOT NULL,
+    training_label_assigned INTEGER,
+    validation_notes TEXT,
+    evidence_verified INTEGER DEFAULT 1,
+    created_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS model_deployments (
+    id TEXT PRIMARY KEY,
+    model_version TEXT NOT NULL,
+    model_name TEXT NOT NULL,
+    deployment_type TEXT NOT NULL,
+    deployed_by TEXT NOT NULL,
+    previous_version TEXT,
+    metrics_snapshot_json TEXT DEFAULT '{}',
+    status TEXT NOT NULL DEFAULT 'ACTIVE',
+    reason TEXT NOT NULL,
+    created_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS model_monitoring_metrics (
+    id TEXT PRIMARY KEY,
+    metric_name TEXT NOT NULL,
+    metric_category TEXT NOT NULL,
+    metric_value REAL,
+    metric_unit TEXT,
+    window_start TEXT,
+    window_end TEXT,
+    status TEXT NOT NULL DEFAULT 'AVAILABLE',
+    metadata_json TEXT DEFAULT '{}',
+    recorded_at TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS audit_events (
     id TEXT PRIMARY KEY,
     actor_id TEXT,

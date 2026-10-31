@@ -7,14 +7,60 @@ def record_feedback(conn: sqlite3.Connection, data: Dict[str, Any]) -> Dict[str,
     f_id = generate_id("FDB")
     now = utc_now_iso()
     cursor = conn.cursor()
+    inv_id = data.get("investigation_id")
+
+    alert_id = None
+    txn_id = None
+    account_id = None
+    if inv_id:
+        try:
+            cursor.execute("""
+                SELECT a.id, a.transaction_id, a.account_id
+                FROM investigation_alerts ia
+                JOIN alerts a ON ia.alert_id = a.id
+                WHERE ia.investigation_id = ? LIMIT 1
+            """, (inv_id,))
+            a_row = cursor.fetchone()
+            if a_row:
+                alert_id = a_row[0] if not hasattr(a_row, "keys") else a_row["id"]
+                txn_id = a_row[1] if not hasattr(a_row, "keys") else a_row["transaction_id"]
+                account_id = a_row[2] if not hasattr(a_row, "keys") else a_row["account_id"]
+        except Exception:
+            pass
+
+    # Insert into investigator_feedback
+    try:
+        cursor.execute("""
+            INSERT INTO investigator_feedback (
+                id, alert_id, transaction_id, account_id, investigation_id,
+                investigator_decision, explanation, supporting_evidence,
+                reviewer_id, reviewer_name, model_version, is_eligible_for_training,
+                training_label, exclusion_reason, validation_status, created_at
+            ) VALUES (
+                ?, ?, ?, ?, ?,
+                ?, ?, ?,
+                ?, 'Investigator', ?, ?,
+                ?, ?, 'PENDING_VALIDATION', ?
+            ) ON CONFLICT (id) DO NOTHING;
+        """, (
+            f_id, alert_id, txn_id, account_id, inv_id,
+            data["disposition"], data.get("rationale", ""), "Investigation Case Review",
+            data.get("analyst_id", "USR-INV-01"), data.get("model_version", "v1.0.0"),
+            data.get("is_eligible_for_training", 0), data.get("training_label"),
+            data.get("exclusion_reason"), now
+        ))
+    except Exception:
+        pass
+
     cursor.execute("""
         INSERT INTO analyst_feedback (
-            id, investigation_id, analyst_id, disposition, rationale,
+            id, investigation_id, transaction_id, analyst_id, disposition, analyst_decision, rationale,
             evidence_reviewed_count, is_eligible_for_training, training_label,
             exclusion_reason, model_version, rule_version, created_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT (id) DO NOTHING;
     """, (
-        f_id, data["investigation_id"], data["analyst_id"], data["disposition"],
+        f_id, inv_id, txn_id, data["analyst_id"], data["disposition"], data["disposition"],
         data["rationale"], data.get("evidence_reviewed_count", 0),
         data["is_eligible_for_training"], data.get("training_label"),
         data.get("exclusion_reason"), data.get("model_version", "v1.0"),
