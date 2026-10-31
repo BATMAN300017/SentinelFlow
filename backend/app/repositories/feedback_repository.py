@@ -3,6 +3,17 @@ from typing import Dict, Any, List, Optional
 from app.utils.ids import generate_id
 from app.utils.time import utc_now_iso
 
+def _ensure_feedback_columns(conn: sqlite3.Connection):
+    try:
+        cursor = conn.cursor()
+        cursor.execute("PRAGMA table_info(analyst_feedback)")
+        cols = {c[1] for c in cursor.fetchall()}
+        if cols and "analyst_decision" not in cols:
+            cursor.execute("ALTER TABLE analyst_feedback ADD COLUMN analyst_decision TEXT")
+    except Exception:
+        pass
+
+
 def record_feedback(conn: sqlite3.Connection, data: Dict[str, Any]) -> Dict[str, Any]:
     f_id = generate_id("FDB")
     now = utc_now_iso()
@@ -52,20 +63,41 @@ def record_feedback(conn: sqlite3.Connection, data: Dict[str, Any]) -> Dict[str,
     except Exception:
         pass
 
-    cursor.execute("""
-        INSERT INTO analyst_feedback (
-            id, investigation_id, transaction_id, analyst_id, disposition, analyst_decision, rationale,
-            evidence_reviewed_count, is_eligible_for_training, training_label,
-            exclusion_reason, model_version, rule_version, created_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ON CONFLICT (id) DO NOTHING;
-    """, (
-        f_id, inv_id, txn_id, data["analyst_id"], data["disposition"], data["disposition"],
-        data["rationale"], data.get("evidence_reviewed_count", 0),
-        data["is_eligible_for_training"], data.get("training_label"),
-        data.get("exclusion_reason"), data.get("model_version", "v1.0"),
-        data.get("rule_version", "v1.0"), now
-    ))
+    _ensure_feedback_columns(conn)
+    cursor.execute("PRAGMA table_info(analyst_feedback)")
+    fb_cols = {c[1] for c in cursor.fetchall()}
+    decision = data.get("analyst_decision") or data.get("disposition")
+
+    if "analyst_decision" in fb_cols:
+        cursor.execute("""
+            INSERT INTO analyst_feedback (
+                id, investigation_id, transaction_id, analyst_id, disposition, analyst_decision, rationale,
+                evidence_reviewed_count, is_eligible_for_training, training_label,
+                exclusion_reason, model_version, rule_version, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT (id) DO NOTHING;
+        """, (
+            f_id, inv_id, txn_id, data["analyst_id"], data["disposition"], decision,
+            data["rationale"], data.get("evidence_reviewed_count", 0),
+            data["is_eligible_for_training"], data.get("training_label"),
+            data.get("exclusion_reason"), data.get("model_version", "v1.0"),
+            data.get("rule_version", "v1.0"), now
+        ))
+    else:
+        cursor.execute("""
+            INSERT INTO analyst_feedback (
+                id, investigation_id, transaction_id, analyst_id, disposition, rationale,
+                evidence_reviewed_count, is_eligible_for_training, training_label,
+                exclusion_reason, model_version, rule_version, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT (id) DO NOTHING;
+        """, (
+            f_id, inv_id, txn_id, data["analyst_id"], data["disposition"],
+            data["rationale"], data.get("evidence_reviewed_count", 0),
+            data["is_eligible_for_training"], data.get("training_label"),
+            data.get("exclusion_reason"), data.get("model_version", "v1.0"),
+            data.get("rule_version", "v1.0"), now
+        ))
     return {**data, "id": f_id, "created_at": now}
 
 def get_feedback_summary(conn: sqlite3.Connection) -> Dict[str, Any]:

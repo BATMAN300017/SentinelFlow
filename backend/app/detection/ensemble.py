@@ -6,21 +6,29 @@ def compute_ensemble_risk(
     anomaly_score: float,
     supervised_score: float,
     graph_score: float,
-    isolation_forest_score: float = 0.0
+    isolation_forest_score: float = 0.0,
+    is_cold_start: bool = False
 ) -> Dict[str, Any]:
     """
     Computes calibrated composite ensemble risk across all 5 detection models:
-    - Rule-based heuristics (20%)
-    - Behavioral MAD anomaly (20%)
-    - Unsupervised Isolation Forest (20%)
-    - Graph & Network centrality (20%)
-    - Random Forest classifier (20%)
+    - Rule-based heuristics
+    - Behavioral MAD anomaly
+    - Unsupervised Isolation Forest
+    - Graph & Network centrality
+    - Random Forest classifier
     """
-    w_rules = 0.20
-    w_mad = 0.20
-    w_if = 0.20
-    w_graph = 0.20
-    w_rf = 0.20
+    if is_cold_start:
+        w_rules = 0.35
+        w_graph = 0.30
+        w_rf = 0.25
+        w_mad = 0.05
+        w_if = 0.05
+    else:
+        w_rules = 0.30
+        w_graph = 0.20
+        w_rf = 0.20
+        w_mad = 0.15
+        w_if = 0.15
     
     # Composite calculation
     composite = (
@@ -30,6 +38,10 @@ def compute_ensemble_risk(
         (float(graph_score) * w_graph) +
         (float(supervised_score) * w_rf)
     )
+
+    # Compliance safeguard: Critical rule violations establish an alert severity floor
+    if float(rule_score) >= 50.0:
+        composite = max(composite, float(rule_score) * 0.60)
     
     final_score = round(min(100.0, max(0.0, composite)), 1)
     band = assign_triage_band(final_score)

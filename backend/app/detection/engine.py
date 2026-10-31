@@ -42,7 +42,8 @@ def score_transaction(conn: sqlite3.Connection, txn: Dict[str, Any]) -> Dict[str
         anomaly_score=anomaly_score,
         supervised_score=supervised_score,
         graph_score=graph_score,
-        isolation_forest_score=isolation_forest_score
+        isolation_forest_score=isolation_forest_score,
+        is_cold_start=is_cold
     )
     final_score = ensemble["final_risk_score"]
     

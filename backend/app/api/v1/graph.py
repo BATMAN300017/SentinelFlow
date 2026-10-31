@@ -18,11 +18,18 @@ def get_graph(
     db: sqlite3.Connection = Depends(get_db)
 ):
     from app.graph.builder import build_investigation_subgraph
+    safe_hops = hops.default if hasattr(hops, "default") else hops
+    try:
+        safe_hops = int(safe_hops)
+    except (TypeError, ValueError):
+        safe_hops = 2
+    safe_hops = max(1, min(safe_hops, 3))
+
     if account_id:
-        return build_investigation_subgraph(db, [account_id], max_hops=hops)
+        return build_investigation_subgraph(db, [account_id], max_hops=safe_hops)
     if investigation_id:
         from app.services.graph_service import get_graph_for_investigation
-        return get_graph_for_investigation(db, investigation_id, max_hops=hops)
+        return get_graph_for_investigation(db, investigation_id, max_hops=safe_hops)
     # Return graph built from active alerts or accounts
     cursor = db.cursor()
     cursor.execute("SELECT account_id FROM alerts ORDER BY risk_score DESC LIMIT 5")
@@ -30,7 +37,7 @@ def get_graph(
     if not accounts:
         cursor.execute("SELECT id FROM accounts LIMIT 5")
         accounts = [r[0] for r in cursor.fetchall()]
-    return build_investigation_subgraph(db, accounts, max_hops=hops)
+    return build_investigation_subgraph(db, accounts, max_hops=safe_hops)
 
 @router.post("/expand")
 def post_expand_graph(req: GraphExpandRequest, db: sqlite3.Connection = Depends(get_db)):

@@ -1,11 +1,22 @@
 import sqlite3
 from typing import Dict, Any, List
 
+def _normalize_max_hops(hops: Any) -> int:
+    if hasattr(hops, "default"):
+        hops = hops.default
+    try:
+        val = int(hops)
+    except (TypeError, ValueError):
+        val = 2
+    return max(1, min(val, 5))
+
+
 def build_investigation_subgraph(
     conn: sqlite3.Connection,
     account_ids: List[str],
     max_hops: int = 2
 ) -> Dict[str, Any]:
+    max_hops = _normalize_max_hops(max_hops)
     nodes = {}
     edges = {}
     

@@ -288,6 +288,9 @@ CREATE TABLE IF NOT EXISTS alerts (
     summary TEXT NOT NULL,
     assigned_to TEXT,
     dismissal_reason TEXT,
+    alert_type TEXT DEFAULT 'ANOMALOUS_VELOCITY',
+    detection_reason TEXT DEFAULT 'Suspicious transaction pattern detected',
+    assigned_analyst TEXT,
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL
 );
@@ -376,6 +379,7 @@ CREATE TABLE IF NOT EXISTS analyst_feedback (
     transaction_id TEXT,
     analyst_id TEXT NOT NULL,
     disposition TEXT NOT NULL,
+    analyst_decision TEXT,
     rationale TEXT,
     evidence_reviewed_count INTEGER DEFAULT 1,
     is_eligible_for_training INTEGER DEFAULT 1,
@@ -566,6 +570,22 @@ def init_db():
             txn_cols = [c[1] for c in cursor.fetchall()]
             if "dataset_source" not in txn_cols:
                 cursor.execute("ALTER TABLE transactions ADD COLUMN dataset_source TEXT DEFAULT 'INDIA_SIMULATOR'")
+
+            cursor.execute("PRAGMA table_info(alerts)")
+            alert_cols = [c[1] for c in cursor.fetchall()]
+            if alert_cols:
+                if "alert_type" not in alert_cols:
+                    cursor.execute("ALTER TABLE alerts ADD COLUMN alert_type TEXT DEFAULT 'ANOMALOUS_VELOCITY'")
+                if "detection_reason" not in alert_cols:
+                    cursor.execute("ALTER TABLE alerts ADD COLUMN detection_reason TEXT DEFAULT 'Suspicious transaction pattern detected'")
+                if "assigned_analyst" not in alert_cols:
+                    cursor.execute("ALTER TABLE alerts ADD COLUMN assigned_analyst TEXT")
+
+            cursor.execute("PRAGMA table_info(analyst_feedback)")
+            fb_cols = [c[1] for c in cursor.fetchall()]
+            if fb_cols and "analyst_decision" not in fb_cols:
+                cursor.execute("ALTER TABLE analyst_feedback ADD COLUMN analyst_decision TEXT")
+
             conn.commit()
         else:
             logger.info("Connected to Supabase PostgreSQL database. Schema managed via migrations.")

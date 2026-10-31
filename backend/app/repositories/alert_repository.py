@@ -5,23 +5,64 @@ from typing import Dict, Any, List, Optional, Tuple
 from app.utils.ids import generate_alert_id
 from app.utils.time import utc_now_iso
 
+def _ensure_alert_columns(conn: sqlite3.Connection):
+    try:
+        cursor = conn.cursor()
+        cursor.execute("PRAGMA table_info(alerts)")
+        cols = {c[1] for c in cursor.fetchall()}
+        if cols:
+            if "alert_type" not in cols:
+                cursor.execute("ALTER TABLE alerts ADD COLUMN alert_type TEXT DEFAULT 'ANOMALOUS_VELOCITY'")
+            if "detection_reason" not in cols:
+                cursor.execute("ALTER TABLE alerts ADD COLUMN detection_reason TEXT DEFAULT 'Suspicious transaction pattern detected'")
+            if "assigned_analyst" not in cols:
+                cursor.execute("ALTER TABLE alerts ADD COLUMN assigned_analyst TEXT")
+    except Exception:
+        pass
+
+
 def create_alert(conn: sqlite3.Connection, data: Dict[str, Any]) -> Dict[str, Any]:
+    _ensure_alert_columns(conn)
     alert_id = data.get("id") or generate_alert_id()
     alert_ref = data.get("alert_ref") or f"ALT-{alert_id[-6:].upper()}"
     now = utc_now_iso()
     cursor = conn.cursor()
-    cursor.execute("""
-        INSERT INTO alerts (
-            id, alert_ref, transaction_id, account_id, customer_id,
-            severity, status, risk_score, title, summary, assigned_to,
-            created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    """, (
-        alert_id, alert_ref, data["transaction_id"], data["account_id"],
-        data["customer_id"], data["severity"], data.get("status", "NEW"),
-        float(data["risk_score"]), data["title"], data["summary"],
-        data.get("assigned_to"), now, now
-    ))
+    cursor.execute("PRAGMA table_info(alerts)")
+    cols = {c[1] for c in cursor.fetchall()}
+
+    findings = data.get("findings", [])
+    default_type = findings[0].get("code", "ANOMALOUS_TRANSACTION") if findings else "ANOMALOUS_TRANSACTION"
+    alert_type = data.get("alert_type") or default_type
+    detection_reason = data.get("detection_reason") or data.get("summary") or data.get("title") or "Suspicious transaction pattern detected"
+    assigned_to = data.get("assigned_to") or data.get("assigned_analyst")
+
+    if "alert_type" in cols and "detection_reason" in cols:
+        cursor.execute("""
+            INSERT INTO alerts (
+                id, alert_ref, transaction_id, account_id, customer_id,
+                severity, status, risk_score, title, summary, assigned_to,
+                alert_type, detection_reason, assigned_analyst,
+                created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            alert_id, alert_ref, data["transaction_id"], data["account_id"],
+            data["customer_id"], data["severity"], data.get("status", "NEW"),
+            float(data["risk_score"]), data["title"], data["summary"],
+            assigned_to, alert_type, detection_reason, assigned_to, now, now
+        ))
+    else:
+        cursor.execute("""
+            INSERT INTO alerts (
+                id, alert_ref, transaction_id, account_id, customer_id,
+                severity, status, risk_score, title, summary, assigned_to,
+                created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            alert_id, alert_ref, data["transaction_id"], data["account_id"],
+            data["customer_id"], data["severity"], data.get("status", "NEW"),
+            float(data["risk_score"]), data["title"], data["summary"],
+            assigned_to, now, now
+        ))
     
     # Save findings
     findings = data.get("findings", [])
@@ -36,6 +77,7 @@ def create_alert(conn: sqlite3.Connection, data: Dict[str, Any]) -> Dict[str, An
     return {**data, "id": alert_id, "alert_ref": alert_ref, "created_at": now, "updated_at": now}
 
 def get_alert_by_id(conn: sqlite3.Connection, alert_id: str) -> Optional[Dict[str, Any]]:
+    _ensure_alert_columns(conn)
     cursor = conn.cursor()
     cursor.execute("""
         SELECT 
@@ -44,7 +86,7 @@ def get_alert_by_id(conn: sqlite3.Connection, alert_id: str) -> Optional[Dict[st
             a.dismissal_reason, a.created_at, a.updated_at, a.alert_type, a.detection_reason,
             t.source_account_id, t.destination_account_id, t.beneficiary_name, 
             t.amount as transaction_amount, t.currency, t.payment_channel, 
-            t.transaction_timestamp, t.dataset_source,
+            t.created_at as transaction_timestamp, t.dataset_source,
             acc.account_type, acc.balance as account_balance
         FROM alerts a
         LEFT JOIN transactions t ON a.transaction_id = t.id
@@ -111,6 +153,7 @@ def list_alerts(
     detection_method: Optional[str] = None,
     search: Optional[str] = None
 ) -> Tuple[List[Dict[str, Any]], int]:
+    _ensure_alert_columns(conn)
     cursor = conn.cursor()
     base_from = """
         FROM alerts a
@@ -160,7 +203,7 @@ def list_alerts(
             a.dismissal_reason, a.created_at, a.updated_at, a.alert_type, a.detection_reason,
             t.source_account_id, t.destination_account_id, t.beneficiary_name, 
             t.amount as transaction_amount, t.currency, t.payment_channel, 
-            t.transaction_timestamp, t.dataset_source,
+            t.created_at as transaction_timestamp, t.dataset_source,
             acc.account_type, acc.balance as account_balance
         {base_from} {where_clauses}
         ORDER BY a.risk_score DESC, a.created_at DESC

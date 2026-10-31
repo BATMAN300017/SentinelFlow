@@ -56,6 +56,17 @@ def extract_transaction_features(conn: sqlite3.Connection, txn: Dict[str, Any]) 
     total_inbound = float(in_row[0]) if in_row else 0.0
     inbound_count = int(in_row[1]) if in_row else 0
     
+    # Recent Inbound (last 30 minutes)
+    thirty_mins_ago = (datetime.now(timezone.utc) - timedelta(minutes=30)).isoformat()
+    cursor.execute("""
+        SELECT COALESCE(SUM(amount), 0), COUNT(*)
+        FROM transactions
+        WHERE destination_account_id = ? AND created_at >= ?
+    """, (source_acc, thirty_mins_ago))
+    recent_in_row = cursor.fetchone()
+    recent_inbound_sum = float(recent_in_row[0]) if recent_in_row and recent_in_row[0] else total_inbound
+    recent_inbound_count = int(recent_in_row[1]) if recent_in_row and recent_in_row[1] else inbound_count
+
     total_outbound = sum(amounts) + txn_amount
     outbound_count = history_count + 1
     
@@ -65,9 +76,10 @@ def extract_transaction_features(conn: sqlite3.Connection, txn: Dict[str, Any]) 
     
     # Rapid movement of funds check (inbound followed by immediate outbound)
     rapid_movement = 0
-    if total_inbound > 0 and txn_amount > 0:
-        ratio = txn_amount / (total_inbound + 1.0)
-        if 0.70 <= ratio <= 1.20:
+    ref_inbound = recent_inbound_sum if recent_inbound_sum > 0 else total_inbound
+    if ref_inbound > 0 and txn_amount > 0:
+        ratio = txn_amount / (ref_inbound + 1.0)
+        if 0.70 <= ratio <= 1.25:
             rapid_movement = 1
             
     # Velocity: count of transactions in last 10 minutes
@@ -116,6 +128,8 @@ def extract_transaction_features(conn: sqlite3.Connection, txn: Dict[str, Any]) 
         "is_new_beneficiary": is_new_beneficiary,
         "shared_device_accounts": shared_device_accounts,
         "rapid_movement_detected": rapid_movement,
+        "recent_inbound_sum": recent_inbound_sum,
+        "recent_inbound_count": recent_inbound_count,
         "structuring_flag": structuring_flag,
         "round_amount_flag": round_amount_flag,
         "historical_amounts": amounts

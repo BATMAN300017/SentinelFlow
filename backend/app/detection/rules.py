@@ -118,7 +118,7 @@ def evaluate_rules(conn: sqlite3.Connection, txn: Dict[str, Any], features: Dict
         elif code == "RAPID_FUND_MOVEMENT":
             min_in = thresholds.get("min_inbound", 5000.0)
             ratio = thresholds.get("forwarding_ratio", 0.80)
-            recent_in = features.get("recent_inbound_sum", 0.0)
+            recent_in = float(features.get("recent_inbound_sum") or features.get("total_inbound") or 0.0)
             if recent_in >= min_in and (amount / recent_in) >= ratio:
                 is_hit = True
                 contrib = 50.0
