@@ -309,3 +309,51 @@ class IsolationForestDetector:
             )
 
         return " ".join(parts)
+
+_global_if_detector: Optional[IsolationForestDetector] = None
+
+def get_isolation_forest_score(features: Dict[str, Any]) -> Dict[str, Any]:
+    """Scores a single transaction's operational feature snapshot using Isolation Forest."""
+    global _global_if_detector
+    if _global_if_detector is None or not _global_if_detector._is_fitted:
+        _global_if_detector = IsolationForestDetector(n_estimators=50, random_state=42)
+        # Seed with synthetic baseline operational distributions
+        synthetic_baseline = [
+            {
+                "total_in": float(i * 1000),
+                "total_out": float(i * 900),
+                "txn_count": max(3, i),
+                "unique_counterparties": max(1, i // 2),
+                "avg_amount": 2500.0,
+                "std_amount": 1000.0,
+                "in_out_ratio": 1.1,
+                "max_single_txn": 10000.0,
+                "time_span_hours": 72.0,
+                "unique_currencies": 1.0,
+            }
+            for i in range(1, 30)
+        ]
+        _global_if_detector.fit_account_features(synthetic_baseline)
+
+    mapped_account = {
+        "account_id": features.get("account_id", "CURRENT"),
+        "total_in": float(features.get("recent_inbound_sum", 0.0)),
+        "total_out": float(features.get("short_window_sum", features.get("amount", 0.0))),
+        "txn_count": int(features.get("history_count", 1)),
+        "unique_counterparties": int(features.get("unique_counterparties", 1)),
+        "avg_amount": float(features.get("amount", 1000.0)),
+        "std_amount": float(features.get("amount", 1000.0) * 0.3),
+        "in_out_ratio": float(features.get("in_out_ratio", 1.0)),
+        "max_single_txn": float(features.get("amount", 1000.0)),
+        "time_span_hours": 24.0,
+        "unique_currencies": 1.0,
+    }
+    
+    results = _global_if_detector.score_accounts([mapped_account])
+    res = results[0] if results else _global_if_detector._cold_start_result(mapped_account)
+    return {
+        "isolation_forest_score": res.risk_score,
+        "raw_score": res.raw_if_score,
+        "is_cold_start": res.is_cold_start,
+        "evidence": res.evidence
+    }

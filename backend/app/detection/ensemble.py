@@ -1,24 +1,34 @@
 from typing import Dict, Any, List
-from app.core.config import settings
 from app.detection.calibration import assign_triage_band, assign_alert_severity
 
 def compute_ensemble_risk(
     rule_score: float,
     anomaly_score: float,
     supervised_score: float,
-    graph_score: float
+    graph_score: float,
+    isolation_forest_score: float = 0.0
 ) -> Dict[str, Any]:
-    w_rules = settings.RULE_ENGINE_WEIGHT
-    w_anom = settings.BEHAVIORAL_ANOMALY_WEIGHT
-    w_sup = settings.SUPERVISED_MODEL_WEIGHT
-    w_graph = settings.GRAPH_INTELLIGENCE_WEIGHT
+    """
+    Computes calibrated composite ensemble risk across all 5 detection models:
+    - Rule-based heuristics (20%)
+    - Behavioral MAD anomaly (20%)
+    - Unsupervised Isolation Forest (20%)
+    - Graph & Network centrality (20%)
+    - Random Forest classifier (20%)
+    """
+    w_rules = 0.20
+    w_mad = 0.20
+    w_if = 0.20
+    w_graph = 0.20
+    w_rf = 0.20
     
     # Composite calculation
     composite = (
-        (rule_score * w_rules) +
-        (anomaly_score * w_anom) +
-        (supervised_score * w_sup) +
-        (graph_score * w_graph)
+        (float(rule_score) * w_rules) +
+        (float(anomaly_score) * w_mad) +
+        (float(isolation_forest_score) * w_if) +
+        (float(graph_score) * w_graph) +
+        (float(supervised_score) * w_rf)
     )
     
     final_score = round(min(100.0, max(0.0, composite)), 1)
@@ -30,15 +40,17 @@ def compute_ensemble_risk(
         "risk_band": band,
         "recommended_severity": severity,
         "component_scores": {
-            "rules": round(rule_score, 1),
-            "anomaly": round(anomaly_score, 1),
-            "supervised": round(supervised_score, 1),
-            "graph": round(graph_score, 1)
+            "rules": round(float(rule_score), 1),
+            "mad_anomaly": round(float(anomaly_score), 1),
+            "isolation_forest": round(float(isolation_forest_score), 1),
+            "graph_centrality": round(float(graph_score), 1),
+            "random_forest": round(float(supervised_score), 1)
         },
         "weights": {
             "rules": w_rules,
-            "anomaly": w_anom,
-            "supervised": w_sup,
-            "graph": w_graph
+            "mad_anomaly": w_mad,
+            "isolation_forest": w_if,
+            "graph_centrality": w_graph,
+            "random_forest": w_rf
         }
     }

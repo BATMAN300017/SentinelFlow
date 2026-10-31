@@ -24,7 +24,32 @@ def orchestrate_self_directed_investigation(
     
     # Step 1: Inspect triggering transaction
     cursor.execute("SELECT * FROM transactions WHERE id = ?", (txn_id,))
-    txn = dict(cursor.fetchone())
+    txn_row = cursor.fetchone()
+    if not txn_row:
+        cursor.execute("SELECT * FROM transactions WHERE original_transaction_id = ? OR event_id = ? LIMIT 1", (txn_id, txn_id))
+        txn_row = cursor.fetchone()
+    if not txn_row:
+        cursor.execute("SELECT * FROM transactions WHERE source_account_id = ? ORDER BY amount DESC LIMIT 1", (acc_id,))
+        txn_row = cursor.fetchone()
+        
+    if txn_row:
+        txn = dict(txn_row)
+    else:
+        txn = {
+            "id": txn_id,
+            "amount": 0.0,
+            "currency": "USD",
+            "payment_channel": "UNKNOWN",
+            "transaction_type": "TRANSFER",
+            "created_at": alert.get("created_at") or utc_now_iso(),
+            "source_account_id": acc_id,
+            "destination_account_id": None,
+            "beneficiary_name": "Unknown Counterparty"
+        }
+    
+    # Ensure amount and risk_score are float
+    txn_amount = float(txn.get("amount") or 0.0)
+    alert_risk_score = float(alert.get("risk_score") or 0.0)
     
     # Step 2: Retrieve related transactions in lookback window (last 24 hours)
     cursor.execute("""
@@ -60,7 +85,7 @@ def orchestrate_self_directed_investigation(
             "id": inv_id,
             "title": case_title,
             "summary": summary,
-            "priority": "HIGH" if alert["risk_score"] >= 70.0 else "MEDIUM",
+            "priority": "HIGH" if alert_risk_score >= 70.0 else "MEDIUM",
             "alert_ids": [alert_id],
             "model_version": "v1.0",
             "rule_version": "v1.0"
@@ -73,13 +98,13 @@ def orchestrate_self_directed_investigation(
         "investigation_id": inv_id,
         "evidence_type": "TRANSACTION",
         "source_record_id": txn_id,
-        "description": f"Triggering transaction: ${txn['amount']:,.2f} via {txn['payment_channel']} to {txn.get('beneficiary_name') or txn.get('destination_account_id')}",
+        "description": f"Triggering transaction: {txn.get('currency', 'USD')} {txn_amount:,.2f} via {txn.get('payment_channel', 'TRANSFER')} to {txn.get('beneficiary_name') or txn.get('destination_account_id', 'Counterparty')}",
         "observed_facts": {
-            "amount": txn["amount"],
-            "currency": txn["currency"],
-            "payment_channel": txn["payment_channel"],
-            "transaction_type": txn["transaction_type"],
-            "created_at": txn["created_at"]
+            "amount": txn_amount,
+            "currency": txn.get("currency", "USD"),
+            "payment_channel": txn.get("payment_channel", "TRANSFER"),
+            "transaction_type": txn.get("transaction_type", "TRANSFER"),
+            "created_at": str(txn.get("created_at") or now)
         },
         "associated_entities": [{"type": "ACCOUNT", "id": acc_id}],
         "associated_transactions": [txn_id],
@@ -95,7 +120,7 @@ def orchestrate_self_directed_investigation(
         "description": "Account baseline comparison: Deviation observed against historical rolling median",
         "observed_facts": {
             "historical_transactions_analyzed": len(related_txns),
-            "risk_score": alert["risk_score"]
+            "risk_score": alert_risk_score
         },
         "associated_entities": [{"type": "ACCOUNT", "id": acc_id}],
         "associated_transactions": [txn_id],

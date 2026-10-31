@@ -3,6 +3,7 @@ import json
 from typing import Optional, Dict, Any
 from app.utils.ids import generate_id
 from app.utils.time import utc_now_iso
+from app.utils.json_utils import safe_json_dumps
 from app.core.logging import logger
 
 def record_audit_event(
@@ -17,7 +18,7 @@ def record_audit_event(
 ):
     ev_id = generate_id("AUD")
     now = utc_now_iso()
-    meta_json = json.dumps(metadata or {})
+    meta_json = safe_json_dumps(metadata or {})
     
     cursor = conn.cursor()
     cursor.execute("""

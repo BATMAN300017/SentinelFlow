@@ -11,15 +11,26 @@ from app.graph.traversal import find_shortest_path
 router = APIRouter()
 
 @router.get("")
-def get_graph(investigation_id: Optional[str] = None, db: sqlite3.Connection = Depends(get_db)):
-    if investigation_id:
-        return get_graph_for_investigation(db, investigation_id)
-    # Return general demo graph
-    cursor = db.cursor()
-    cursor.execute("SELECT id FROM accounts LIMIT 6")
-    accounts = [r[0] for r in cursor.fetchall()]
+def get_graph(
+    investigation_id: Optional[str] = None,
+    account_id: Optional[str] = None,
+    hops: int = Query(2, ge=1, le=3),
+    db: sqlite3.Connection = Depends(get_db)
+):
     from app.graph.builder import build_investigation_subgraph
-    return build_investigation_subgraph(db, accounts, max_hops=2)
+    if account_id:
+        return build_investigation_subgraph(db, [account_id], max_hops=hops)
+    if investigation_id:
+        from app.services.graph_service import get_graph_for_investigation
+        return get_graph_for_investigation(db, investigation_id, max_hops=hops)
+    # Return graph built from active alerts or accounts
+    cursor = db.cursor()
+    cursor.execute("SELECT account_id FROM alerts ORDER BY risk_score DESC LIMIT 5")
+    accounts = [r[0] for r in cursor.fetchall() if r[0]]
+    if not accounts:
+        cursor.execute("SELECT id FROM accounts LIMIT 5")
+        accounts = [r[0] for r in cursor.fetchall()]
+    return build_investigation_subgraph(db, accounts, max_hops=hops)
 
 @router.post("/expand")
 def post_expand_graph(req: GraphExpandRequest, db: sqlite3.Connection = Depends(get_db)):

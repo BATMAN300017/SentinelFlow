@@ -4,15 +4,15 @@ import hashlib
 from typing import Dict, Any, List, Optional
 from app.utils.ids import generate_evidence_id
 from app.utils.time import utc_now_iso
-from app.utils.json_utils import safe_json_loads
+from app.utils.json_utils import safe_json_loads, safe_json_dumps
 
 def create_evidence(conn: sqlite3.Connection, data: Dict[str, Any]) -> Dict[str, Any]:
     ev_id = data.get("id") or generate_evidence_id()
     now = utc_now_iso()
     
-    observed_str = json.dumps(data.get("observed_facts", {}))
-    entities_str = json.dumps(data.get("associated_entities", []))
-    txns_str = json.dumps(data.get("associated_transactions", []))
+    observed_str = safe_json_dumps(data.get("observed_facts", {}))
+    entities_str = safe_json_dumps(data.get("associated_entities", []))
+    txns_str = safe_json_dumps(data.get("associated_transactions", []))
     
     # Compute integrity hash
     hash_payload = f"{data['investigation_id']}_{data['evidence_type']}_{observed_str}_{now}"
