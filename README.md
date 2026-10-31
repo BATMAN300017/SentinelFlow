@@ -1,4 +1,4 @@
-# SentinelFlow AI — The Self-Directed Fraud Investigation Platform
+# SentinelFlow — The Self-Directed Fraud Investigation Platform
 
 [![CI Pipeline](https://github.com/sentinelflow/sentinelflow-ai/actions/workflows/ci.yml/badge.svg)](https://github.com/sentinelflow/sentinelflow-ai/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
@@ -6,7 +6,7 @@
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.110+-009688.svg)](https://fastapi.tiangolo.com)
 [![Scikit-Learn](https://img.shields.io/badge/scikit--learn-1.4+-orange.svg)](https://scikit-learn.org/)
 
-> **SentinelFlow AI** is a production-inspired financial crime surveillance and self-directed fraud investigation command center. It bridges the gap between raw anomaly detection and final authorized case disposition.
+> **SentinelFlow ** is a production-inspired financial crime surveillance and self-directed fraud investigation command center. It bridges the gap between raw anomaly detection and final authorized case disposition.
 
 ---
 
