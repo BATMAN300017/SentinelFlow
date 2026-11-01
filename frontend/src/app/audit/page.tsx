@@ -114,10 +114,10 @@ function AuditContent() {
         ) : error ? (
           <ErrorState message={error} onRetry={loadAudit} />
         ) : (
-          <div className="bg-slate-900/90 rounded-2xl border border-slate-800 overflow-hidden shadow-2xl backdrop-blur-sm">
+          <div className="bg-[#111722] rounded-2xl border border-slate-800/80 overflow-hidden shadow-2xl">
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs font-mono">
-              <thead className="bg-slate-950/90 text-slate-400 font-semibold border-b border-slate-800 uppercase tracking-wider text-[11px]">
+              <thead className="bg-[#0B0F17] text-slate-400 font-semibold border-b border-slate-800/80 uppercase tracking-wider text-[11px]">
                 <tr>
                   <th className="px-5 py-3.5">Timestamp (UTC)</th>
                   <th className="px-5 py-3.5">Actor / Subject</th>
@@ -127,18 +127,18 @@ function AuditContent() {
                   <th className="px-5 py-3.5">Integrity Hash</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-850">
+              <tbody className="divide-y divide-slate-800/60">
                 {audit.length > 0 ? (
                   audit.map((a) => (
-                    <tr key={a.id} className="hover:bg-slate-800/40 transition">
-                      <td className="px-5 py-3.5 text-slate-400 whitespace-nowrap">
+                    <tr key={a.id} className="hover:bg-slate-800/30 transition">
+                      <td className="px-5 py-3.5 text-slate-400 whitespace-nowrap tabular-nums">
                         {new Date(a.created_at || Date.now()).toISOString().replace('T', ' ').substring(0, 19)}
                       </td>
                       <td className="px-5 py-3.5 font-bold text-slate-200">
                         {a.actor_name || 'System Pipeline'}
                       </td>
-                      <td className="px-5 py-3.5 text-sky-400 font-bold">
-                        <span className="px-2 py-0.5 rounded bg-sky-950/80 border border-sky-800 text-[10px]">
+                      <td className="px-5 py-3.5 text-emerald-400 font-bold">
+                        <span className="px-2 py-0.5 rounded bg-slate-800 border border-slate-700 text-[10px]">
                           {a.action}
                         </span>
                       </td>

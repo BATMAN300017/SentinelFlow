@@ -64,7 +64,7 @@ export default function FeedbackLearningPage() {
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold font-mono text-slate-100 tracking-tight flex items-center space-x-3">
               <span>Model Learning & Feedback Loop</span>
-              <span className="text-xs font-mono font-medium px-2 py-0.5 rounded-full bg-emerald-950/80 text-emerald-400 border border-emerald-800">
+              <span className="text-xs font-mono font-medium px-2 py-0.5 rounded-full bg-slate-800 text-emerald-400 border border-slate-700">
                 Controlled MLOps Gate
               </span>
             </h1>
@@ -77,7 +77,7 @@ export default function FeedbackLearningPage() {
             <button
               onClick={handleRetrain}
               disabled={retraining}
-              className="flex items-center space-x-2 px-3.5 py-1.5 rounded-lg text-xs font-mono font-bold bg-purple-600 hover:bg-purple-500 disabled:opacity-50 text-white shadow-lg shadow-purple-600/20 transition"
+              className="flex items-center space-x-2 px-3.5 py-1.5 rounded-lg text-xs font-mono font-bold bg-slate-800 hover:bg-slate-750 disabled:opacity-50 text-emerald-400 border border-slate-700 transition"
             >
               <Play className="w-3.5 h-3.5" />
               <span>{retraining ? 'Executing...' : 'Run Retraining Cycle'}</span>
@@ -93,7 +93,7 @@ export default function FeedbackLearningPage() {
         </div>
 
         {retrainMsg && (
-          <div className="p-4 rounded-xl text-xs font-mono bg-purple-950/60 border border-purple-850 text-purple-200">
+          <div className="p-4 rounded-xl text-xs font-mono bg-slate-800/80 border border-slate-700 text-slate-200">
             {retrainMsg}
           </div>
         )}
@@ -106,7 +106,7 @@ export default function FeedbackLearningPage() {
           <div className="space-y-6">
             {/* Status Overview Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="p-5 rounded-2xl border border-slate-800 bg-slate-900/80 shadow-lg backdrop-blur-sm space-y-1">
+              <div className="p-5 rounded-2xl border border-slate-800/80 bg-[#111722] shadow-lg space-y-1">
                 <span className="text-slate-500 font-mono text-[10px] uppercase tracking-wider">
                   Active Production Model
                 </span>
@@ -116,19 +116,19 @@ export default function FeedbackLearningPage() {
                 <div className="text-[11px] font-mono text-emerald-400">Deployed & Monitored</div>
               </div>
 
-              <div className="p-5 rounded-2xl border border-slate-800 bg-slate-900/80 shadow-lg backdrop-blur-sm space-y-1">
+              <div className="p-5 rounded-2xl border border-slate-800/80 bg-[#111722] shadow-lg space-y-1">
                 <span className="text-slate-500 font-mono text-[10px] uppercase tracking-wider">
                   Training Readiness
                 </span>
-                <div className="text-base font-bold font-mono text-sky-400">
+                <div className="text-base font-bold font-mono text-emerald-400">
                   {status?.training_data_readiness || 'READY_FOR_RETRAINING'}
                 </div>
-                <div className="text-[11px] font-mono text-slate-400">
+                <div className="text-[11px] font-mono text-slate-400 tabular-nums">
                   {status?.labeled_samples_count || 32} Ground-Truth Samples Logged
                 </div>
               </div>
 
-              <div className="p-5 rounded-2xl border border-slate-800 bg-slate-900/80 shadow-lg backdrop-blur-sm space-y-1">
+              <div className="p-5 rounded-2xl border border-slate-800/80 bg-[#111722] shadow-lg space-y-1">
                 <span className="text-slate-500 font-mono text-[10px] uppercase tracking-wider">
                   Candidate Promotion Gate
                 </span>

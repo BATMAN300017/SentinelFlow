@@ -52,7 +52,7 @@ export default function EntitiesPage() {
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold font-mono text-slate-100 tracking-tight flex items-center space-x-3">
               <span>Entity & Account Profiles</span>
-              <span className="text-xs font-mono font-medium px-2 py-0.5 rounded-full bg-sky-950/80 text-sky-400 border border-sky-800">
+              <span className="text-xs font-mono font-medium px-2 py-0.5 rounded-full bg-slate-800 text-emerald-400 border border-slate-700">
                 Persistent Graph Store
               </span>
             </h1>
@@ -88,30 +88,30 @@ export default function EntitiesPage() {
             {filtered.map((e) => (
               <div
                 key={e.id}
-                className="p-5 rounded-2xl border border-slate-800 bg-slate-900/80 shadow-lg backdrop-blur-sm space-y-3 hover:border-slate-700 transition"
+                className="p-5 rounded-2xl border border-slate-800/80 bg-[#111722] shadow-lg space-y-3 hover:border-slate-700 transition"
               >
                 <div className="flex items-start justify-between">
                   <div className="space-y-0.5">
-                    <span className="text-xs font-mono font-bold text-sky-400">{e.identifier || e.id}</span>
+                    <span className="text-xs font-mono font-bold text-emerald-400">{e.identifier || e.id}</span>
                     <h3 className="text-sm font-semibold font-mono text-slate-100">{e.label || 'Account Profile'}</h3>
                   </div>
                   <StatusBadge type="severity" value={e.risk_level || 'ROUTINE'} />
                 </div>
 
-                <div className="grid grid-cols-2 gap-2 text-[11px] font-mono text-slate-400 pt-2 border-t border-slate-850">
+                <div className="grid grid-cols-2 gap-2 text-[11px] font-mono text-slate-400 pt-2 border-t border-slate-800/80">
                   <div>
                     <span className="text-slate-500">Type:</span> {e.type || 'ACCOUNT'}
                   </div>
                   <div>
                     <span className="text-slate-500">Risk Score:</span>{' '}
-                    <span className="text-slate-200 font-bold">{e.risk_score || 18}/100</span>
+                    <span className="text-slate-200 font-bold tabular-nums">{e.risk_score || 18}/100</span>
                   </div>
                 </div>
 
                 <div className="pt-2 flex justify-end">
                   <Link
                     href={`/entities/${e.id}`}
-                    className="flex items-center space-x-1 text-xs font-mono font-bold text-sky-400 hover:text-sky-300"
+                    className="flex items-center space-x-1 text-xs font-mono font-bold text-emerald-400 hover:text-emerald-300"
                   >
                     <span>View Dossier</span>
                     <ExternalLink className="w-3.5 h-3.5" />
