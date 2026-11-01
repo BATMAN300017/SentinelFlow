@@ -1,0 +1,5 @@
+/alerts/* /alerts.html 200
+/entities/* /entities.html 200
+/investigations/* /investigations.html 200
+/transactions/* /transactions.html 200
+/* /index.html 200

@@ -5,6 +5,7 @@
   "description": "SentinelFlow AI — The Self-Directed Fraud Investigation Platform",
   "scripts": {
     "dev:frontend": "pnpm --filter frontend dev",
+    "build": "pnpm --filter frontend build",
     "build:frontend": "pnpm --filter frontend build",
     "lint": "pnpm --filter frontend lint",
     "test": "pnpm --filter frontend test"
