@@ -1,5 +1,11 @@
-/alerts/* /alerts.html 200
-/entities/* /entities.html 200
-/investigations/* /investigations.html 200
-/transactions/* /transactions.html 200
-/* /index.html 200
+# SentinelFlow AI — Cloudflare Assets Redirect Configuration
+# SPA routing and clean URLs are natively handled by Cloudflare via wrangler.json:
+# "html_handling": "auto-trailing-slash"
+# "not_found_handling": "single-page-application"
+#
+# Note: Do not add '/* /index.html 200' because Cloudflare automatically strips
+# '.html' and '/index' to '/', creating a recursive redirect loop (Cloudflare error 100324).
+
+# Canonical navigation redirects
+/home /dashboard 301
+/overview /dashboard 301

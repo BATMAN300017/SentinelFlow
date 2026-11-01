@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "next build && node -e \"const fs=require('fs'); if(fs.existsSync('out/index.html')) fs.copyFileSync('out/index.html', 'out/200.html')\"",
     "start": "next start",
     "deploy": "wrangler deploy",
     "deploy:pages": "wrangler pages deploy out --project-name=sentinelflow",
