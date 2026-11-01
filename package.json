@@ -11,6 +11,7 @@
     "build": "npm --prefix frontend run build",
     "build:frontend": "npm --prefix frontend run build",
     "deploy": "wrangler deploy",
+    "deploy:pages": "wrangler pages deploy frontend/out --project-name=sentinelflow",
     "lint": "pnpm --filter frontend lint",
     "test": "pnpm --filter frontend test"
   },

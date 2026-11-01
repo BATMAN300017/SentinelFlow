@@ -28,6 +28,7 @@ app.add_middleware(
         "http://localhost:8000",
         "http://127.0.0.1:8000",
         "https://sentinelflow-ljlk.onrender.com",
+        "https://sentinelflow.batman3-00017.workers.dev",
         "https://sentinelflow.pages.dev",
         "*"
     ],
@@ -52,7 +53,9 @@ def root_info():
         "version": settings.VERSION,
         "status": "online",
         "role": "API backend",
-        "canonical_frontend": "https://sentinelflow.pages.dev",
+        "canonical_frontend": "https://sentinelflow.batman3-00017.workers.dev",
+        "cloudflare_workers_frontend": "https://sentinelflow.batman3-00017.workers.dev",
+        "cloudflare_pages_target": "https://sentinelflow.pages.dev",
         "docs": "/docs",
         "redoc": "/redoc",
         "api_v1": settings.API_V1_STR,
