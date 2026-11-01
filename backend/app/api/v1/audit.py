@@ -14,10 +14,20 @@ def get_audit_trail(
     page_size: int = Query(30, ge=1, le=100),
     action: Optional[str] = None,
     resource_type: Optional[str] = None,
+    resource_id: Optional[str] = None,
     current_user: dict = Depends(require_permission(Permission.VIEW_AUDIT)),
     db: sqlite3.Connection = Depends(get_db)
 ):
-    offset = (page - 1) * page_size
+    page_val = (page.default if hasattr(page, "default") else page) or 1
+    page_size_val = (page_size.default if hasattr(page_size, "default") else page_size) or 30
+    page_int = int(page_val)
+    page_size_int = int(page_size_val)
+    offset = (page_int - 1) * page_size_int
+
+    action = action.default if hasattr(action, "default") else action
+    resource_type = resource_type.default if hasattr(resource_type, "default") else resource_type
+    resource_id = resource_id.default if hasattr(resource_id, "default") else resource_id
+
     cursor = db.cursor()
     query = "SELECT * FROM audit_events WHERE 1=1"
     count_query = "SELECT COUNT(*) FROM audit_events WHERE 1=1"
@@ -30,13 +40,17 @@ def get_audit_trail(
     if resource_type:
         query += " AND resource_type = ?"
         count_query += " AND resource_type = ?"
-        params.append(resource_type)
+        params.append(resource_type.upper())
+    if resource_id:
+        query += " AND (resource_id = ? OR metadata_json LIKE ?)"
+        count_query += " AND (resource_id = ? OR metadata_json LIKE ?)"
+        params.extend([resource_id, f"%{resource_id}%"])
         
     cursor.execute(count_query, params)
     total = cursor.fetchone()[0]
     
     query += " ORDER BY created_at DESC LIMIT ? OFFSET ?"
-    params.extend([page_size, offset])
+    params.extend([page_size_int, offset])
     
     cursor.execute(query, params)
     events = []

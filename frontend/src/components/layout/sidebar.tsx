@@ -17,6 +17,7 @@ import {
   Settings,
   Shield,
   Activity,
+  Workflow,
 } from 'lucide-react';
 import { APP_NAME, APP_TAGLINE } from '@/lib/constants';
 
@@ -32,6 +33,7 @@ const ICON_MAP: Record<string, React.ReactNode> = {
   FileCode2: <FileCode2 className="w-4 h-4" />,
   ScrollText: <ScrollText className="w-4 h-4" />,
   Settings: <Settings className="w-4 h-4" />,
+  Workflow: <Workflow className="w-4 h-4" />,
 };
 
 const SECTIONS = [
@@ -47,6 +49,7 @@ const SECTIONS = [
   {
     title: 'SURVEILLANCE & GRAPH',
     items: [
+      { name: 'Fund Flow Tracing', href: '/fund-flow', icon: 'Workflow' },
       { name: 'Network Intelligence', href: '/network', icon: 'Network' },
       { name: 'Entity Profiles', href: '/entities', icon: 'Users' },
     ],
