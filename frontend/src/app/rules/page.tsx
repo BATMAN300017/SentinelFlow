@@ -42,7 +42,7 @@ export default function RulesPage() {
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold font-mono text-slate-100 tracking-tight flex items-center space-x-3">
               <span>Deterministic Detection Rules</span>
-              <span className="text-xs font-mono font-medium px-2 py-0.5 rounded-full bg-sky-950/80 text-sky-400 border border-sky-800">
+              <span className="text-xs font-mono font-medium px-2 py-0.5 rounded-full bg-slate-800 text-emerald-400 border border-slate-700">
                 Rule Engine
               </span>
             </h1>
@@ -66,10 +66,10 @@ export default function RulesPage() {
         ) : error ? (
           <ErrorState message={error} onRetry={loadRules} />
         ) : (
-          <div className="bg-slate-900/80 rounded-2xl border border-slate-800 overflow-hidden shadow-xl backdrop-blur-sm">
+          <div className="bg-[#111722] rounded-2xl border border-slate-800/80 overflow-hidden shadow-xl">
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs font-mono">
-              <thead className="bg-slate-950/80 text-slate-400 font-semibold border-b border-slate-800 uppercase tracking-wider text-[11px]">
+              <thead className="bg-[#0B0F17] text-slate-400 font-semibold border-b border-slate-800/80 uppercase tracking-wider text-[11px]">
                 <tr>
                   <th className="px-5 py-3.5">Rule Code</th>
                   <th className="px-5 py-3.5">Rule Description</th>
@@ -78,10 +78,10 @@ export default function RulesPage() {
                   <th className="px-5 py-3.5">Revision</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-850">
+              <tbody className="divide-y divide-slate-800/60">
                 {rules.map((r) => (
-                  <tr key={r.id} className="hover:bg-slate-800/40 transition">
-                    <td className="px-5 py-3.5 font-bold text-sky-400">{r.rule_code}</td>
+                  <tr key={r.id} className="hover:bg-slate-800/30 transition">
+                    <td className="px-5 py-3.5 font-bold text-emerald-400">{r.rule_code}</td>
                     <td className="px-5 py-3.5 text-slate-200">
                       <div>{r.name}</div>
                       <div className="text-[10px] text-slate-500 mt-0.5">{r.description}</div>
@@ -89,12 +89,12 @@ export default function RulesPage() {
                     <td className="px-5 py-3.5">
                       <StatusBadge type="severity" value={r.severity} />
                     </td>
-                    <td className="px-5 py-3.5 text-slate-400 max-w-xs truncate">
+                    <td className="px-5 py-3.5 text-slate-400 max-w-xs truncate tabular-nums">
                       {typeof r.thresholds === 'object'
                         ? JSON.stringify(r.thresholds)
                         : String(r.thresholds)}
                     </td>
-                    <td className="px-5 py-3.5 text-slate-400">v{r.version}</td>
+                    <td className="px-5 py-3.5 text-slate-400 tabular-nums">v{r.version}</td>
                   </tr>
                 ))}
               </tbody>

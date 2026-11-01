@@ -24,26 +24,26 @@ export function MetricCard({
   icon,
   accent = 'sky',
 }: MetricCardProps) {
-  const accentStyles = {
-    sky: 'border-sky-500/30 shadow-sky-500/5',
-    emerald: 'border-emerald-500/30 shadow-emerald-500/5',
-    amber: 'border-amber-500/30 shadow-amber-500/5',
-    rose: 'border-rose-500/30 shadow-rose-500/5',
+  const accentBorder = {
+    sky: 'border-l-2 border-l-slate-700',
+    emerald: 'border-l-2 border-l-emerald-500/80',
+    amber: 'border-l-2 border-l-amber-500/80',
+    rose: 'border-l-2 border-l-rose-500/80',
   }[accent];
 
   return (
     <div
-      className={`p-5 rounded-2xl border bg-slate-900/80 shadow-lg backdrop-blur-sm transition-all hover:border-slate-700/80 ${accentStyles}`}
+      className={`p-4 sm:p-5 rounded-lg border border-slate-800/80 bg-[#111722] hover:border-slate-700/90 transition-colors ${accentBorder}`}
     >
       <div className="flex items-center justify-between">
-        <span className="text-[11px] font-mono font-semibold uppercase tracking-wider text-slate-400">
+        <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-slate-400">
           {label}
         </span>
-        {icon && <div className="text-slate-400">{icon}</div>}
+        {icon && <div className="text-slate-500 shrink-0">{icon}</div>}
       </div>
 
-      <div className="mt-3 flex items-baseline space-x-2">
-        <span className="text-2xl sm:text-3xl font-bold font-mono text-slate-100 tracking-tight">
+      <div className="mt-2.5 flex items-baseline space-x-2">
+        <span className="text-2xl sm:text-3xl font-bold font-mono text-slate-100 tracking-tight tabular-nums">
           {typeof value === 'number' ? value.toLocaleString() : value}
         </span>
         {delta && (
@@ -68,7 +68,7 @@ export function MetricCard({
         )}
       </div>
 
-      {subtitle && <p className="mt-1.5 text-xs text-slate-400 font-mono">{subtitle}</p>}
+      {subtitle && <p className="mt-1 text-[11px] text-slate-400 font-mono">{subtitle}</p>}
     </div>
   );
 }

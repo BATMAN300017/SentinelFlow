@@ -67,23 +67,23 @@ export default function DashboardPage() {
       </head>
       <div className="space-y-8 max-w-7xl mx-auto">
         {/* Page Header */}
-        <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-800/80 pb-4">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold font-mono text-slate-100 tracking-tight flex items-center space-x-3">
-              <span>Fraud Command Center</span>
-              <span className="text-xs font-mono font-medium px-2 py-0.5 rounded-full bg-emerald-950/80 text-emerald-400 border border-emerald-800">
+            <h1 className="text-xl sm:text-2xl font-bold font-mono text-slate-100 tracking-tight flex items-center space-x-2.5">
+              <span>Financial Crime Command Center</span>
+              <span className="text-[10px] font-mono font-medium px-2 py-0.5 rounded bg-emerald-950/60 text-emerald-400 border border-emerald-800/60">
                 Live Multi-Signal
               </span>
             </h1>
-            <p className="text-xs sm:text-sm text-slate-400 font-mono mt-1">
-              Autonomous surveillance, graph correlation, and controlled learning.
+            <p className="text-xs text-slate-400 font-mono mt-1">
+              Real-time multi-signal surveillance, topological graph correlation, and controlled model learning.
             </p>
           </div>
 
           <button
             onClick={handleManualSync}
             disabled={loading}
-            className="flex items-center space-x-2 px-3 py-1.5 rounded-lg text-xs font-mono font-semibold bg-slate-800 hover:bg-slate-700 disabled:opacity-50 text-slate-200 border border-slate-700 transition"
+            className="flex items-center space-x-2 px-3 py-1.5 rounded-md text-xs font-mono font-semibold bg-slate-800/80 hover:bg-slate-700 disabled:opacity-50 text-slate-200 border border-slate-750 transition"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
             <span>Sync Telemetry</span>

@@ -30,10 +30,10 @@ export function LearningMetrics({ evaluation }: LearningMetricsProps) {
 
   return (
     <div className="space-y-6">
-      <div className="p-6 rounded-2xl border border-slate-800 bg-slate-900/80 shadow-lg backdrop-blur-sm space-y-4">
+      <div className="p-6 rounded-2xl border border-slate-800/80 bg-[#111722] shadow-lg space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <div className="p-2.5 rounded-xl bg-sky-950 border border-sky-800 text-sky-400">
+            <div className="p-2.5 rounded-xl bg-slate-800/80 border border-slate-700 text-emerald-400">
               <Cpu className="w-5 h-5" />
             </div>
             <div>
@@ -45,16 +45,16 @@ export function LearningMetrics({ evaluation }: LearningMetricsProps) {
               </p>
             </div>
           </div>
-          <span className="px-3 py-1 rounded-full text-xs font-mono font-bold bg-sky-950 text-sky-400 border border-sky-800">
+          <span className="px-3 py-1 rounded-full text-xs font-mono font-bold bg-slate-800 text-emerald-400 border border-slate-700 tabular-nums">
             {metrics.evaluated_samples?.toLocaleString()} Samples Evaluated
           </span>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pt-2">
           {statItems.map((st) => (
-            <div key={st.label} className="p-4 rounded-xl border border-slate-850 bg-slate-950/60 space-y-1">
+            <div key={st.label} className="p-4 rounded-xl border border-slate-800/80 bg-[#0B0F17] space-y-1">
               <span className="text-slate-500 font-mono text-[10px] uppercase tracking-wider">{st.label}</span>
-              <div className="text-2xl font-bold font-mono text-slate-100">{st.value}</div>
+              <div className="text-2xl font-bold font-mono text-slate-100 tabular-nums">{st.value}</div>
               <p className="text-[11px] font-mono text-slate-400">{st.desc}</p>
             </div>
           ))}

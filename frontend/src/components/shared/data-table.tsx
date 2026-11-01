@@ -37,7 +37,7 @@ export function DataTable<T>({
 }: DataTableProps<T>) {
   if (loading) {
     return (
-      <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-6">
+      <div className="rounded-xl border border-slate-800/80 bg-[#111722] p-6">
         <LoadingState />
       </div>
     );
@@ -49,16 +49,16 @@ export function DataTable<T>({
 
   if (!data || data.length === 0) {
     return (
-      <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-6">
+      <div className="rounded-xl border border-slate-800/80 bg-[#111722] p-6">
         <EmptyState title={emptyTitle} description={emptyDescription} />
       </div>
     );
   }
 
   return (
-    <div className="overflow-x-auto rounded-xl border border-slate-800 bg-slate-900/70 shadow-xl backdrop-blur-sm">
+    <div className="overflow-x-auto rounded-xl border border-slate-800/80 bg-[#111722] shadow-xl">
       <table className="w-full text-left text-xs">
-        <thead className="bg-slate-950/80 border-b border-slate-800 text-slate-400 font-mono uppercase tracking-wider text-[11px]">
+        <thead className="bg-[#0B0F17] border-b border-slate-800/80 text-slate-400 font-mono uppercase tracking-wider text-[11px]">
           <tr>
             {columns.map((col) => (
               <th key={col.key} className={`px-4 py-3 font-semibold ${col.className || ''}`}>
@@ -67,17 +67,17 @@ export function DataTable<T>({
             ))}
           </tr>
         </thead>
-        <tbody className="divide-y divide-slate-850">
+        <tbody className="divide-y divide-slate-800/60">
           {data.map((item) => (
             <tr
               key={keyExtractor(item)}
               onClick={() => onRowClick && onRowClick(item)}
-              className={`transition-colors hover:bg-slate-800/40 ${
+              className={`transition-colors hover:bg-slate-800/30 ${
                 onRowClick ? 'cursor-pointer' : ''
               }`}
             >
               {columns.map((col) => (
-                <td key={col.key} className={`px-4 py-3 text-slate-300 font-mono ${col.className || ''}`}>
+                <td key={col.key} className={`px-4 py-3 text-slate-300 font-mono tabular-nums ${col.className || ''}`}>
                   {col.render ? col.render(item) : (item as any)[col.key]}
                 </td>
               ))}

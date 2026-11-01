@@ -4,46 +4,69 @@
 
 :root {
   --foreground-rgb: 241, 245, 249;
-  --background-rgb: 2, 6, 23;
+  --background-rgb: 11, 15, 23;
 }
 
 body {
   color: rgb(var(--foreground-rgb));
-  background: rgb(var(--background-rgb));
-  font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+  background: #0B0F17;
+  font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11', 'tnum';
+  font-variant-numeric: tabular-nums;
   overflow-x: hidden;
 }
 
-/* Custom Financial Command Center Scrollbar */
+/* Institutional Command Center Scrollbar */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #020617;
+  background: #0B0F17;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #1e293b;
-  border-radius: 9999px;
+  background: #1C2638;
+  border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #334155;
+  background: #2D3D58;
 }
 
-@keyframes fadeIn {
+/* Tabular Numerals helper */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Hairline border utilities */
+.border-hairline {
+  border-color: rgba(255, 255, 255, 0.07);
+}
+
+.border-hairline-subtle {
+  border-color: rgba(255, 255, 255, 0.04);
+}
+
+/* Subtle transitions with strict reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@keyframes fadeInFast {
   from {
     opacity: 0;
-    transform: scale(0.98);
   }
   to {
     opacity: 1;
-    transform: scale(1);
   }
 }
 
 .animate-fade-in {
-  animation: fadeIn 0.15s ease-out forwards;
+  animation: fadeInFast 0.12s ease-out forwards;
 }

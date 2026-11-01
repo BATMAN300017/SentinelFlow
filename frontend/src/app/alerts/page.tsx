@@ -96,20 +96,20 @@ function AlertsContent() {
       </head>
       <div className="space-y-6 max-w-7xl mx-auto pb-12">
         {/* Header */}
-        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-rose-950/40 pb-4">
+        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-800/80 pb-4">
           <div>
             <div className="flex items-center space-x-3">
-              <span className="p-2 rounded-xl bg-rose-950/80 border border-rose-800/80 text-rose-400">
+              <span className="p-2 rounded-lg bg-slate-900 border border-rose-500/30 text-rose-400">
                 <ShieldAlert className="w-5 h-5" />
               </span>
               <div>
-                <h1 className="text-2xl sm:text-3xl font-bold font-mono text-slate-100 tracking-tight flex items-center space-x-3">
+                <h1 className="text-xl sm:text-2xl font-bold font-mono text-slate-100 tracking-tight flex items-center space-x-2.5">
                   <span>Alerts Queue & Triage</span>
-                  <span className="text-xs font-mono font-medium px-2.5 py-0.5 rounded-full bg-rose-950/80 text-rose-400 border border-rose-800">
+                  <span className="text-[10px] font-mono font-medium px-2 py-0.5 rounded bg-rose-950/60 text-rose-400 border border-rose-800/60">
                     High Priority Heuristics
                   </span>
                 </h1>
-                <p className="text-xs sm:text-sm text-slate-400 font-mono mt-0.5">
+                <p className="text-xs text-slate-400 font-mono mt-0.5">
                   Review incoming financial crime alerts produced by multi-signal fraud heuristics and graph topology.
                 </p>
               </div>
@@ -119,7 +119,7 @@ function AlertsContent() {
           <div className="flex items-center space-x-3">
             <Link
               href="/investigations"
-              className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-semibold bg-sky-950/60 hover:bg-sky-900/80 text-sky-300 border border-sky-700/60 transition"
+              className="flex items-center space-x-1.5 px-3 py-1.5 rounded-md text-xs font-mono font-semibold bg-slate-800 hover:bg-slate-750 text-slate-200 border border-slate-700/80 transition"
             >
               <Briefcase className="w-3.5 h-3.5" />
               <span>Go to Investigations &rarr;</span>
@@ -127,7 +127,7 @@ function AlertsContent() {
             <button
               onClick={loadAlerts}
               disabled={loading}
-              className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-semibold bg-slate-800 hover:bg-slate-700 disabled:opacity-50 text-slate-200 border border-slate-700 transition"
+              className="flex items-center space-x-1.5 px-3 py-1.5 rounded-md text-xs font-mono font-semibold bg-slate-800 hover:bg-slate-750 disabled:opacity-50 text-slate-200 border border-slate-700/80 transition"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
               <span>Refresh Alerts</span>
@@ -136,16 +136,16 @@ function AlertsContent() {
         </div>
 
         {/* Filter Controls Bar */}
-        <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-950/80 p-3 rounded-xl border border-slate-800">
+        <div className="flex flex-wrap items-center justify-between gap-3 bg-[#0B0F17] p-2.5 rounded-lg border border-slate-800/80">
           <div className="flex items-center space-x-1">
             {['ALL', 'CRITICAL', 'HIGH', 'MEDIUM'].map(sev => (
               <button
                 key={sev}
                 onClick={() => setSeverityFilter(sev)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-mono font-semibold transition ${
+                className={`px-2.5 py-1 rounded-md text-xs font-mono font-semibold transition-colors ${
                   severityFilter === sev
-                    ? 'bg-rose-950 text-rose-400 border border-rose-700/80 shadow-sm'
-                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
+                    ? 'bg-rose-950/60 text-rose-400 border border-rose-700/60'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900 border border-transparent'
                 }`}
               >
                 {sev === 'ALL' ? 'All Severities' : sev}
@@ -159,32 +159,32 @@ function AlertsContent() {
               placeholder="Filter Alert, Account, or Txn ID..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="px-3 py-1.5 bg-slate-900 border border-slate-800 rounded-lg text-xs font-mono text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-rose-600 w-48 sm:w-64"
+              className="px-3 py-1 bg-[#111722] border border-slate-800 rounded-md text-xs font-mono text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-rose-600 w-48 sm:w-64"
             />
           </div>
         </div>
 
         {/* Alerts Table */}
-        <div className="bg-slate-900/90 rounded-2xl border border-slate-800 overflow-hidden shadow-2xl backdrop-blur-sm">
+        <div className="bg-[#111722] rounded-lg border border-slate-800/80 overflow-hidden shadow-lg">
           <table className="w-full text-left text-xs font-mono">
-            <thead className="bg-slate-950/90 text-slate-400 font-semibold border-b border-slate-800 uppercase tracking-wider text-[11px]">
+            <thead className="bg-[#0B0F17] text-slate-400 font-semibold border-b border-slate-800 uppercase tracking-wider text-[10px]">
               <tr>
-                <th className="px-5 py-3.5">Alert Ref</th>
-                <th className="px-5 py-3.5">Severity</th>
-                <th className="px-5 py-3.5">Risk Score</th>
-                <th className="px-5 py-3.5">Account ID</th>
-                <th className="px-5 py-3.5">Linked Transaction</th>
-                <th className="px-5 py-3.5">Typology & Findings</th>
-                <th className="px-5 py-3.5">Status</th>
-                <th className="px-5 py-3.5 text-right">Actions</th>
+                <th className="px-4 py-3">Alert Ref</th>
+                <th className="px-4 py-3">Severity</th>
+                <th className="px-4 py-3">Risk Score</th>
+                <th className="px-4 py-3">Account ID</th>
+                <th className="px-4 py-3">Linked Transaction</th>
+                <th className="px-4 py-3">Typology & Findings</th>
+                <th className="px-4 py-3">Status</th>
+                <th className="px-4 py-3 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-850">
+            <tbody className="divide-y divide-slate-800/60">
               {loading ? (
                 <tr>
                   <td colSpan={8} className="text-center py-12 text-slate-400 font-mono">
                     <div className="flex items-center justify-center space-x-2">
-                      <div className="w-4 h-4 border-2 border-rose-500 border-t-transparent rounded-full animate-spin" />
+                      <div className="w-4 h-4 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
                       <span>Loading active alerts queue...</span>
                     </div>
                   </td>
@@ -196,36 +196,30 @@ function AlertsContent() {
                   </td>
                 </tr>
               ) : filteredAlerts.map(a => (
-                <tr key={a.id} className="hover:bg-slate-800/40 transition">
-                  <td className="px-5 py-3.5 font-mono font-bold text-sky-400">
+                <tr key={a.id} className="hover:bg-slate-800/40 transition-colors">
+                  <td className="px-4 py-3 font-mono font-bold text-slate-200">
                     {a.alert_ref}
                   </td>
-                  <td className="px-5 py-3.5 font-semibold">
-                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold font-mono border ${
-                      a.severity === 'CRITICAL' ? 'bg-rose-950/80 text-rose-400 border-rose-800' :
-                      a.severity === 'HIGH' ? 'bg-amber-950/80 text-amber-400 border-amber-800' :
-                      'bg-slate-800 text-slate-300 border-slate-700'
-                    }`}>
-                      {a.severity}
-                    </span>
+                  <td className="px-4 py-3 font-semibold">
+                    <StatusBadge type="severity" value={a.severity} />
                   </td>
-                  <td className="px-5 py-3.5 font-mono font-bold text-slate-100">
-                    {Number(a.risk_score).toFixed(1)}
+                  <td className="px-4 py-3 font-mono">
+                    <StatusBadge type="risk" value={a.risk_score} />
                   </td>
-                  <td className="px-5 py-3.5 font-mono text-slate-300">
+                  <td className="px-4 py-3 font-mono text-slate-300">
                     <Link
                       href={`/fund-flow?account_id=${a.account_id}`}
-                      className="text-sky-400 hover:text-sky-300 underline underline-offset-2"
+                      className="text-emerald-400 hover:text-emerald-300 underline underline-offset-2"
                       title="Trace fund flow for this account"
                     >
                       {a.account_id}
                     </Link>
                   </td>
-                  <td className="px-5 py-3.5 font-mono text-slate-400">
+                  <td className="px-4 py-3 font-mono text-slate-400">
                     {a.transaction_id ? (
                       <Link
                         href={`/transactions?id=${a.transaction_id}`}
-                        className="text-emerald-400 hover:text-emerald-300 underline underline-offset-2"
+                        className="text-slate-200 hover:text-emerald-400 underline underline-offset-2"
                       >
                         {a.transaction_id}
                       </Link>
@@ -233,21 +227,43 @@ function AlertsContent() {
                       <span className="text-slate-600">AGGREGATED_STREAM</span>
                     )}
                   </td>
-                  <td className="px-5 py-3.5 text-slate-300 font-mono max-w-xs truncate" title={a.summary || a.title}>
+                  <td className="px-4 py-3 text-slate-300 font-mono max-w-xs truncate" title={a.summary || a.title}>
                     {a.title}
                   </td>
-                  <td className="px-5 py-3.5 text-slate-400 font-mono text-xs">
-                    <span className="px-2 py-0.5 rounded bg-slate-800 text-slate-300 text-[10px]">
+                  <td className="px-4 py-3 text-slate-400 font-mono text-xs">
+                    <span className="px-1.5 py-0.5 rounded bg-slate-900 border border-slate-800 text-slate-300 text-[10px]">
                       {a.status}
                     </span>
                   </td>
-                  <td className="px-5 py-3.5 text-right whitespace-nowrap">
-                    <div className="flex items-center justify-end space-x-2">
+                  <td className="px-4 py-3 text-right whitespace-nowrap">
+                    <div className="flex items-center justify-end space-x-1.5">
                       {/* Open Case Action */}
                       <button
                         onClick={() => handleInvestigate(a.id)}
                         disabled={investigatingId === a.id}
-                        className="bg-sky-600 hover:bg-sky-500 text-white font-mono text-[11px] px-2.5 py-1.5 rounded-lg font-bold shadow-sm transition flex items-center space-x-1 disabled:opacity-50"
+                        className="bg-emerald-600 hover:bg-emerald-500 text-white font-mono text-[10px] px-2.5 py-1 rounded-md font-semibold transition-colors flex items-center space-x-1 disabled:opacity-50"
+                        title="Open or convert this alert into an investigation case dossier"
+                      >
+                        <Briefcase className="w-3 h-3" />
+                        <span>{investigatingId === a.id ? 'Loading...' : 'Open Case'}</span>
+                      </button>
+
+                      {/* Open Full Audit Action */}
+                      <Link
+                        href={`/audit?resource_id=${a.id}&resource_type=ALERT`}
+                        className="bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-700 font-mono text-[10px] px-2.5 py-1 rounded-md transition-colors flex items-center space-x-1"
+                        title="Open immutable cryptographic audit logs for this alert"
+                      >
+                        <ScrollText className="w-3 h-3 text-slate-400" />
+                        <span>Full Audit</span>
+                      </Link>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
                         title="Open or convert this alert into an investigation case dossier"
                       >
                         <Briefcase className="w-3 h-3" />

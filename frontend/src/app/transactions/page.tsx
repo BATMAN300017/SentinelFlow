@@ -214,24 +214,24 @@ function TransactionsContent() {
         </div>
 
         {/* Reference Layout: Money Flow (Last 24 Hours) Overview */}
-        <div className="rounded-2xl border border-emerald-900/40 bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 p-5 shadow-2xl relative overflow-hidden">
-          <div className="flex items-center justify-between mb-4">
+        <div className="rounded-lg border border-slate-800/80 bg-[#111722] p-4 sm:p-5 relative overflow-hidden">
+          <div className="flex items-center justify-between mb-3.5">
             <div className="flex items-center space-x-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
-              <span className="text-xs font-mono font-bold uppercase tracking-wider text-emerald-400">
-                Money Flow (Active Ledger Velocity)
+              <span className="w-2 h-2 rounded-full bg-emerald-500" />
+              <span className="text-xs font-mono font-bold uppercase tracking-wider text-slate-200">
+                Monitored Money Flow (Active Ledger Throughput)
               </span>
             </div>
-            <span className="text-[11px] font-mono text-slate-500">
-              Computed from {totalCount ? totalCount.toLocaleString() : '482,810'} transactions
+            <span className="text-[11px] font-mono text-slate-400">
+              Computed from <span className="text-slate-200 tabular-nums">{totalCount ? totalCount.toLocaleString() : '482,810'}</span> transactions
             </span>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4">
             {/* Source Accounts */}
-            <div className="p-4 rounded-xl bg-slate-900/90 border border-slate-800/80 space-y-1">
-              <div className="text-[10px] font-mono uppercase text-slate-400">1. Originator Accounts (Inflow)</div>
-              <div className="text-xl font-mono font-bold text-slate-100">
+            <div className="p-3.5 rounded-md bg-[#0B0F17] border border-slate-800/80 space-y-1">
+              <div className="text-[10px] font-mono uppercase text-slate-400 tracking-wider">1. Originator Accounts (Inflow)</div>
+              <div className="text-lg sm:text-xl font-mono font-bold text-slate-100 tabular-nums">
                 ${summaryMetrics.sourceVolume.toLocaleString(undefined, { maximumFractionDigits: 0 })}
               </div>
               <div className="text-[11px] font-mono text-emerald-400 flex items-center space-x-1">
@@ -240,9 +240,9 @@ function TransactionsContent() {
             </div>
 
             {/* Intermediary Layering Accounts */}
-            <div className="p-4 rounded-xl bg-slate-900/90 border border-slate-800/80 space-y-1">
-              <div className="text-[10px] font-mono uppercase text-slate-400">2. Intermediary Routing Switches</div>
-              <div className="text-xl font-mono font-bold text-amber-300">
+            <div className="p-3.5 rounded-md bg-[#0B0F17] border border-slate-800/80 space-y-1">
+              <div className="text-[10px] font-mono uppercase text-slate-400 tracking-wider">2. Intermediary Routing Switches</div>
+              <div className="text-lg sm:text-xl font-mono font-bold text-amber-300 tabular-nums">
                 ${summaryMetrics.intermediaryVolume.toLocaleString(undefined, { maximumFractionDigits: 0 })}
               </div>
               <div className="text-[11px] font-mono text-amber-400 flex items-center space-x-1">
@@ -251,12 +251,12 @@ function TransactionsContent() {
             </div>
 
             {/* Destination Accounts */}
-            <div className="p-4 rounded-xl bg-slate-900/90 border border-slate-800/80 space-y-1">
-              <div className="text-[10px] font-mono uppercase text-slate-400">3. Beneficiary Accounts (Settlement)</div>
-              <div className="text-xl font-mono font-bold text-sky-300">
+            <div className="p-3.5 rounded-md bg-[#0B0F17] border border-slate-800/80 space-y-1">
+              <div className="text-[10px] font-mono uppercase text-slate-400 tracking-wider">3. Beneficiary Accounts (Settlement)</div>
+              <div className="text-lg sm:text-xl font-mono font-bold text-slate-100 tabular-nums">
                 ${summaryMetrics.destinationVolume.toLocaleString(undefined, { maximumFractionDigits: 0 })}
               </div>
-              <div className="text-[11px] font-mono text-sky-400 flex items-center space-x-1">
+              <div className="text-[11px] font-mono text-emerald-400 flex items-center space-x-1">
                 <span>{summaryMetrics.destinationCount} Beneficiaries</span>
               </div>
             </div>
@@ -264,7 +264,7 @@ function TransactionsContent() {
         </div>
 
         {/* Reference Layout: Horizontal Flow Filter Tabs */}
-        <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-950/80 p-2 rounded-xl border border-slate-800">
+        <div className="flex flex-wrap items-center justify-between gap-3 bg-[#0B0F17] p-2 rounded-lg border border-slate-800/80">
           <div className="flex items-center space-x-1 overflow-x-auto pb-1 sm:pb-0">
             {FLOW_STATUSES.map((fs) => (
               <button
@@ -273,10 +273,10 @@ function TransactionsContent() {
                   setFlowStatus(fs.id);
                   setPage(1);
                 }}
-                className={`px-3 py-1.5 rounded-lg text-xs font-mono font-semibold transition whitespace-nowrap ${
+                className={`px-3 py-1.5 rounded-md text-xs font-mono font-semibold transition-colors whitespace-nowrap ${
                   flowStatus === fs.id
-                    ? 'bg-emerald-950 text-emerald-400 border border-emerald-700/80 shadow-sm'
-                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
+                    ? 'bg-emerald-950/60 text-emerald-400 border border-emerald-700/60'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900 border border-transparent'
                 }`}
               >
                 {fs.label}
@@ -296,20 +296,20 @@ function TransactionsContent() {
                   setSearch(e.target.value);
                   setPage(1);
                 }}
-                className="pl-8 pr-3 py-1.5 bg-slate-900 border border-slate-800 rounded-lg text-xs font-mono text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-emerald-600 w-48 sm:w-64"
+                className="pl-8 pr-3 py-1.5 bg-[#111722] border border-slate-800 rounded-md text-xs font-mono text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-emerald-600 w-48 sm:w-64"
               />
             </div>
           </div>
         </div>
 
         {/* Detailed Secondary Filters Bar */}
-        <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 bg-slate-900/60 p-3 rounded-xl border border-slate-800 text-xs font-mono">
+        <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 bg-[#111722] p-3 rounded-lg border border-slate-800/80 text-xs font-mono">
           <div>
-            <label className="text-slate-500 text-[10px] block mb-1">Payment Channel</label>
+            <label className="text-slate-400 text-[10px] block mb-1 uppercase tracking-wider">Payment Channel</label>
             <select
               value={channel}
               onChange={(e) => { setChannel(e.target.value); setPage(1); }}
-              className="w-full bg-slate-950 border border-slate-800 rounded px-2.5 py-1 text-slate-200"
+              className="w-full bg-[#0B0F17] border border-slate-800 rounded px-2.5 py-1 text-slate-200"
             >
               <option value="">All Channels</option>
               <option value="ONLINE">ONLINE</option>
@@ -322,11 +322,11 @@ function TransactionsContent() {
           </div>
 
           <div>
-            <label className="text-slate-500 text-[10px] block mb-1">Dataset Origin</label>
+            <label className="text-slate-400 text-[10px] block mb-1 uppercase tracking-wider">Dataset Origin</label>
             <select
               value={dataset}
               onChange={(e) => { setDataset(e.target.value); setPage(1); }}
-              className="w-full bg-slate-950 border border-slate-800 rounded px-2.5 py-1 text-slate-200"
+              className="w-full bg-[#0B0F17] border border-slate-800 rounded px-2.5 py-1 text-slate-200"
             >
               <option value="">All Registered Datasets</option>
               <option value="NFPC">NFPC Indian Banking</option>
@@ -337,16 +337,16 @@ function TransactionsContent() {
           </div>
 
           <div>
-            <label className="text-slate-500 text-[10px] block mb-1">Risk Score Minimum</label>
+            <label className="text-slate-400 text-[10px] block mb-1 uppercase tracking-wider">Risk Score Threshold</label>
             <select
               value={minScore}
               onChange={(e) => { setMinScore(e.target.value); setPage(1); }}
-              className="w-full bg-slate-950 border border-slate-800 rounded px-2.5 py-1 text-slate-200"
+              className="w-full bg-[#0B0F17] border border-slate-800 rounded px-2.5 py-1 text-slate-200"
             >
               <option value="">Any Score</option>
               <option value="25">Low Risk (25+)</option>
-              <option value="50">Elevated Risk (50+)</option>
-              <option value="75">Critical / Fraud (75+)</option>
+              <option value="50">Medium Risk (50+)</option>
+              <option value="75">High / Critical (75+)</option>
             </select>
           </div>
 
@@ -360,7 +360,7 @@ function TransactionsContent() {
                 setFlowStatus('ALL');
                 setPage(1);
               }}
-              className="w-full px-3 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded transition text-xs font-semibold"
+              className="w-full px-3 py-1 bg-slate-800 hover:bg-slate-750 text-slate-300 border border-slate-700/80 rounded transition text-xs font-semibold"
             >
               Reset Filters
             </button>
@@ -368,28 +368,27 @@ function TransactionsContent() {
         </div>
 
         {/* Transactions Table */}
-        <div className="bg-slate-900/90 rounded-2xl border border-slate-800 overflow-hidden shadow-2xl backdrop-blur-sm">
+        <div className="bg-[#111722] rounded-lg border border-slate-800/80 overflow-hidden shadow-lg">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs font-mono">
-              <thead className="bg-slate-950/90 text-slate-400 font-semibold border-b border-slate-800 uppercase tracking-wider text-[11px]">
+              <thead className="bg-[#0B0F17] text-slate-400 font-semibold border-b border-slate-800 uppercase tracking-wider text-[10px]">
                 <tr>
-                  <th className="px-4 py-3.5 w-8"></th>
-                  <th className="px-4 py-3.5">Transaction ID</th>
-                  <th className="px-4 py-3.5">Amount</th>
-                  <th className="px-4 py-3.5">From Account</th>
-                  <th className="px-4 py-3.5">To Account</th>
-                  <th className="px-4 py-3.5">Timestamp</th>
-                  <th className="px-4 py-3.5">Risk Score</th>
-                  <th className="px-4 py-3.5">Dataset & Label</th>
-                  <th className="px-4 py-3.5">AI Prediction</th>
-                  <th className="px-4 py-3.5">Status</th>
-                  <th className="px-4 py-3.5 text-right">Actions</th>
+                  <th className="px-3 py-3 w-8"></th>
+                  <th className="px-3 py-3">Transaction ID</th>
+                  <th className="px-3 py-3">Amount</th>
+                  <th className="px-3 py-3">From Account</th>
+                  <th className="px-3 py-3">To Account</th>
+                  <th className="px-3 py-3">Timestamp</th>
+                  <th className="px-3 py-3">Risk Assessment</th>
+                  <th className="px-3 py-3">Dataset & Label</th>
+                  <th className="px-3 py-3">Status</th>
+                  <th className="px-3 py-3 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-850">
+              <tbody className="divide-y divide-slate-800/60">
                 {loading ? (
                   <tr>
-                    <td colSpan={11} className="py-12 text-center text-slate-400">
+                    <td colSpan={10} className="py-12 text-center text-slate-400">
                       <div className="flex items-center justify-center space-x-2">
                         <div className="w-4 h-4 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
                         <span>Querying 482,810 transaction records...</span>
@@ -398,13 +397,13 @@ function TransactionsContent() {
                   </tr>
                 ) : error ? (
                   <tr>
-                    <td colSpan={11} className="py-8 text-center text-rose-400">
+                    <td colSpan={10} className="py-8 text-center text-rose-400">
                       {error}
                     </td>
                   </tr>
                 ) : transactions.length === 0 ? (
                   <tr>
-                    <td colSpan={11} className="py-12 text-center text-slate-500">
+                    <td colSpan={10} className="py-12 text-center text-slate-500">
                       No transactions matched the specified filters.
                     </td>
                   </tr>
@@ -419,96 +418,70 @@ function TransactionsContent() {
                       <React.Fragment key={tx.id}>
                         <tr
                           onClick={() => handleRowClick(tx)}
-                          className={`hover:bg-slate-800/40 cursor-pointer transition ${
-                            isExpanded ? 'bg-slate-800/60' : ''
+                          className={`hover:bg-slate-800/40 cursor-pointer transition-colors ${
+                            isExpanded ? 'bg-slate-800/50' : ''
                           }`}
                         >
-                          <td className="px-4 py-3 text-slate-500">
-                            {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                          <td className="px-3 py-2.5 text-slate-500">
+                            {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
                           </td>
-                          <td className="px-4 py-3 font-bold text-sky-400 hover:text-sky-300">
+                          <td className="px-3 py-2.5 font-bold text-slate-200 hover:text-emerald-400 transition-colors">
                             {tx.id}
                           </td>
-                          <td className="px-4 py-3 font-bold text-slate-100 whitespace-nowrap">
+                          <td className="px-3 py-2.5 font-bold text-slate-100 whitespace-nowrap tabular-nums">
                             {tx.currency} {Number(tx.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                           </td>
-                          <td className="px-4 py-3 text-slate-300 font-semibold">
+                          <td className="px-3 py-2.5 text-slate-300 font-medium">
                             {tx.source_account_id}
                           </td>
-                          <td className="px-4 py-3 text-slate-400">
+                          <td className="px-3 py-2.5 text-slate-400">
                             {tx.destination_account_id || 'EXTERNAL'}
                           </td>
-                          <td className="px-4 py-3 text-slate-500 text-[11px] whitespace-nowrap">
+                          <td className="px-3 py-2.5 text-slate-500 text-[10px] whitespace-nowrap tabular-nums">
                             {new Date(tx.created_at || Date.now()).toLocaleDateString([], {
                               month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit'
                             })}
                           </td>
-                          <td className="px-4 py-3">
-                            <span
-                              className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
-                                isHighRisk
-                                  ? 'bg-rose-950/80 text-rose-400 border-rose-800'
-                                  : isMediumRisk
-                                  ? 'bg-amber-950/80 text-amber-400 border-amber-800'
-                                  : 'bg-emerald-950/80 text-emerald-400 border-emerald-800'
-                              }`}
-                            >
-                              {risk.toFixed(1)}
-                            </span>
+                          <td className="px-3 py-2.5">
+                            <StatusBadge type="risk" value={tx.risk_score} />
                           </td>
-                          <td className="px-4 py-3">
-                            <div className="space-y-0.5">
-                              <span className="text-[10px] text-slate-400 bg-slate-800 px-1.5 py-0.5 rounded">
+                          <td className="px-3 py-2.5">
+                            <div className="flex items-center space-x-1">
+                              <span className="text-[9px] text-slate-400 bg-slate-900 border border-slate-800 px-1.5 py-0.5 rounded">
                                 {tx.dataset_source || 'PROD'}
                               </span>
                               {tx.is_ground_truth_fraud === 1 && (
-                                <span className="ml-1 text-[9px] text-rose-300 bg-rose-950/80 px-1 py-0.5 rounded border border-rose-900">
+                                <span className="text-[9px] text-rose-300 bg-rose-950/80 px-1 py-0.5 rounded border border-rose-900 font-bold">
                                   GT Fraud
                                 </span>
                               )}
                             </div>
                           </td>
-                          <td className="px-4 py-3">
-                            {risk >= 70 ? (
-                              <span className="text-[10px] font-bold text-rose-400 flex items-center space-x-1">
-                                <AlertTriangle className="w-3 h-3 inline" />
-                                <span>High Risk ({risk.toFixed(0)}%)</span>
-                              </span>
-                            ) : risk >= 40 ? (
-                              <span className="text-[10px] font-bold text-amber-400">
-                                Elevated ({risk.toFixed(0)}%)
-                              </span>
-                            ) : (
-                              <span className="text-[10px] text-emerald-400">
-                                Routine ({risk.toFixed(0)}%)
-                              </span>
-                            )}
-                          </td>
-                          <td className="px-4 py-3 text-slate-400">
-                            <span className="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-300">
+                          <td className="px-3 py-2.5 text-slate-400">
+                            <span className="text-[9px] px-1.5 py-0.5 rounded bg-slate-900 border border-slate-800 text-slate-300">
                               {tx.status || 'COMPLETED'}
                             </span>
                           </td>
-                          <td className="px-4 py-3 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
-                            <div className="flex items-center justify-end space-x-2">
+                          <td className="px-3 py-2.5 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                            <div className="flex items-center justify-end space-x-1.5">
                               {/* Open Case Action */}
                               <Link
                                 href={tx.linked_investigation_id ? `/investigations?id=${tx.linked_investigation_id}` : `/investigations?txn_id=${tx.id}`}
-                                className="px-2 py-1 bg-sky-950/80 hover:bg-sky-900 border border-sky-800 text-sky-300 rounded text-[11px] font-bold transition flex items-center space-x-1"
+                                className="px-2 py-1 bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-200 rounded text-[10px] font-mono transition-colors flex items-center space-x-1"
                                 title="Open investigation dossier for this transaction"
                               >
-                                <Briefcase className="w-3 h-3" />
+                                <Briefcase className="w-3 h-3 text-slate-400" />
                                 <span>Open Case</span>
                               </Link>
 
                               {/* Open Full Audit Action */}
                               <Link
                                 href={`/audit?resource_id=${tx.id}&resource_type=TRANSACTION`}
-                                className="px-2 py-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 rounded text-[11px] font-bold transition flex items-center space-x-1"
+                                className="px-2 py-1 bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-300 rounded text-[10px] font-mono transition-colors flex items-center space-x-1"
                                 title="Open immutable cryptographic audit logs for this transaction"
                               >
-                                <ScrollText className="w-3 h-3" />
-                                <span>Open Full Audit</span>
+                                <ScrollText className="w-3 h-3 text-slate-400" />
+                                <span>Full Audit</span>
                               </Link>
                             </div>
                           </td>
@@ -516,8 +489,8 @@ function TransactionsContent() {
 
                         {/* Expandable Transaction Row Details */}
                         {isExpanded && (
-                          <tr className="bg-slate-950/90 border-b border-slate-800">
-                            <td colSpan={11} className="p-4 pl-12 space-y-3">
+                          <tr className="bg-[#0B0F17] border-b border-slate-800/80">
+                            <td colSpan={10} className="p-4 pl-10 space-y-3">
                               <div className="grid grid-cols-1 md:grid-cols-4 gap-3 text-xs">
                                 <div className="p-3 rounded-lg bg-slate-900 border border-slate-800 space-y-1">
                                   <div className="text-[10px] text-slate-500 uppercase">Payment Channel</div>
