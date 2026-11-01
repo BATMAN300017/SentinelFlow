@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "private": true,
   "description": "SentinelFlow AI — The Self-Directed Fraud Investigation Platform",
+  "workspaces": [
+    "frontend"
+  ],
   "scripts": {
     "dev:frontend": "pnpm --filter frontend dev",
     "build": "npm --prefix frontend run build",
