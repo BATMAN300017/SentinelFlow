@@ -5,13 +5,15 @@
   "description": "SentinelFlow AI — The Self-Directed Fraud Investigation Platform",
   "scripts": {
     "dev:frontend": "pnpm --filter frontend dev",
-    "build": "pnpm --filter frontend build",
-    "build:frontend": "pnpm --filter frontend build",
+    "build": "npm --prefix frontend run build",
+    "build:frontend": "npm --prefix frontend run build",
+    "deploy": "wrangler deploy",
     "lint": "pnpm --filter frontend lint",
     "test": "pnpm --filter frontend test"
   },
   "devDependencies": {
     "typescript": "^5.4.0",
-    "prettier": "^3.2.5"
+    "prettier": "^3.2.5",
+    "wrangler": "4.156.0"
   }
 }

@@ -6,6 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "deploy": "wrangler deploy",
+    "deploy:pages": "wrangler pages deploy out --project-name=sentinelflow",
     "lint": "next lint",
     "test": "vitest run"
   },
