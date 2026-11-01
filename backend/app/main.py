@@ -45,17 +45,28 @@ app.include_router(api_router, prefix=settings.API_V1_STR)
 def root_health():
     return {"status": "ok", "app": settings.PROJECT_NAME, "version": settings.VERSION}
 
-# Production Backend API Root (Render)
-@app.get("/", tags=["API Info"])
-def root_info():
+# Canonical production frontend URL on Cloudflare
+CANONICAL_FRONTEND_URL = "https://sentinelflow.batman3-00017.workers.dev"
+
+# Production Root: Redirect visitors to the working frontend dashboard
+@app.get("/", include_in_schema=False)
+def root_redirect():
+    return RedirectResponse(url=f"{CANONICAL_FRONTEND_URL}/", status_code=307)
+
+# App shortcut: Redirect /app to the working frontend dashboard
+@app.get("/app", include_in_schema=False)
+def app_redirect():
+    return RedirectResponse(url=f"{CANONICAL_FRONTEND_URL}/dashboard", status_code=307)
+
+# Backend API service descriptor
+@app.get("/api", tags=["API Info"])
+def api_info():
     return {
         "service": settings.PROJECT_NAME,
         "version": settings.VERSION,
         "status": "online",
         "role": "API backend",
-        "canonical_frontend": "https://sentinelflow.batman3-00017.workers.dev",
-        "cloudflare_workers_frontend": "https://sentinelflow.batman3-00017.workers.dev",
-        "cloudflare_pages_target": "https://sentinelflow.pages.dev",
+        "canonical_frontend": CANONICAL_FRONTEND_URL,
         "docs": "/docs",
         "redoc": "/redoc",
         "api_v1": settings.API_V1_STR,
@@ -73,10 +84,6 @@ if os.path.exists(static_dir):
     def serve_legacy_demo():
         index_file = os.path.join(static_dir, "index.html")
         return FileResponse(index_file)
-
-    @app.get("/app", include_in_schema=False)
-    def serve_app_redirect():
-        return RedirectResponse(url="/demo")
 
 @app.on_event("startup")
 def on_startup():
