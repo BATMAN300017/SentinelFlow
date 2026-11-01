@@ -114,8 +114,16 @@ function InvestigationsContent() {
     return true;
   });
 
+  useEffect(() => {
+    document.title = 'Investigation Workspace & Case Management | SentinelFlow AI';
+  }, []);
+
   return (
     <AppShell>
+      <head>
+        <title>Investigation Workspace &amp; Case Management | SentinelFlow AI</title>
+        <meta name="description" content="Evidence-grounded case dossiers, timeline reconstruction, analyst notes, and disposition adjudication." />
+      </head>
       <div className="space-y-6 max-w-7xl mx-auto pb-12">
         {/* If viewing a single case dossier */}
         {caseIdParam || txnIdParam ? (
@@ -332,7 +340,7 @@ function InvestigationsContent() {
 
             {/* Filter Tabs */}
             <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-950/80 p-3 rounded-xl border border-slate-800">
-              <div className="flex items-center space-x-1">
+              <div className="flex flex-wrap items-center gap-1.5">
                 {['ALL', 'UNDER_INVESTIGATION', 'PENDING_PEER_REVIEW', 'RESOLVED'].map(st => (
                   <button
                     key={st}
@@ -348,7 +356,7 @@ function InvestigationsContent() {
                 ))}
               </div>
 
-              <div className="flex items-center space-x-1">
+              <div className="flex flex-wrap items-center gap-1.5">
                 {['ALL', 'CRITICAL', 'HIGH', 'MEDIUM'].map(prio => (
                   <button
                     key={prio}
@@ -367,7 +375,8 @@ function InvestigationsContent() {
 
             {/* Cases Table */}
             <div className="bg-slate-900/90 rounded-2xl border border-slate-800 overflow-hidden shadow-2xl backdrop-blur-sm">
-              <table className="w-full text-left text-xs font-mono">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs font-mono">
                 <thead className="bg-slate-950/90 text-slate-400 font-semibold border-b border-slate-800 uppercase tracking-wider text-[11px]">
                   <tr>
                     <th className="px-5 py-3.5">Case Number</th>
@@ -458,6 +467,7 @@ function InvestigationsContent() {
                   ))}
                 </tbody>
               </table>
+              </div>
             </div>
           </>
         )}

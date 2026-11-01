@@ -28,7 +28,7 @@ export function AlertList({
       key: 'alert_ref',
       header: 'Reference',
       render: (a) => (
-        <Link href={`/alerts/${a.id}`} className="font-bold text-sky-400 hover:text-sky-300">
+        <Link href={`/alerts?id=${a.id}`} className="font-bold text-sky-400 hover:text-sky-300">
           {a.alert_ref}
         </Link>
       ),

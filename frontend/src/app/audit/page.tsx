@@ -41,11 +41,18 @@ function AuditContent() {
   }, [resourceIdParam, resourceTypeParam]);
 
   useEffect(() => {
+    document.title = resourceIdParam
+      ? `Audit Trail (${resourceIdParam}) | SentinelFlow AI`
+      : 'Audit Trail & Compliance Ledger | SentinelFlow AI';
     loadAudit();
-  }, [loadAudit]);
+  }, [loadAudit, resourceIdParam]);
 
   return (
     <AppShell>
+      <head>
+        <title>{resourceIdParam ? `Audit Trail (${resourceIdParam}) | SentinelFlow AI` : 'Audit Trail & Compliance Ledger | SentinelFlow AI'}</title>
+        <meta name="description" content="Immutable compliance audit logs, case disposition histories, analyst interventions, and evidentiary verification." />
+      </head>
       <div className="space-y-6 max-w-7xl mx-auto pb-12">
         <div className="flex flex-wrap items-center justify-between gap-4 border-b border-emerald-950/40 pb-4">
           <div>
@@ -108,7 +115,8 @@ function AuditContent() {
           <ErrorState message={error} onRetry={loadAudit} />
         ) : (
           <div className="bg-slate-900/90 rounded-2xl border border-slate-800 overflow-hidden shadow-2xl backdrop-blur-sm">
-            <table className="w-full text-left text-xs font-mono">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs font-mono">
               <thead className="bg-slate-950/90 text-slate-400 font-semibold border-b border-slate-800 uppercase tracking-wider text-[11px]">
                 <tr>
                   <th className="px-5 py-3.5">Timestamp (UTC)</th>
@@ -154,6 +162,7 @@ function AuditContent() {
                 )}
               </tbody>
             </table>
+            </div>
           </div>
         )}
       </div>

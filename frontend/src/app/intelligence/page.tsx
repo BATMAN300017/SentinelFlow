@@ -35,11 +35,16 @@ export default function IntelligencePage() {
   }, []);
 
   useEffect(() => {
+    document.title = 'Model Intelligence & Explainability | SentinelFlow AI';
     loadData();
   }, [loadData]);
 
   return (
     <AppShell>
+      <head>
+        <title>Model Intelligence &amp; Explainability | SentinelFlow AI</title>
+        <meta name="description" content="Multi-signal ensemble model inspection, heuristic rules, Isolation Forest telemetry, and detection explainability." />
+      </head>
       <div className="space-y-6 max-w-7xl mx-auto">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>

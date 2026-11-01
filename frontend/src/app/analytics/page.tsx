@@ -29,11 +29,16 @@ export default function AnalyticsPage() {
   }, []);
 
   useEffect(() => {
+    document.title = 'Portfolio Analytics & Risk Trends | SentinelFlow AI';
     loadData();
   }, [loadData]);
 
   return (
     <AppShell>
+      <head>
+        <title>Portfolio Analytics &amp; Risk Trends | SentinelFlow AI</title>
+        <meta name="description" content="Portfolio-level fraud risk score distributions, transaction throughput trends, and alert velocity curves." />
+      </head>
       <div className="space-y-6 max-w-7xl mx-auto">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>

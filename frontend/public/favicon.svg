@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none">
+  <defs>
+    <linearGradient id="shieldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stopColor="#0ea5e9" />
+      <stop offset="100%" stopColor="#4f46e5" />
+    </linearGradient>
+    <linearGradient id="glowGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stopColor="#38bdf8" />
+      <stop offset="100%" stopColor="#818cf8" />
+    </linearGradient>
+  </defs>
+  <!-- Background Shield Container -->
+  <rect width="32" height="32" rx="8" fill="#020617" />
+  <rect x="1" y="1" width="30" height="30" rx="7" stroke="#1e293b" stroke-width="1.5" />
+  
+  <!-- Cyber Shield Motif -->
+  <path
+    d="M16 5L7 9V15.5C7 21 10.8 25.8 16 27C21.2 25.8 25 21 25 15.5V9L16 5Z"
+    fill="url(#shieldGrad)"
+    stroke="url(#glowGrad)"
+    stroke-width="1.5"
+    stroke-linejoin="round"
+  />
+  
+  <!-- Inner Circuit Checkmark / Flow -->
+  <path
+    d="M12 16L15 19L20 13"
+    stroke="#ffffff"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+  
+  <!-- Neural Nodes -->
+  <circle cx="16" cy="5" r="1.5" fill="#38bdf8" />
+  <circle cx="7" cy="9" r="1.5" fill="#38bdf8" />
+  <circle cx="25" cy="9" r="1.5" fill="#38bdf8" />
+</svg>

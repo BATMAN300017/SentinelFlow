@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { DispositionType, DispositionPayload } from '@/types/investigation';
 import { X, CheckCircle2, ShieldAlert } from 'lucide-react';
+import { useToast } from '@/components/shared/toast';
 
 interface DispositionDialogProps {
   isOpen: boolean;
@@ -17,6 +18,7 @@ export function DispositionDialog({
   onSubmit,
   caseNumber = 'CASE-000',
 }: DispositionDialogProps) {
+  const { showToast } = useToast();
   const [disposition, setDisposition] = useState<DispositionType>('CONFIRMED_FRAUD');
   const [rationale, setRationale] = useState('');
   const [escalateSar, setEscalateSar] = useState(true);
@@ -30,17 +32,26 @@ export function DispositionDialog({
     setSubmitting(true);
     try {
       await onSubmit({ disposition, rationale, escalate_sar: escalateSar });
+      showToast({
+        type: 'success',
+        title: 'Disposition Submitted',
+        message: `Case ${caseNumber} dispositioned as ${disposition.replace(/_/g, ' ')}.`,
+      });
       onClose();
-    } catch (err) {
-      alert('Failed to submit disposition: ' + err);
+    } catch (err: any) {
+      showToast({
+        type: 'error',
+        title: 'Submission Failed',
+        message: err?.message || String(err) || 'Failed to submit case disposition.',
+      });
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fade-in">
-      <div className="w-full max-w-lg rounded-2xl border border-slate-800 bg-slate-900 p-6 shadow-2xl space-y-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-sm animate-fade-in overflow-y-auto">
+      <div className="w-full max-w-lg rounded-2xl border border-slate-800 bg-slate-900 max-h-[92vh] overflow-y-auto p-4 sm:p-6 shadow-2xl space-y-4">
         <div className="flex items-center justify-between border-b border-slate-800 pb-3">
           <div className="flex items-center space-x-2">
             <ShieldAlert className="w-5 h-5 text-sky-400" />

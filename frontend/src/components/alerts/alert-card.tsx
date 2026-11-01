@@ -41,7 +41,7 @@ export function AlertCard({ alert, onInvestigate, isInvestigating }: AlertCardPr
 
       <div className="flex items-center justify-between pt-2">
         <Link
-          href={`/alerts/${alert.id}`}
+          href={`/alerts?id=${alert.id}`}
           className="text-xs font-mono text-slate-400 hover:text-slate-200 transition"
         >
           View Details &rarr;

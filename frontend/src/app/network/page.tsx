@@ -40,8 +40,16 @@ export default function NetworkPage() {
     loadGraph();
   }, [loadGraph]);
 
+  useEffect(() => {
+    document.title = 'Network Intelligence Graph | SentinelFlow AI';
+  }, []);
+
   return (
     <AppShell>
+      <head>
+        <title>Network Intelligence Graph | SentinelFlow AI</title>
+        <meta name="description" content="Interactive topological transaction graphs, account clustering, and multi-hop mule chain visualization." />
+      </head>
       <div className="space-y-6 max-w-7xl mx-auto">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>

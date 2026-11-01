@@ -186,8 +186,16 @@ function FundFlowContent() {
     };
   }, [data]);
 
+  useEffect(() => {
+    document.title = 'Fund Flow Tracing & Sankey Graph | SentinelFlow AI';
+  }, []);
+
   return (
     <AppShell>
+      <head>
+        <title>Fund Flow Tracing &amp; Sankey Graph | SentinelFlow AI</title>
+        <meta name="description" content="Multi-hop money-flow Sankey visualization, pass-through mule network discovery, and cross-border payment tracing." />
+      </head>
       <div className="space-y-6 max-w-7xl mx-auto pb-16">
         {/* Workspace Title & Period Indicator */}
         <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-800 pb-4">
@@ -364,15 +372,15 @@ function FundFlowContent() {
             {/* The Sankey Diagram Canvas (occupies 2 columns on large screens) */}
             <div className="lg:col-span-2 rounded-2xl border border-slate-800 bg-slate-950 p-4 shadow-2xl relative overflow-hidden flex flex-col justify-between">
               {/* Column Tier Labels */}
-              <div className="grid grid-cols-3 text-center border-b border-slate-900 pb-2 mb-2 text-xs font-mono font-bold uppercase tracking-wider">
+              <div className="grid grid-cols-3 text-center border-b border-slate-900 pb-2 mb-2 text-[10px] sm:text-xs font-mono font-bold uppercase tracking-wider">
                 <div className="text-emerald-400">1. Originator Accounts ({sankeyLayout.sourceCount})</div>
                 <div className="text-amber-400">2. Layering Intermediaries ({sankeyLayout.interCount})</div>
                 <div className="text-sky-400">3. Beneficiary Accounts ({sankeyLayout.destCount})</div>
               </div>
 
               {/* SVG Canvas */}
-              <div className="w-full aspect-[16/9] min-h-[460px] relative">
-                <svg viewBox="0 0 980 540" className="w-full h-full select-none">
+              <div className="w-full aspect-[16/9] min-h-[300px] sm:min-h-[460px] relative overflow-hidden">
+                <svg viewBox="0 0 980 540" preserveAspectRatio="xMidYMid meet" className="w-full h-full select-none">
                   <defs>
                     <linearGradient id="flowGradRoutine" x1="0%" y1="0%" x2="100%" y2="0%">
                       <stop offset="0%" stopColor="#10B981" stopOpacity="0.45" />

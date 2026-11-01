@@ -96,7 +96,7 @@ export function TransactionDetail({ transaction, onClose }: TransactionDetailPro
 
       <div className="pt-4 border-t border-slate-800 flex justify-end">
         <Link
-          href={`/transactions/${transaction.id}`}
+          href={`/transactions?id=${transaction.id}`}
           className="flex items-center space-x-1.5 text-xs font-mono font-bold text-sky-400 hover:text-sky-300"
         >
           <span>Open Full Transaction Audit</span>

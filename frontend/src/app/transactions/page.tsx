@@ -162,8 +162,16 @@ function TransactionsContent() {
     }
   };
 
+  useEffect(() => {
+    document.title = 'Live Transactions & Flow Analyzer | SentinelFlow AI';
+  }, []);
+
   return (
     <AppShell>
+      <head>
+        <title>Live Transactions &amp; Flow Analyzer | SentinelFlow AI</title>
+        <meta name="description" content="Real-time financial transaction surveillance, active ledger velocity, ground-truth comparison, and fund flow tracing." />
+      </head>
       <div className="space-y-6 max-w-7xl mx-auto pb-12">
         {/* Workspace Title & Actions */}
         <div className="flex flex-wrap items-center justify-between gap-4 border-b border-emerald-950/40 pb-4">
@@ -594,8 +602,8 @@ function TransactionsContent() {
 
         {/* Focused Transaction Modal */}
         {selectedTxn && (
-          <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-2xl w-full p-6 shadow-2xl space-y-5 animate-in fade-in zoom-in-95">
+          <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-2xl w-full max-h-[92vh] overflow-y-auto p-4 sm:p-6 shadow-2xl space-y-5 animate-in fade-in zoom-in-95">
               <div className="flex items-start justify-between border-b border-slate-800 pb-3">
                 <div>
                   <div className="text-xs font-mono font-bold text-sky-400">{selectedTxn.id}</div>
@@ -609,7 +617,7 @@ function TransactionsContent() {
                 </button>
               </div>
 
-              <div className="grid grid-cols-2 gap-4 text-xs font-mono">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 text-xs font-mono">
                 <div className="p-3 bg-slate-950 rounded-xl border border-slate-800">
                   <span className="text-slate-500 text-[10px]">Gross Settlement</span>
                   <div className="text-lg font-bold text-slate-100 mt-1">
@@ -639,19 +647,19 @@ function TransactionsContent() {
                 </div>
               </div>
 
-              <div className="border-t border-slate-800 pt-4 flex items-center justify-between">
+              <div className="border-t border-slate-800 pt-4 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
                 <Link
                   href={`/fund-flow?account_id=${selectedTxn.source_account_id}`}
-                  className="px-3 py-1.5 bg-emerald-950 hover:bg-emerald-900 border border-emerald-800 text-emerald-300 rounded text-xs font-bold transition flex items-center space-x-1"
+                  className="px-3 py-1.5 bg-emerald-950 hover:bg-emerald-900 border border-emerald-800 text-emerald-300 rounded text-xs font-bold transition flex items-center justify-center space-x-1"
                 >
                   <Network className="w-3.5 h-3.5" />
                   <span>Trace Fund Flow</span>
                 </Link>
 
-                <div className="flex items-center space-x-2">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                   <Link
                     href={`/audit?resource_id=${selectedTxn.id}&resource_type=TRANSACTION`}
-                    className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded text-xs font-bold transition flex items-center space-x-1"
+                    className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded text-xs font-bold transition flex items-center justify-center space-x-1"
                   >
                     <ScrollText className="w-3.5 h-3.5" />
                     <span>Open Full Audit</span>
@@ -659,7 +667,7 @@ function TransactionsContent() {
 
                   <Link
                     href={selectedTxn.linked_investigation_id ? `/investigations?id=${selectedTxn.linked_investigation_id}` : `/investigations?txn_id=${selectedTxn.id}`}
-                    className="px-4 py-1.5 bg-sky-600 hover:bg-sky-500 text-white rounded text-xs font-bold transition flex items-center space-x-1"
+                    className="px-4 py-1.5 bg-sky-600 hover:bg-sky-500 text-white rounded text-xs font-bold transition flex items-center justify-center space-x-1"
                   >
                     <Briefcase className="w-3.5 h-3.5" />
                     <span>Open Case</span>

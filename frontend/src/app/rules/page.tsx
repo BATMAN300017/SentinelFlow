@@ -27,11 +27,16 @@ export default function RulesPage() {
   }, []);
 
   useEffect(() => {
+    document.title = 'Detection Rules & Thresholds | SentinelFlow AI';
     loadRules();
   }, [loadRules]);
 
   return (
     <AppShell>
+      <head>
+        <title>Detection Rules &amp; Thresholds | SentinelFlow AI</title>
+        <meta name="description" content="Configured deterministic heuristics, velocity windows, and policy thresholds for real-time fraud prevention." />
+      </head>
       <div className="space-y-6 max-w-7xl mx-auto">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
@@ -62,7 +67,8 @@ export default function RulesPage() {
           <ErrorState message={error} onRetry={loadRules} />
         ) : (
           <div className="bg-slate-900/80 rounded-2xl border border-slate-800 overflow-hidden shadow-xl backdrop-blur-sm">
-            <table className="w-full text-left text-xs font-mono">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs font-mono">
               <thead className="bg-slate-950/80 text-slate-400 font-semibold border-b border-slate-800 uppercase tracking-wider text-[11px]">
                 <tr>
                   <th className="px-5 py-3.5">Rule Code</th>
@@ -93,6 +99,7 @@ export default function RulesPage() {
                 ))}
               </tbody>
             </table>
+            </div>
           </div>
         )}
       </div>
