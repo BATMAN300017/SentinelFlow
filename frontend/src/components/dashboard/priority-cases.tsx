@@ -34,7 +34,7 @@ export function PriorityCases({ cases = [] }: PriorityCasesProps) {
           cases.slice(0, 4).map((c) => (
             <Link
               key={c.id}
-              href={`/investigations/${c.id}`}
+              href={`/investigations?id=${c.id}`}
               className="p-3.5 rounded-xl border border-slate-800 bg-slate-950/60 hover:bg-slate-800/50 hover:border-slate-700 transition flex items-center justify-between group block"
             >
               <div className="space-y-1 pr-3">

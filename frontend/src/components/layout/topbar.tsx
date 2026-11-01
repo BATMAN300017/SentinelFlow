@@ -4,13 +4,14 @@ import React, { useEffect, useState } from 'react';
 import { pingApi } from '@/lib/api-client';
 import { usePermissions } from '@/hooks/use-permissions';
 import { UserRole } from '@/lib/auth';
-import { Activity, ShieldCheck, Wifi, WifiOff, Search, User } from 'lucide-react';
+import { Activity, ShieldCheck, Wifi, WifiOff, Search, User, Menu } from 'lucide-react';
 
 interface TopbarProps {
   onOpenCommandPalette?: () => void;
+  onToggleMobileMenu?: () => void;
 }
 
-export function Topbar({ onOpenCommandPalette }: TopbarProps) {
+export function Topbar({ onOpenCommandPalette, onToggleMobileMenu }: TopbarProps) {
   const { user, role, switchRole } = usePermissions();
   const [apiStatus, setApiStatus] = useState<{
     ok: boolean;
@@ -29,61 +30,83 @@ export function Topbar({ onOpenCommandPalette }: TopbarProps) {
   }, []);
 
   return (
-    <header className="h-14 border-b border-slate-850 bg-slate-950/80 backdrop-blur-md px-6 flex items-center justify-between z-20">
-      {/* Left: Search Trigger */}
-      <div className="flex items-center space-x-4">
+    <header className="h-14 border-b border-slate-850 bg-slate-950/80 backdrop-blur-md px-4 sm:px-6 flex items-center justify-between z-20">
+      {/* Left: Mobile Menu Toggle & Search Trigger */}
+      <div className="flex items-center space-x-2 sm:space-x-4">
+        {onToggleMobileMenu && (
+          <button
+            type="button"
+            onClick={onToggleMobileMenu}
+            className="md:hidden p-2 rounded-lg text-slate-400 hover:text-slate-100 hover:bg-slate-900 border border-slate-800 transition"
+            aria-label="Toggle navigation drawer"
+          >
+            <Menu className="w-4 h-4" />
+          </button>
+        )}
         <button
           onClick={onOpenCommandPalette}
-          className="flex items-center space-x-2 px-3 py-1.5 rounded-lg text-xs font-mono text-slate-400 bg-slate-900 border border-slate-800 hover:border-slate-700 hover:text-slate-200 transition"
+          className="flex items-center space-x-2 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-mono text-slate-400 bg-slate-900 border border-slate-800 hover:border-slate-700 hover:text-slate-200 transition"
         >
-          <Search className="w-3.5 h-3.5" />
-          <span>Quick search cases, transactions...</span>
-          <kbd className="text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700">
+          <Search className="w-3.5 h-3.5 shrink-0" />
+          <span className="hidden sm:inline">Quick search cases, transactions...</span>
+          <span className="sm:hidden text-[11px]">Search...</span>
+          <kbd className="hidden sm:inline-block text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700">
             ⌘K
           </kbd>
         </button>
       </div>
 
       {/* Right: API Connectivity Pill + User Session */}
-      <div className="flex items-center space-x-4">
+      <div className="flex items-center space-x-2 sm:space-x-4">
         {/* API Status Pill */}
-        <div className="flex items-center space-x-2 px-2.5 py-1 rounded-full text-[11px] font-mono border bg-slate-900 border-slate-800">
+        <div className="flex items-center space-x-1.5 sm:space-x-2 px-2 sm:px-2.5 py-1 rounded-full text-[10px] sm:text-[11px] font-mono border bg-slate-900 border-slate-800">
           {apiStatus.checked ? (
             apiStatus.ok ? (
               <>
-                <span className="relative flex h-2 w-2">
+                <span className="relative flex h-2 w-2 shrink-0">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
                 </span>
-                <span className="text-emerald-400 font-medium">Render API Connected</span>
-                <span className="text-slate-500">({apiStatus.latencyMs}ms)</span>
+                <span className="text-emerald-400 font-medium hidden xs:inline sm:inline">API Connected</span>
+                <span className="text-emerald-400 font-medium xs:hidden">Online</span>
+                <span className="text-slate-500 hidden md:inline">({apiStatus.latencyMs}ms)</span>
               </>
             ) : (
               <>
-                <WifiOff className="w-3 h-3 text-rose-400" />
-                <span className="text-rose-400 font-medium">API Connecting...</span>
+                <WifiOff className="w-3 h-3 text-rose-400 shrink-0" />
+                <span className="text-rose-400 font-medium">Reconnecting</span>
               </>
             )
           ) : (
             <>
-              <Activity className="w-3 h-3 text-sky-400 animate-spin" />
-              <span className="text-slate-400">Pinging backend...</span>
+              <Activity className="w-3 h-3 text-sky-400 animate-spin shrink-0" />
+              <span className="text-slate-400 hidden sm:inline">Pinging backend...</span>
             </>
           )}
         </div>
 
         {/* Environment Pill */}
-        <div className="hidden sm:inline-flex px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-sky-950/80 text-sky-400 border border-sky-800/80">
+        <div className="hidden lg:inline-flex px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-sky-950/80 text-sky-400 border border-sky-800/80">
           PROD-CALIBRATED
         </div>
 
-        {/* User Role Switcher */}
+        {/* User Role Switcher & Profile */}
         <div className="flex items-center space-x-2 pl-2 border-l border-slate-800">
-          <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-sky-600 to-indigo-600 flex items-center justify-center text-xs font-bold font-mono text-white">
+          <a
+            href={`mailto:${user.email}`}
+            title={`Logged in as ${user.name} (${user.email})`}
+            className="w-7 h-7 rounded-full bg-gradient-to-tr from-sky-600 to-indigo-600 flex items-center justify-center text-xs font-bold font-mono text-white hover:opacity-90 transition shrink-0"
+          >
             {user.avatarInitials}
-          </div>
+          </a>
           <div className="text-left hidden md:block">
-            <div className="text-xs font-semibold text-slate-200 leading-none">{user.name}</div>
+            <a
+              href={`mailto:${user.email}`}
+              className="text-xs font-semibold text-slate-200 leading-none hover:text-sky-300 transition block truncate max-w-[120px]"
+              title={`Send email to ${user.email}`}
+            >
+              {user.name}
+            </a>
             <select
               value={role}
               onChange={(e) => switchRole(e.target.value as UserRole)}

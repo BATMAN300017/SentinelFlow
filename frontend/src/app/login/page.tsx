@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { fetchApi } from '@/lib/api-client';
 import { useRouter } from 'next/navigation';
 import { Shield, Lock, User, ArrowRight } from 'lucide-react';
@@ -12,6 +12,10 @@ export default function LoginPage() {
   const [password, setPassword] = useState('password123');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    document.title = 'Analyst Sign In | SentinelFlow AI';
+  }, []);
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
@@ -35,6 +39,10 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-950 p-4 font-mono">
+      <head>
+        <title>Analyst Sign In | SentinelFlow AI</title>
+        <meta name="description" content="Secure analyst authentication gateway to SentinelFlow AI financial crime surveillance platform." />
+      </head>
       <div className="w-full max-w-md p-8 rounded-3xl border border-slate-800 bg-slate-900/90 shadow-2xl backdrop-blur-xl space-y-6">
         <div className="text-center space-y-2">
           <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-sky-500 to-indigo-600 flex items-center justify-center text-white mx-auto shadow-lg shadow-sky-500/20">
@@ -89,8 +97,9 @@ export default function LoginPage() {
           </button>
         </form>
 
-        <div className="pt-2 border-t border-slate-800 text-[11px] text-slate-500 text-center">
-          Production Security Perimeter • Render Backend Gateway
+        <div className="pt-2 border-t border-slate-800 text-[11px] text-slate-500 text-center space-y-1">
+          <div>Production Security Perimeter • Render Backend Gateway</div>
+          <div>&copy; 2026 SentinelFlow AI &bull; All rights reserved</div>
         </div>
       </div>
     </div>

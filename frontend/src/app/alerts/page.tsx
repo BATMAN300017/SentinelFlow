@@ -10,8 +10,10 @@ import {
   ExternalLink, AlertTriangle, ArrowLeftRight, CheckCircle2, ChevronRight, X
 } from 'lucide-react';
 import { LoadingState } from '@/components/shared/loading-state';
+import { useToast } from '@/components/shared/toast';
 
 function AlertsContent() {
+  const { showToast } = useToast();
   const searchParams = useSearchParams();
   const targetAlertId = searchParams.get('id');
 
@@ -53,9 +55,18 @@ function AlertsContent() {
         setSelectedDossier(res.scam_dossier);
         setModalOpen(true);
         loadAlerts();
+        showToast({
+          type: 'success',
+          title: 'Investigation Initialized',
+          message: `Alert ${alertId} converted to investigation case with evidentiary route map.`,
+        });
       }
     } catch (e: any) {
-      alert("Failed to investigate alert: " + (e.message || e));
+      showToast({
+        type: 'error',
+        title: 'Action Failed',
+        message: e.message || `Unable to convert alert ${alertId} into an investigation.`,
+      });
     } finally {
       setInvestigatingId(null);
     }
@@ -73,8 +84,16 @@ function AlertsContent() {
     return true;
   });
 
+  useEffect(() => {
+    document.title = 'Alerts Queue & Triage | SentinelFlow AI';
+  }, []);
+
   return (
     <AppShell>
+      <head>
+        <title>Alerts Queue &amp; Triage | SentinelFlow AI</title>
+        <meta name="description" content="Prioritized queue of high-risk financial crime incidents, suspicious transaction patterns, and alert triage dossiers." />
+      </head>
       <div className="space-y-6 max-w-7xl mx-auto pb-12">
         {/* Header */}
         <div className="flex flex-wrap items-center justify-between gap-4 border-b border-rose-950/40 pb-4">
@@ -403,16 +422,16 @@ function AlertsContent() {
               </div>
 
               {/* Modal Footer */}
-              <div className="border-t border-slate-800 pt-4 flex items-center justify-between">
+              <div className="border-t border-slate-800 pt-4 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
                 <Link
                   href={`/audit?resource_id=${selectedDossier.alert_id || selectedDossier.case_number}&resource_type=ALERT`}
-                  className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-mono font-medium transition flex items-center space-x-1"
+                  className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-mono font-medium transition flex items-center justify-center space-x-1"
                 >
                   <ScrollText className="w-3.5 h-3.5" />
                   <span>View Case Audit Trail</span>
                 </Link>
 
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center space-x-2 justify-end">
                   <button
                     onClick={() => setModalOpen(false)}
                     className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-medium transition"
@@ -422,7 +441,7 @@ function AlertsContent() {
                   {selectedDossier.investigation_id && (
                     <Link
                       href={`/investigations?id=${selectedDossier.investigation_id}`}
-                      className="px-4 py-2 bg-sky-600 hover:bg-sky-500 text-white rounded-lg text-xs font-medium shadow-sm transition"
+                      className="px-4 py-2 bg-sky-600 hover:bg-sky-500 text-white rounded-lg text-xs font-medium shadow-sm transition text-center"
                     >
                       Open Full Dossier &rarr;
                     </Link>

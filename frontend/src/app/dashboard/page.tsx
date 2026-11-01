@@ -10,10 +10,12 @@ import { PriorityCases } from '@/components/dashboard/priority-cases';
 import { LiveActivityFeed } from '@/components/dashboard/live-activity-feed';
 import { LoadingState } from '@/components/shared/loading-state';
 import { ErrorState } from '@/components/shared/error-state';
+import { useToast } from '@/components/shared/toast';
 import { fetchApi } from '@/lib/api-client';
 import { ShieldCheck, Activity, AlertOctagon, Briefcase, RefreshCw } from 'lucide-react';
 
 export default function DashboardPage() {
+  const { showToast } = useToast();
   const [summary, setSummary] = useState<any>(null);
   const [trends, setTrends] = useState<any>(null);
   const [cases, setCases] = useState<any[]>([]);
@@ -43,12 +45,26 @@ export default function DashboardPage() {
     }
   }, []);
 
+  const handleManualSync = async () => {
+    await loadData();
+    showToast({
+      type: 'success',
+      title: 'Telemetry Refreshed',
+      message: 'Command Center synchronized with latest multi-signal telemetry.',
+    });
+  };
+
   useEffect(() => {
+    document.title = 'Fraud Command Center | SentinelFlow AI';
     loadData();
   }, [loadData]);
 
   return (
     <AppShell>
+      <head>
+        <title>Fraud Command Center | SentinelFlow AI</title>
+        <meta name="description" content="Real-time multi-signal financial crime surveillance, alert generation, and incident command telemetry." />
+      </head>
       <div className="space-y-8 max-w-7xl mx-auto">
         {/* Page Header */}
         <div className="flex flex-wrap items-center justify-between gap-4">
@@ -65,7 +81,7 @@ export default function DashboardPage() {
           </div>
 
           <button
-            onClick={loadData}
+            onClick={handleManualSync}
             disabled={loading}
             className="flex items-center space-x-2 px-3 py-1.5 rounded-lg text-xs font-mono font-semibold bg-slate-800 hover:bg-slate-700 disabled:opacity-50 text-slate-200 border border-slate-700 transition"
           >

@@ -18,6 +18,7 @@ import {
   Shield,
   Activity,
   Workflow,
+  X,
 } from 'lucide-react';
 import { APP_NAME, APP_TAGLINE } from '@/lib/constants';
 
@@ -69,27 +70,49 @@ const SECTIONS = [
   },
 ];
 
-export function Sidebar() {
+interface SidebarProps {
+  isOpen?: boolean;
+  onClose?: () => void;
+}
+
+export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const pathname = usePathname();
 
-  return (
-    <aside className="w-64 shrink-0 flex flex-col h-screen bg-slate-950 border-r border-slate-850 select-none">
-      {/* Brand Header */}
-      <div className="p-5 border-b border-slate-850 flex items-center space-x-3">
-        <div className="p-2 rounded-xl bg-gradient-to-br from-sky-500 to-indigo-600 text-white shadow-lg shadow-sky-500/20">
-          <Shield className="w-5 h-5" />
-        </div>
-        <div>
-          <div className="text-sm font-bold tracking-wider font-mono text-slate-100 flex items-center space-x-1.5">
-            <span>{APP_NAME}</span>
-            <span className="text-[10px] px-1 py-0.2 rounded bg-sky-500/20 text-sky-400 border border-sky-500/30 font-mono">
-              v2.0
-            </span>
+  const sidebarContent = (
+    <div className="flex flex-col h-full bg-slate-950 border-r border-slate-850 select-none">
+      {/* Brand Header - Clickable Logo & Title to Dashboard */}
+      <div className="p-5 border-b border-slate-850 flex items-center justify-between">
+        <Link
+          href="/dashboard"
+          onClick={onClose}
+          className="flex items-center space-x-3 group transition"
+          title="Go to SentinelFlow Command Center"
+        >
+          <div className="p-2 rounded-xl bg-gradient-to-br from-sky-500 to-indigo-600 text-white shadow-lg shadow-sky-500/20 group-hover:scale-105 transition-transform">
+            <Shield className="w-5 h-5" />
           </div>
-          <div className="text-[11px] text-slate-500 font-mono tracking-tight truncate max-w-[145px]">
-            {APP_TAGLINE}
+          <div>
+            <div className="text-sm font-bold tracking-wider font-mono text-slate-100 flex items-center space-x-1.5 group-hover:text-sky-300 transition-colors">
+              <span>{APP_NAME}</span>
+              <span className="text-[10px] px-1 py-0.2 rounded bg-sky-500/20 text-sky-400 border border-sky-500/30 font-mono">
+                v2.0
+              </span>
+            </div>
+            <div className="text-[11px] text-slate-500 font-mono tracking-tight truncate max-w-[145px]">
+              {APP_TAGLINE}
+            </div>
           </div>
-        </div>
+        </Link>
+        {onClose && (
+          <button
+            type="button"
+            onClick={onClose}
+            className="md:hidden p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-900 transition"
+            aria-label="Close navigation menu"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        )}
       </div>
 
       {/* Nav List */}
@@ -106,6 +129,7 @@ export function Sidebar() {
                   <Link
                     key={item.href}
                     href={item.href}
+                    onClick={onClose}
                     className={`flex items-center space-x-3 px-3 py-2 rounded-lg text-xs font-mono font-medium transition-all ${
                       isActive
                         ? 'bg-sky-500/15 text-sky-400 border border-sky-500/30 shadow-sm shadow-sky-500/10'
@@ -124,9 +148,9 @@ export function Sidebar() {
         ))}
       </nav>
 
-      {/* System Telemetry Footer */}
-      <div className="p-3 border-t border-slate-850 bg-slate-950/70">
-        <div className="p-3 rounded-xl bg-slate-900/80 border border-slate-800 space-y-2">
+      {/* System Telemetry & Copyright Footer */}
+      <div className="p-3 border-t border-slate-850 bg-slate-950/70 space-y-2">
+        <div className="p-3 rounded-xl bg-slate-900/80 border border-slate-800 space-y-1.5">
           <div className="flex items-center justify-between text-[11px] font-mono text-slate-400">
             <span className="flex items-center space-x-1.5">
               <Activity className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
@@ -138,7 +162,35 @@ export function Sidebar() {
             Canonical Cloudflare App • Render API
           </div>
         </div>
+        <div className="text-[10px] text-slate-500 font-mono text-center px-1">
+          &copy; 2026 SentinelFlow AI &bull; All rights reserved
+        </div>
       </div>
-    </aside>
+    </div>
+  );
+
+  return (
+    <>
+      {/* Desktop Persistent Sidebar */}
+      <aside className="hidden md:flex w-64 shrink-0 flex-col h-screen">
+        {sidebarContent}
+      </aside>
+
+      {/* Mobile Drawer Navigation */}
+      {isOpen && (
+        <div className="fixed inset-0 z-50 md:hidden">
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm transition-opacity"
+            onClick={onClose}
+            aria-hidden="true"
+          />
+          {/* Drawer */}
+          <div className="fixed inset-y-0 left-0 w-72 max-w-[85vw] flex flex-col shadow-2xl animate-fade-in">
+            {sidebarContent}
+          </div>
+        </div>
+      )}
+    </>
   );
 }

@@ -35,6 +35,7 @@ export default function FeedbackLearningPage() {
   }, []);
 
   useEffect(() => {
+    document.title = 'Model Learning & Feedback Loop | SentinelFlow AI';
     loadData();
   }, [loadData]);
 
@@ -54,6 +55,10 @@ export default function FeedbackLearningPage() {
 
   return (
     <AppShell>
+      <head>
+        <title>Model Learning &amp; Feedback Loop | SentinelFlow AI</title>
+        <meta name="description" content="Analyst disposition feedback capture, active learning dataset curation, and governed MLOps model promotion." />
+      </head>
       <div className="space-y-6 max-w-7xl mx-auto">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>

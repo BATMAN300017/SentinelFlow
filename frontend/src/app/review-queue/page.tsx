@@ -1,13 +1,21 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { AppShell } from '@/components/layout/app-shell';
 import Link from 'next/link';
 import { ShieldAlert, ArrowRight, CheckCircle2 } from 'lucide-react';
 
 export default function ReviewQueuePage() {
+  useEffect(() => {
+    document.title = 'Analyst Review & Triage Queue | SentinelFlow AI';
+  }, []);
+
   return (
     <AppShell>
+      <head>
+        <title>Analyst Review &amp; Triage Queue | SentinelFlow AI</title>
+        <meta name="description" content="Senior investigator review queue for incident dispositioning, peer approvals, and regulatory filing triage." />
+      </head>
       <div className="space-y-6 max-w-5xl mx-auto">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold font-mono text-slate-100 tracking-tight flex items-center space-x-3">

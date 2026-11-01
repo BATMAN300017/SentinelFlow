@@ -34,8 +34,16 @@ export default function EntityDetailPageClient() {
     loadData();
   }, [entityId]);
 
+  useEffect(() => {
+    document.title = entityId ? `Entity Profile (${entityId}) | SentinelFlow AI` : 'Entity Profile | SentinelFlow AI';
+  }, [entityId]);
+
   return (
     <AppShell>
+      <head>
+        <title>{entityId ? `Entity Profile (${entityId}) | SentinelFlow AI` : 'Entity Profile | SentinelFlow AI'}</title>
+        <meta name="description" content="In-depth entity counterparty risk profile, behavioral metrics, and connected financial crime alerts." />
+      </head>
       <div className="space-y-6 max-w-5xl mx-auto">
         <div className="flex items-center justify-between">
           <Link

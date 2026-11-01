@@ -10,6 +10,7 @@ export default function SettingsPage() {
   const [apiHealth, setApiHealth] = useState<any>(null);
 
   useEffect(() => {
+    document.title = 'System Configuration & Architecture | SentinelFlow AI';
     async function check() {
       const res = await pingApi();
       setApiHealth(res);
@@ -19,6 +20,10 @@ export default function SettingsPage() {
 
   return (
     <AppShell>
+      <head>
+        <title>System Configuration &amp; Architecture | SentinelFlow AI</title>
+        <meta name="description" content="Technical runtime architecture, canonical Cloudflare frontend, Render FastAPI backend connectivity, and ensemble model weights." />
+      </head>
       <div className="space-y-6 max-w-5xl mx-auto">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold font-mono text-slate-100 tracking-tight flex items-center space-x-3">
@@ -117,6 +122,72 @@ export default function SettingsPage() {
               <p className="text-[10px] text-slate-500">Mule chains & cycles</p>
             </div>
           </div>
+        {/* Operational Contacts & Governance Support */}
+        <div className="p-6 rounded-2xl border border-slate-800 bg-slate-900/80 shadow-lg backdrop-blur-sm space-y-4">
+          <div className="flex items-center space-x-2">
+            <Lock className="w-5 h-5 text-emerald-400" />
+            <h3 className="text-sm font-bold font-mono text-slate-100">
+              Operational Governance &amp; Security Contacts
+            </h3>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs font-mono">
+            <div className="p-4 rounded-xl bg-slate-950 border border-slate-850 space-y-2">
+              <span className="text-slate-500 text-[10px] uppercase font-bold tracking-wider">
+                Financial Crime Operations Desk
+              </span>
+              <div className="space-y-1">
+                <div>
+                  <span className="text-slate-400">Incident Hotline: </span>
+                  <a
+                    href="tel:+18005550199"
+                    className="text-emerald-400 hover:text-emerald-300 underline font-semibold transition"
+                  >
+                    +1 (800) 555-0199
+                  </a>
+                </div>
+                <div>
+                  <span className="text-slate-400">Dispatch Email: </span>
+                  <a
+                    href="mailto:operations@sentinelflow.bank"
+                    className="text-sky-400 hover:text-sky-300 underline transition"
+                  >
+                    operations@sentinelflow.bank
+                  </a>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-4 rounded-xl bg-slate-950 border border-slate-850 space-y-2">
+              <span className="text-slate-500 text-[10px] uppercase font-bold tracking-wider">
+                Compliance &amp; Model Governance
+              </span>
+              <div className="space-y-1">
+                <div>
+                  <span className="text-slate-400">Audit Hotline: </span>
+                  <a
+                    href="tel:+18005550188"
+                    className="text-emerald-400 hover:text-emerald-300 underline font-semibold transition"
+                  >
+                    +1 (800) 555-0188
+                  </a>
+                </div>
+                <div>
+                  <span className="text-slate-400">Governance Email: </span>
+                  <a
+                    href="mailto:compliance@sentinelflow.bank"
+                    className="text-sky-400 hover:text-sky-300 underline transition"
+                  >
+                    compliance@sentinelflow.bank
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* System Copyright & Governance Notice */}
+        <div className="text-center py-4 border-t border-slate-850 text-xs font-mono text-slate-500">
+          &copy; 2026 SentinelFlow AI &bull; Autonomous Financial Crime Intelligence Platform &bull; All rights reserved.
         </div>
       </div>
     </AppShell>

@@ -7,6 +7,7 @@ export default function HomePage() {
   const router = useRouter();
 
   useEffect(() => {
+    document.title = 'SentinelFlow AI — Autonomous Financial Crime Intelligence';
     if (typeof window === 'undefined') return;
 
     const path = window.location.pathname;

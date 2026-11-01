@@ -11,14 +11,17 @@ interface CommandPaletteProps {
 
 const COMMANDS = [
   { name: 'Command Center', path: '/dashboard', section: 'Navigation' },
-  { name: 'Live Transactions', path: '/transactions', section: 'Navigation' },
+  { name: 'Live Transactions & Flow Analyzer', path: '/transactions', section: 'Navigation' },
   { name: 'Alerts Queue & Triage', path: '/alerts', section: 'Navigation' },
   { name: 'Investigation Workspace', path: '/investigations', section: 'Navigation' },
-  { name: 'Network Intelligence', path: '/network', section: 'Navigation' },
-  { name: 'Model Intelligence & Learning', path: '/intelligence', section: 'Navigation' },
-  { name: 'Detection Rules & Heuristics', path: '/rules', section: 'Navigation' },
-  { name: 'Audit Trail', path: '/audit', section: 'Navigation' },
-  { name: 'System Settings', path: '/settings', section: 'Navigation' },
+  { name: 'Fund Flow Tracing (Sankey)', path: '/fund-flow', section: 'Surveillance' },
+  { name: 'Network Intelligence Graph', path: '/network', section: 'Surveillance' },
+  { name: 'Entity Profiles & Accounts', path: '/entities', section: 'Surveillance' },
+  { name: 'Model Intelligence & Explainability', path: '/intelligence', section: 'Machine Learning' },
+  { name: 'Model Learning & Feedback Loop', path: '/feedback', section: 'Machine Learning' },
+  { name: 'Detection Rules & Heuristics', path: '/rules', section: 'Governance' },
+  { name: 'Audit Trail & Compliance', path: '/audit', section: 'Governance' },
+  { name: 'System Settings & Architecture', path: '/settings', section: 'Configuration' },
 ];
 
 export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
@@ -52,7 +55,7 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center pt-24 px-4 bg-slate-950/80 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-start justify-center pt-12 sm:pt-24 px-3 sm:px-4 bg-slate-950/80 backdrop-blur-sm">
       <div className="w-full max-w-xl rounded-2xl border border-slate-800 bg-slate-900 shadow-2xl overflow-hidden animate-fade-in">
         <div className="flex items-center px-4 py-3 border-b border-slate-800">
           <Search className="w-5 h-5 text-slate-500 mr-3" />

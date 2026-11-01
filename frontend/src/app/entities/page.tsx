@@ -37,8 +37,16 @@ export default function EntitiesPage() {
     (e.label || e.identifier || e.id || '').toLowerCase().includes(search.toLowerCase())
   );
 
+  useEffect(() => {
+    document.title = 'Entity Profiles & Risk Intelligence | SentinelFlow AI';
+  }, []);
+
   return (
     <AppShell>
+      <head>
+        <title>Entity Profiles &amp; Risk Intelligence | SentinelFlow AI</title>
+        <meta name="description" content="Continuous counterparty risk profiling, customer baseline behaviors, and entity surveillance telemetry." />
+      </head>
       <div className="space-y-6 max-w-7xl mx-auto">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
