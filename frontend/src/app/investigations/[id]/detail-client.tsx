@@ -2,67 +2,104 @@
 
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
+import { AppShell } from '@/components/layout/app-shell';
+import { InvestigationHeader } from '@/components/investigations/investigation-header';
+import { EvidencePanel } from '@/components/investigations/evidence-panel';
+import { CaseTimeline } from '@/components/investigations/case-timeline';
+import { CaseNotes } from '@/components/investigations/case-notes';
+import { InvestigationChecklist } from '@/components/investigations/investigation-checklist';
+import { DispositionDialog } from '@/components/investigations/disposition-dialog';
+import { CaseReportPreview } from '@/components/investigations/case-report-preview';
+import { LoadingState } from '@/components/shared/loading-state';
+import { ErrorState } from '@/components/shared/error-state';
 import { fetchApi } from '@/lib/api-client';
-import Link from 'next/link';
+import { InvestigationCase, DispositionPayload } from '@/types/investigation';
 
 export default function InvestigationDetailPageClient() {
   const params = useParams();
   const caseId = params?.id as string;
-  const [caseData, setCaseData] = useState<any>(null);
+  const [caseData, setCaseData] = useState<InvestigationCase | null>(null);
   const [evidence, setEvidence] = useState<any[]>([]);
-  const [tasks, setTasks] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const [dispositionOpen, setDispositionOpen] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
 
   useEffect(() => {
     async function loadData() {
       if (!caseId) return;
+      setLoading(true);
+      setError(null);
       try {
-        const c = await fetchApi<any>(`/investigations/${caseId}`);
+        const c = await fetchApi<InvestigationCase>(`/investigations/${caseId}`);
         setCaseData(c);
-        const ev = await fetchApi<any[]>(`/investigations/${caseId}/evidence`);
+        const ev = await fetchApi<any[]>(`/investigations/${caseId}/evidence`).catch(() => []);
         setEvidence(ev || []);
-        const t = await fetchApi<any[]>(`/investigations/${caseId}/tasks`);
-        setTasks(t || []);
-      } catch (e) {
-        console.error(e);
+      } catch (err: any) {
+        setError(err.message || `Failed to retrieve case ${caseId}`);
+      } finally {
+        setLoading(false);
       }
     }
     loadData();
   }, [caseId]);
 
-  if (!caseData) return <div className="p-8 text-center text-slate-400">Loading case dossier...</div>;
+  const handleDispositionSubmit = async (payload: DispositionPayload) => {
+    if (!caseId) return;
+    const res = await fetchApi<InvestigationCase>(`/investigations/${caseId}/disposition`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+    setCaseData(res);
+  };
 
   return (
-    <div className="p-8 max-w-5xl mx-auto space-y-6">
-      <div className="flex items-center justify-between">
-        <Link href="/investigations" className="text-xs text-slate-500 hover:text-slate-800">&larr; Back to Cases</Link>
-        <span className="font-mono text-xs font-bold text-sky-700 bg-sky-50 px-2.5 py-1 rounded border border-sky-200">{caseData.case_number}</span>
-      </div>
+    <AppShell>
+      <div className="space-y-6 max-w-7xl mx-auto">
+        {loading ? (
+          <LoadingState message="Retrieving evidentiary case dossier..." rows={6} />
+        ) : error || !caseData ? (
+          <ErrorState
+            title="Dossier Unavailable"
+            message={error || `Investigation record ${caseId} could not be located.`}
+            onRetry={() => window.location.reload()}
+          />
+        ) : (
+          <>
+            <InvestigationHeader
+              caseData={caseData}
+              onOpenDisposition={() => setDispositionOpen(true)}
+              onGenerateReport={() => setReportOpen(true)}
+            />
 
-      <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
-        <h1 className="text-xl font-bold text-slate-900">{caseData.title}</h1>
-        <p className="text-xs text-slate-600">{caseData.summary}</p>
-        <div className="flex space-x-4 text-xs font-medium text-slate-700 pt-2 border-t border-slate-100">
-          <span>Priority: {caseData.priority}</span>
-          <span>Status: {caseData.status}</span>
-          <span>Completeness: {caseData.evidence_completeness_score}%</span>
-          <span>Disposition: {caseData.disposition || 'Pending'}</span>
-        </div>
-      </div>
-
-      <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
-        <h2 className="text-base font-bold text-slate-900">Case Evidence Items ({evidence.length})</h2>
-        <div className="space-y-2">
-          {evidence.map(e => (
-            <div key={e.id} className="p-3 bg-slate-50 border border-slate-200 rounded-lg text-xs flex justify-between items-start">
-              <div>
-                <span className="font-mono font-bold text-sky-700">[{e.evidence_type}]</span> {e.description}
-                <div className="font-mono text-[10px] text-slate-400 mt-0.5">Hash: {e.integrity_hash?.substring(0, 24)}...</div>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="lg:col-span-2 space-y-6">
+                <EvidencePanel evidence={evidence} accountsInvolved={caseData.accounts_involved} />
+                <CaseTimeline />
+                <CaseNotes />
               </div>
-              <span className="font-semibold text-slate-700">{e.verification_status}</span>
+
+              <div className="space-y-6">
+                <InvestigationChecklist />
+              </div>
             </div>
-          ))}
-        </div>
+
+            <DispositionDialog
+              isOpen={dispositionOpen}
+              onClose={() => setDispositionOpen(false)}
+              onSubmit={handleDispositionSubmit}
+              caseNumber={caseData.case_number}
+            />
+
+            <CaseReportPreview
+              isOpen={reportOpen}
+              onClose={() => setReportOpen(false)}
+              caseData={caseData}
+            />
+          </>
+        )}
       </div>
-    </div>
+    </AppShell>
   );
 }

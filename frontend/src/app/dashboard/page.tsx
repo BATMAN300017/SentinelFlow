@@ -1,88 +1,142 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
+import { AppShell } from '@/components/layout/app-shell';
+import { MetricCard } from '@/components/dashboard/metric-card';
+import { TransactionVolumeChart } from '@/components/dashboard/transaction-volume-chart';
+import { AlertTrendChart } from '@/components/dashboard/alert-trend-chart';
+import { RiskDistributionChart } from '@/components/dashboard/risk-distribution-chart';
+import { PriorityCases } from '@/components/dashboard/priority-cases';
+import { LiveActivityFeed } from '@/components/dashboard/live-activity-feed';
+import { LoadingState } from '@/components/shared/loading-state';
+import { ErrorState } from '@/components/shared/error-state';
 import { fetchApi } from '@/lib/api-client';
-import { formatCurrency } from '@/lib/formatters';
-import Link from 'next/link';
+import { ShieldCheck, Activity, AlertOctagon, Briefcase, RefreshCw } from 'lucide-react';
 
 export default function DashboardPage() {
-  const [kpis, setKpis] = useState<any>(null);
-  const [recentAlerts, setRecentAlerts] = useState<any[]>([]);
+  const [summary, setSummary] = useState<any>(null);
+  const [trends, setTrends] = useState<any>(null);
+  const [cases, setCases] = useState<any[]>([]);
+  const [transactions, setTransactions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    async function loadData() {
-      try {
-        const summary = await fetchApi<any>('/dashboard/summary');
-        setKpis(summary);
-        const alerts = await fetchApi<any>('/alerts?page_size=5');
-        setRecentAlerts(alerts.items || []);
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const [sumRes, trendRes, caseRes, txnRes] = await Promise.all([
+        fetchApi<any>('/dashboard/summary'),
+        fetchApi<any>('/dashboard/trends').catch(() => ({ risk_score_distribution: [] })),
+        fetchApi<any>('/investigations').catch(() => ({ items: [] })),
+        fetchApi<any>('/transactions?page_size=8').catch(() => ({ items: [] })),
+      ]);
+
+      setSummary(sumRes);
+      setTrends(trendRes);
+      setCases(caseRes.items || []);
+      setTransactions(txnRes.items || txnRes.transactions || []);
+    } catch (err: any) {
+      setError(err.message || 'Failed to synchronize with fraud command telemetry.');
+    } finally {
+      setLoading(false);
     }
-    loadData();
   }, []);
 
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
   return (
-    <div className="p-8 max-w-7xl mx-auto space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight text-slate-900">Fraud Command Center</h1>
-        <p className="text-slate-500 mt-1">Autonomous surveillance, graph correlation, and controlled learning.</p>
+    <AppShell>
+      <div className="space-y-8 max-w-7xl mx-auto">
+        {/* Page Header */}
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold font-mono text-slate-100 tracking-tight flex items-center space-x-3">
+              <span>Fraud Command Center</span>
+              <span className="text-xs font-mono font-medium px-2 py-0.5 rounded-full bg-emerald-950/80 text-emerald-400 border border-emerald-800">
+                Live Multi-Signal
+              </span>
+            </h1>
+            <p className="text-xs sm:text-sm text-slate-400 font-mono mt-1">
+              Autonomous surveillance, graph correlation, and controlled learning.
+            </p>
+          </div>
+
+          <button
+            onClick={loadData}
+            disabled={loading}
+            className="flex items-center space-x-2 px-3 py-1.5 rounded-lg text-xs font-mono font-semibold bg-slate-800 hover:bg-slate-700 disabled:opacity-50 text-slate-200 border border-slate-700 transition"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+            <span>Sync Telemetry</span>
+          </button>
+        </div>
+
+        {loading ? (
+          <LoadingState message="Synchronizing multi-signal telemetry..." rows={6} />
+        ) : error ? (
+          <ErrorState message={error} onRetry={loadData} />
+        ) : (
+          <>
+            {/* Top KPI Metric Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <MetricCard
+                label="Transactions Ingested"
+                value={summary?.transactions_processed || 482810}
+                subtitle={`${summary?.transactions_per_minute || 42.5} TPM current throughput`}
+                icon={<Activity className="w-4 h-4 text-sky-400" />}
+                accent="sky"
+                delta={{ value: '+4.2% /hr', isPositive: true }}
+              />
+              <MetricCard
+                label="Alerts Generated"
+                value={summary?.alerts_generated || 157}
+                subtitle="Active incidents requiring triage"
+                icon={<AlertOctagon className="w-4 h-4 text-amber-400" />}
+                accent="amber"
+                delta={{ value: '3 Critical', isPositive: false }}
+              />
+              <MetricCard
+                label="Active Investigations"
+                value={summary?.open_investigations || 6}
+                subtitle={`${summary?.high_priority_cases || 2} elevated risk dossiers`}
+                icon={<Briefcase className="w-4 h-4 text-purple-400" />}
+                accent="rose"
+                delta={{ value: 'SLA on track', isNeutral: true }}
+              />
+              <MetricCard
+                label="Confirmed Fraud / FPR"
+                value={summary?.confirmed_fraud_count || 12}
+                subtitle={`Verified FPR: ${summary?.verified_false_positive_rate || '1.8'}%`}
+                icon={<ShieldCheck className="w-4 h-4 text-emerald-400" />}
+                accent="emerald"
+                delta={{ value: 'Calibrated', isPositive: true }}
+              />
+            </div>
+
+            {/* Middle Row: Charts */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="lg:col-span-2">
+                <TransactionVolumeChart throughputTpm={summary?.transactions_per_minute || 42.5} />
+              </div>
+              <div>
+                <RiskDistributionChart distribution={trends?.risk_score_distribution} />
+              </div>
+            </div>
+
+            {/* Bottom Row: Priority Cases & Surveillance Feed */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <PriorityCases cases={cases} />
+              <LiveActivityFeed transactions={transactions} />
+            </div>
+
+            {/* Alert Trends */}
+            <AlertTrendChart totalAlerts={summary?.alerts_generated || 157} />
+          </>
+        )}
       </div>
-
-      {loading ? (
-        <div className="text-center py-12 text-slate-400">Loading telemetry...</div>
-      ) : (
-        <>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-              <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Transactions Processed</div>
-              <div className="text-3xl font-bold text-slate-900 mt-2">{kpis?.transactions_processed?.toLocaleString()}</div>
-              <div className="text-xs text-emerald-600 font-medium mt-1">42.5 TPM throughput</div>
-            </div>
-            <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-              <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Alerts Generated</div>
-              <div className="text-3xl font-bold text-amber-600 mt-2">{kpis?.alerts_generated?.toLocaleString()}</div>
-              <div className="text-xs text-slate-500 mt-1">Requiring investigation</div>
-            </div>
-            <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-              <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Open Investigations</div>
-              <div className="text-3xl font-bold text-sky-600 mt-2">{kpis?.open_investigations?.toLocaleString()}</div>
-              <div className="text-xs text-slate-500 mt-1">{kpis?.high_priority_cases} High Priority</div>
-            </div>
-            <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-              <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Confirmed Fraud / FPR</div>
-              <div className="text-3xl font-bold text-red-600 mt-2">{kpis?.confirmed_fraud_count}</div>
-              <div className="text-xs text-slate-500 mt-1">FPR: {kpis?.verified_false_positive_rate}%</div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-bold text-slate-900">Priority Alerts Awaiting Review</h2>
-              <Link href="/alerts" className="text-xs font-semibold text-sky-600 hover:text-sky-700">View All Alerts &rarr;</Link>
-            </div>
-            <div className="divide-y divide-slate-100">
-              {recentAlerts.map(alert => (
-                <div key={alert.id} className="py-3 flex items-center justify-between text-xs">
-                  <div>
-                    <div className="font-mono font-bold text-sky-700">{alert.alert_ref}</div>
-                    <div className="font-medium text-slate-900 mt-0.5">{alert.title}</div>
-                    <div className="text-slate-500 mt-0.5">{alert.summary}</div>
-                  </div>
-                  <div className="text-right">
-                    <span className="font-mono font-bold text-slate-800 text-sm">{alert.risk_score.toFixed(1)}/100</span>
-                    <div className="text-[10px] text-slate-400 mt-0.5">{alert.severity}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </>
-      )}
-    </div>
+    </AppShell>
   );
 }

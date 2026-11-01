@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { fetchApi } from '@/lib/api-client';
+import { AppShell } from '@/components/layout/app-shell';
 import Link from 'next/link';
 
 export default function AlertsPage() {
@@ -43,63 +44,64 @@ export default function AlertsPage() {
   }
 
   return (
-    <div className="p-8 max-w-7xl mx-auto space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">Alerts Queue & Triage</h1>
-          <p className="text-slate-500 text-sm">Review incoming alerts produced by multi-signal fraud heuristics.</p>
+    <AppShell>
+      <div className="space-y-6 max-w-7xl mx-auto">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold font-mono text-slate-100">Alerts Queue & Triage</h1>
+            <p className="text-slate-400 text-xs font-mono mt-1">Review incoming alerts produced by multi-signal fraud heuristics.</p>
+          </div>
+          <Link href="/dashboard" className="text-xs font-mono text-sky-400 hover:text-sky-300">&larr; Back to Dashboard</Link>
         </div>
-        <Link href="/dashboard" className="text-xs font-semibold text-sky-600 hover:text-sky-700">&larr; Back to Dashboard</Link>
-      </div>
 
-      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
-        <table className="w-full text-left text-xs">
-          <thead className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200 uppercase">
-            <tr>
-              <th className="px-5 py-3">Alert Ref</th>
-              <th className="px-5 py-3">Severity</th>
-              <th className="px-5 py-3">Risk Score</th>
-              <th className="px-5 py-3">Account</th>
-              <th className="px-5 py-3">Findings</th>
-              <th className="px-5 py-3">Status</th>
-              <th className="px-5 py-3">Action</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {loading ? (
-              <tr><td colSpan={7} className="text-center py-6 text-slate-400">Loading alerts telemetry...</td></tr>
-            ) : alerts.length === 0 ? (
-              <tr><td colSpan={7} className="text-center py-6 text-slate-400">No alerts in review queue</td></tr>
-            ) : alerts.map(a => (
-              <tr key={a.id} className="hover:bg-slate-50/80 transition">
-                <td className="px-5 py-3 font-mono font-bold text-sky-700">{a.alert_ref}</td>
-                <td className="px-5 py-3 font-semibold">
-                  <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                    a.severity === 'CRITICAL' ? 'bg-rose-100 text-rose-700' :
-                    a.severity === 'HIGH' ? 'bg-amber-100 text-amber-800' :
-                    'bg-slate-100 text-slate-700'
-                  }`}>
-                    {a.severity}
-                  </span>
-                </td>
-                <td className="px-5 py-3 font-mono font-bold text-slate-900">{Number(a.risk_score).toFixed(1)}</td>
-                <td className="px-5 py-3 font-mono text-slate-600">{a.account_id}</td>
-                <td className="px-5 py-3 text-slate-800 max-w-xs truncate" title={a.summary}>{a.title}</td>
-                <td className="px-5 py-3 text-slate-500 font-medium">{a.status}</td>
-                <td className="px-5 py-3">
-                  <button
-                    onClick={() => handleInvestigate(a.id)}
-                    disabled={investigatingId === a.id}
-                    className="bg-sky-600 hover:bg-sky-500 text-white text-[11px] px-3 py-1.5 rounded-lg font-medium shadow-sm transition flex items-center space-x-1 disabled:opacity-50"
-                  >
-                    <span>{investigatingId === a.id ? 'Analyzing...' : 'Investigate'}</span>
-                  </button>
-                </td>
+        <div className="bg-slate-900/80 rounded-2xl border border-slate-800 overflow-hidden shadow-xl backdrop-blur-sm">
+          <table className="w-full text-left text-xs">
+            <thead className="bg-slate-950/80 text-slate-400 font-semibold font-mono border-b border-slate-800 uppercase tracking-wider text-[11px]">
+              <tr>
+                <th className="px-5 py-3">Alert Ref</th>
+                <th className="px-5 py-3">Severity</th>
+                <th className="px-5 py-3">Risk Score</th>
+                <th className="px-5 py-3">Account</th>
+                <th className="px-5 py-3">Findings</th>
+                <th className="px-5 py-3">Status</th>
+                <th className="px-5 py-3">Action</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody className="divide-y divide-slate-850">
+              {loading ? (
+                <tr><td colSpan={7} className="text-center py-8 text-slate-400 font-mono">Loading alerts telemetry...</td></tr>
+              ) : alerts.length === 0 ? (
+                <tr><td colSpan={7} className="text-center py-8 text-slate-400 font-mono">No active alerts in review queue</td></tr>
+              ) : alerts.map(a => (
+                <tr key={a.id} className="hover:bg-slate-800/40 transition">
+                  <td className="px-5 py-3 font-mono font-bold text-sky-400">{a.alert_ref}</td>
+                  <td className="px-5 py-3 font-semibold">
+                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold font-mono border ${
+                      a.severity === 'CRITICAL' ? 'bg-rose-950/80 text-rose-400 border-rose-800' :
+                      a.severity === 'HIGH' ? 'bg-amber-950/80 text-amber-400 border-amber-800' :
+                      'bg-slate-800 text-slate-300 border-slate-700'
+                    }`}>
+                      {a.severity}
+                    </span>
+                  </td>
+                  <td className="px-5 py-3 font-mono font-bold text-slate-100">{Number(a.risk_score).toFixed(1)}</td>
+                  <td className="px-5 py-3 font-mono text-slate-300">{a.account_id}</td>
+                  <td className="px-5 py-3 text-slate-300 font-mono max-w-xs truncate" title={a.summary}>{a.title}</td>
+                  <td className="px-5 py-3 text-slate-400 font-mono text-xs">{a.status}</td>
+                  <td className="px-5 py-3">
+                    <button
+                      onClick={() => handleInvestigate(a.id)}
+                      disabled={investigatingId === a.id}
+                      className="bg-sky-600 hover:bg-sky-500 text-white font-mono text-[11px] px-3 py-1.5 rounded-lg font-bold shadow-sm transition flex items-center space-x-1 disabled:opacity-50"
+                    >
+                      <span>{investigatingId === a.id ? 'Analyzing...' : 'Investigate'}</span>
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
 
       {/* Scam Dossier & Route Map Modal */}
       {modalOpen && selectedDossier && (
@@ -334,6 +336,7 @@ export default function AlertsPage() {
           </div>
         </div>
       )}
-    </div>
+      </div>
+    </AppShell>
   );
 }

@@ -1,37 +1,100 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
+import { AppShell } from '@/components/layout/app-shell';
+import { RelationshipGraph } from '@/components/graph/relationship-graph';
+import { GraphControls } from '@/components/graph/graph-controls';
+import { GraphLegend } from '@/components/graph/graph-legend';
+import { NodeInspector } from '@/components/graph/node-inspector';
+import { SuspiciousPathPanel } from '@/components/graph/suspicious-path-panel';
+import { LoadingState } from '@/components/shared/loading-state';
+import { ErrorState } from '@/components/shared/error-state';
 import { fetchApi } from '@/lib/api-client';
+import { GraphData, GraphNode } from '@/types/entity';
+import { RefreshCw } from 'lucide-react';
 
 export default function NetworkPage() {
-  const [paths, setPaths] = useState<any[]>([]);
+  const [graphData, setGraphData] = useState<GraphData | null>(null);
+  const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null);
+  const [hopDepth, setHopDepth] = useState(2);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const loadGraph = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetchApi<GraphData>(`/graph?max_hops=${hopDepth}`);
+      setGraphData(res);
+      if (res.nodes && res.nodes.length > 0 && !selectedNode) {
+        setSelectedNode(res.nodes[0]);
+      }
+    } catch (err: any) {
+      setError(err.message || 'Failed to load network intelligence graph.');
+    } finally {
+      setLoading(false);
+    }
+  }, [hopDepth, selectedNode]);
 
   useEffect(() => {
-    async function loadData() {
-      try {
-        const res = await fetchApi<any[]>('/graph/suspicious-paths');
-        setPaths(res || []);
-      } catch (e) {
-        console.error(e);
-      }
-    }
-    loadData();
-  }, []);
+    loadGraph();
+  }, [loadGraph]);
 
   return (
-    <div className="p-8 max-w-7xl mx-auto space-y-6">
-      <h1 className="text-2xl font-bold text-slate-900">Network Intelligence</h1>
-      <p className="text-slate-500 text-sm">Discovered topological structures, fan-in hubs, and intermediary forwarding.</p>
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {paths.map((p, idx) => (
-          <div key={idx} className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-2 text-xs">
-            <div className="font-bold text-sky-800 text-sm">{p.pattern_name}</div>
-            <div className="text-slate-700">{p.explanation}</div>
-            <div className="text-slate-400 italic">Alternative hypothesis: {p.alternative_explanations}</div>
+    <AppShell>
+      <div className="space-y-6 max-w-7xl mx-auto">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold font-mono text-slate-100 tracking-tight flex items-center space-x-3">
+              <span>Network Intelligence</span>
+              <span className="text-xs font-mono font-medium px-2 py-0.5 rounded-full bg-indigo-950/80 text-indigo-400 border border-indigo-800">
+                Topological Surveillance
+              </span>
+            </h1>
+            <p className="text-xs sm:text-sm text-slate-400 font-mono mt-1">
+              Interactive fund-flow graphs, fan-in/fan-out hubs, and intermediary mule chains.
+            </p>
           </div>
-        ))}
+
+          <div className="flex items-center space-x-3">
+            <GraphControls
+              hopDepth={hopDepth}
+              onHopDepthChange={(d) => setHopDepth(d)}
+              onResetView={loadGraph}
+            />
+            <button
+              onClick={loadGraph}
+              disabled={loading}
+              className="p-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 disabled:opacity-50 text-slate-200 border border-slate-700 transition"
+            >
+              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            </button>
+          </div>
+        </div>
+
+        <GraphLegend />
+
+        {loading ? (
+          <LoadingState message="Computing topological centrality and multi-hop paths..." rows={8} />
+        ) : error ? (
+          <ErrorState message={error} onRetry={loadGraph} />
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2 space-y-6">
+              <RelationshipGraph
+                graphData={graphData || undefined}
+                selectedNodeId={selectedNode?.id}
+                onSelectNode={(node) => setSelectedNode(node)}
+              />
+              <SuspiciousPathPanel />
+            </div>
+
+            <div>
+              <NodeInspector node={selectedNode} onClose={() => setSelectedNode(null)} />
+            </div>
+          </div>
+        )}
       </div>
-    </div>
+    </AppShell>
   );
 }
