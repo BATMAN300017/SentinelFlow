@@ -1,10 +1,45 @@
 import sqlite3
+import numpy as np
 from typing import Dict, Any, List
 from datetime import datetime, timezone, timedelta
+
+def _row_to_dict(row, col_names: List[str]) -> Dict[str, Any]:
+    if row is None:
+        return {}
+    if hasattr(row, "keys"):
+        return dict(row)
+    if isinstance(row, dict):
+        return row
+    return {col: val for col, val in zip(col_names, row)}
+
+def _parse_event_time(val: Any) -> datetime:
+    if isinstance(val, datetime):
+        if val.tzinfo is None:
+            return val.replace(tzinfo=timezone.utc)
+        return val
+    if not val:
+        return datetime.now(timezone.utc)
+    val_str = str(val).strip()
+    try:
+        if val_str.endswith("Z"):
+            val_str = val_str[:-1] + "+00:00"
+        dt = datetime.fromisoformat(val_str)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt
+    except Exception:
+        for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%d"):
+            try:
+                return datetime.strptime(val_str, fmt).replace(tzinfo=timezone.utc)
+            except Exception:
+                pass
+        return datetime.now(timezone.utc)
 
 def extract_transaction_features(conn: sqlite3.Connection, txn: Dict[str, Any]) -> Dict[str, Any]:
     """
     Derives genuine operational features from historical transactions prior to prediction time.
+    Uses transaction event timestamp rather than wall-clock datetime.now() to ensure
+    leakage-free, reproducible historical evaluation and streaming inference.
     NEVER accesses ground-truth labels.
     """
     source_acc = str(txn.get("source_account_id") or "")
@@ -12,16 +47,21 @@ def extract_transaction_features(conn: sqlite3.Connection, txn: Dict[str, Any]) 
     device_id = txn.get("device_id")
     txn_amount = float(txn.get("amount") or 0.0)
     
+    # Event-time reference for historical lookback
+    txn_time = _parse_event_time(txn.get("created_at"))
+    txn_time_iso = txn_time.isoformat()
+    
     cursor = conn.cursor()
     
-    # 1. Historical account transactions (last 30 transactions, ordered by created_at DESC)
+    # 1. Historical account transactions strictly prior or at transaction time
     cursor.execute("""
         SELECT amount, created_at, destination_account_id, beneficiary_name, device_id, status, transaction_type
         FROM transactions
-        WHERE source_account_id = ? AND id != ?
+        WHERE source_account_id = ? AND id != ? AND created_at <= ?
         ORDER BY created_at DESC LIMIT 50
-    """, (source_acc, txn.get("id", "")))
-    history = [dict(r._dict if hasattr(r, "_dict") else r) for r in cursor.fetchall()]
+    """, (source_acc, txn.get("id", ""), txn_time_iso))
+    hist_cols = ["amount", "created_at", "destination_account_id", "beneficiary_name", "device_id", "status", "transaction_type"]
+    history = [_row_to_dict(r, hist_cols) for r in cursor.fetchall()]
     
     history_count = len(history)
     amounts = [float(h.get("amount") or 0.0) for h in history]
@@ -38,31 +78,31 @@ def extract_transaction_features(conn: sqlite3.Connection, txn: Dict[str, Any]) 
     cursor.execute("SELECT is_dormant, balance FROM accounts WHERE id = ?", (source_acc,))
     acc_row = cursor.fetchone()
     if acc_row:
-        d_acc = dict(acc_row._dict if hasattr(acc_row, "_dict") else acc_row)
+        d_acc = _row_to_dict(acc_row, ["is_dormant", "balance"])
         is_dormant_flag = 1 if d_acc.get("is_dormant") else 0
         acc_balance = float(d_acc.get("balance") or 0.0)
     else:
         is_dormant_flag = 0
         acc_balance = 0.0
         
-    # Inbound vs Outbound totals for account
+    # Inbound vs Outbound totals for account (strictly up to transaction time)
     cursor.execute("""
         SELECT COALESCE(SUM(amount), 0), COUNT(*)
         FROM transactions
-        WHERE destination_account_id = ?
+        WHERE destination_account_id = ? AND created_at <= ?
         LIMIT 100
-    """, (source_acc,))
+    """, (source_acc, txn_time_iso))
     in_row = cursor.fetchone()
     total_inbound = float(in_row[0]) if in_row else 0.0
     inbound_count = int(in_row[1]) if in_row else 0
     
-    # Recent Inbound (last 30 minutes)
-    thirty_mins_ago = (datetime.now(timezone.utc) - timedelta(minutes=30)).isoformat()
+    # Recent Inbound (last 30 minutes relative to event timestamp)
+    thirty_mins_ago = (txn_time - timedelta(minutes=30)).isoformat()
     cursor.execute("""
         SELECT COALESCE(SUM(amount), 0), COUNT(*)
         FROM transactions
-        WHERE destination_account_id = ? AND created_at >= ?
-    """, (source_acc, thirty_mins_ago))
+        WHERE destination_account_id = ? AND created_at >= ? AND created_at <= ?
+    """, (source_acc, thirty_mins_ago, txn_time_iso))
     recent_in_row = cursor.fetchone()
     recent_inbound_sum = float(recent_in_row[0]) if recent_in_row and recent_in_row[0] else total_inbound
     recent_inbound_count = int(recent_in_row[1]) if recent_in_row and recent_in_row[1] else inbound_count
@@ -82,23 +122,25 @@ def extract_transaction_features(conn: sqlite3.Connection, txn: Dict[str, Any]) 
         if 0.70 <= ratio <= 1.25:
             rapid_movement = 1
             
-    # Velocity: count of transactions in last 10 minutes
-    ten_mins_ago = (datetime.now(timezone.utc) - timedelta(minutes=10)).isoformat()
+    # Velocity: count of transactions in last 10 minutes relative to event timestamp
+    ten_mins_ago = (txn_time - timedelta(minutes=10)).isoformat()
     cursor.execute("""
         SELECT COUNT(*), COALESCE(SUM(amount), 0)
         FROM transactions
-        WHERE source_account_id = ? AND created_at >= ? AND id != ?
-    """, (source_acc, ten_mins_ago, txn.get("id", "")))
+        WHERE source_account_id = ? AND created_at >= ? AND created_at <= ? AND id != ?
+    """, (source_acc, ten_mins_ago, txn_time_iso, txn.get("id", "")))
     short_vel_row = cursor.fetchone()
     short_window_count = int(short_vel_row[0]) + 1 if short_vel_row else 1
     short_window_sum = float(short_vel_row[1]) + txn_amount if short_vel_row else txn_amount
     
-    # Structuring check (just below $10,000 USD or INR 200,000 threshold)
+    # Structuring check (just below reporting thresholds: $10,000 USD/GBP/EUR or INR 200,000)
     structuring_flag = 0
     curr = str(txn.get("currency") or "USD").upper()
-    if curr == "USD" and 9000 <= txn_amount < 10000:
+    if any(c in curr for c in ("USD", "GBP", "EUR", "POUND")) and (8500 <= txn_amount < 10000):
         structuring_flag = 1
-    elif curr == "INR" and 180000 <= txn_amount < 200000:
+    elif "INR" in curr and (180000 <= txn_amount < 200000):
+        structuring_flag = 1
+    elif 8500 <= txn_amount < 10000:
         structuring_flag = 1
         
     # Round amount flag
@@ -112,8 +154,21 @@ def extract_transaction_features(conn: sqlite3.Connection, txn: Dict[str, Any]) 
         if dev_row:
             shared_device_accounts = max(1, int(dev_row[0]))
             
+    # Log-transformed amount for scale-invariant risk evaluation
+    log_amount = round(float(np.log10(max(1.0, txn_amount))), 4)
+    
+    # Cross-border indicator
+    src_country = str(txn.get("sender_country") or txn.get("Sender_bank_location") or "USA").upper()
+    dest_country = str(txn.get("receiver_country") or txn.get("Receiver_bank_location") or src_country).upper()
+    is_cross_border = 1 if (src_country != dest_country and src_country and dest_country) else 0
+    
+    # Cash payment channel indicator
+    payment_channel = str(txn.get("payment_channel") or txn.get("payment_type") or "TRANSFER").lower()
+    is_cash_channel = 1 if "cash" in payment_channel else 0
+            
     return {
         "amount": txn_amount,
+        "log_amount": log_amount,
         "currency": curr,
         "history_count": history_count,
         "is_cold_start": 1 if history_count < 3 else 0,
@@ -132,5 +187,7 @@ def extract_transaction_features(conn: sqlite3.Connection, txn: Dict[str, Any]) 
         "recent_inbound_count": recent_inbound_count,
         "structuring_flag": structuring_flag,
         "round_amount_flag": round_amount_flag,
+        "is_cross_border": is_cross_border,
+        "is_cash_channel": is_cash_channel,
         "historical_amounts": amounts
     }

@@ -18,17 +18,17 @@ def compute_ensemble_risk(
     - Random Forest classifier
     """
     if is_cold_start:
-        w_rules = 0.35
-        w_graph = 0.30
-        w_rf = 0.25
+        w_rules = 0.40
+        w_graph = 0.15
+        w_rf = 0.35
         w_mad = 0.05
         w_if = 0.05
     else:
         w_rules = 0.30
         w_graph = 0.20
-        w_rf = 0.20
-        w_mad = 0.15
-        w_if = 0.15
+        w_rf = 0.25
+        w_mad = 0.125
+        w_if = 0.125
     
     # Composite calculation
     composite = (
@@ -39,9 +39,14 @@ def compute_ensemble_risk(
         (float(supervised_score) * w_rf)
     )
 
-    # Compliance safeguard: Critical rule violations establish an alert severity floor
+    # Compliance safeguards:
+    # 1. Critical rule violations establish an alert severity floor
     if float(rule_score) >= 50.0:
         composite = max(composite, float(rule_score) * 0.60)
+    
+    # 2. Strong supervised machine learning predictions establish an alert floor
+    if float(supervised_score) >= 65.0:
+        composite = max(composite, float(supervised_score) * 0.65)
     
     final_score = round(min(100.0, max(0.0, composite)), 1)
     band = assign_triage_band(final_score)

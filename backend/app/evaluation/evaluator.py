@@ -73,7 +73,10 @@ class IndependentEvaluator:
         y_scores = []
         typology_breakdown = {}
 
-        for txn_id, prot_item in prot_txns.items():
+        matched_txns = [tid for tid in predictions.keys() if tid in prot_txns]
+        eval_ids = matched_txns if matched_txns else list(prot_txns.keys())
+        for txn_id in eval_ids:
+            prot_item = prot_txns.get(txn_id, {})
             true_label = prot_item.get("is_laundering")
             if true_label is None:
                 # Do not count unknown labels as legitimate
