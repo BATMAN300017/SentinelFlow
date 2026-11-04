@@ -9,6 +9,18 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    env:
+      ENVIRONMENT: test
+      APP_ENV: test
+      NODE_ENV: test
+      DATABASE_URL: sqlite:////tmp/sentinelflow_ci_test.db
+      SUPABASE_URL: ""
+      SUPABASE_KEY: ""
+      POSTGRES_URL: ""
+      PGHOST: ""
+      PGDATABASE: "test"
+      ALLOW_DEMO_SEEDING: "true"
+      PYTHONPATH: .
 
     steps:
     - uses: actions/checkout@v4
@@ -23,7 +35,7 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
 
-    - name: Run Database Seeding
+    - name: Run Database Seeding (Isolated Local Test SQLite DB)
       run: |
         python scripts/seed_demo_data.py
 
@@ -31,6 +43,6 @@ jobs:
       run: |
         python backend/tests/run_tests.py
 
-    - name: Test Scenario Simulation
+    - name: Test Scenario Simulation (Isolated Local Test SQLite DB)
       run: |
         python scripts/run_demo_scenario.py --scenario rapid_movement

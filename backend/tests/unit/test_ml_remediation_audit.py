@@ -57,6 +57,14 @@ from app.evaluation.evaluator import IndependentEvaluator
 class TestMLRemediationAudit(unittest.TestCase):
 
     def setUp(self):
+        self._orig_env = dict(os.environ)
+        os.environ["DATABASE_URL"] = "sqlite:///:memory:"
+        os.environ["SUPABASE_URL"] = ""
+        os.environ["POSTGRES_URL"] = ""
+        os.environ["PGHOST"] = ""
+        os.environ["PGDATABASE"] = "test"
+        os.environ["ENVIRONMENT"] = "test"
+        os.environ["ALLOW_DEMO_SEEDING"] = "true"
         self.conn = sqlite3.connect(":memory:")
         self.conn.row_factory = sqlite3.Row
         self.conn.executescript(SCHEMA_SQL)
@@ -65,6 +73,8 @@ class TestMLRemediationAudit(unittest.TestCase):
 
     def tearDown(self):
         self.conn.close()
+        os.environ.clear()
+        os.environ.update(self._orig_env)
 
     def test_01_ground_truth_labels_cannot_influence_predictions(self):
         """1. Ground-truth labels cannot influence prediction scores."""
@@ -626,10 +636,10 @@ class TestMLRemediationAudit(unittest.TestCase):
             with self.assertRaises(PermissionError):
                 check_demo_environment_guard()
 
-        # Test production allowed only with explicit override
+        # Test production rejected even with ALLOW_DEMO_SEEDING override (unconditional)
         with patch.dict(os.environ, {"ENVIRONMENT": "production", "ALLOW_DEMO_SEEDING": "true"}):
-            # Must not raise
-            check_demo_environment_guard()
+            with self.assertRaises(PermissionError):
+                check_demo_environment_guard()
 
         # Test development allowed
         with patch.dict(os.environ, {"ENVIRONMENT": "development", "ALLOW_DEMO_SEEDING": ""}):

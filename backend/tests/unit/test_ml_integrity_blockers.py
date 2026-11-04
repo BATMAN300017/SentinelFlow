@@ -49,6 +49,14 @@ from scripts.seed_saml_and_nfpc import (
 class TestMLIntegrityBlockers(unittest.TestCase):
 
     def setUp(self):
+        self._orig_env = dict(os.environ)
+        os.environ["DATABASE_URL"] = "sqlite:///:memory:"
+        os.environ["SUPABASE_URL"] = ""
+        os.environ["POSTGRES_URL"] = ""
+        os.environ["PGHOST"] = ""
+        os.environ["PGDATABASE"] = "test"
+        os.environ["ENVIRONMENT"] = "test"
+        os.environ["ALLOW_DEMO_SEEDING"] = "true"
         self.conn = sqlite3.connect(":memory:")
         self.conn.row_factory = sqlite3.Row
         self.cursor = self.conn.cursor()
@@ -57,6 +65,8 @@ class TestMLIntegrityBlockers(unittest.TestCase):
 
     def tearDown(self):
         self.conn.close()
+        os.environ.clear()
+        os.environ.update(self._orig_env)
 
     # =========================================================================
     # SECTION 2: SAML-D / NFPC Seeding Crash Fixes
@@ -168,16 +178,18 @@ class TestMLIntegrityBlockers(unittest.TestCase):
     # =========================================================================
 
     def test_06_production_mode_rejects_demo_seeding(self):
-        """6. Production mode strictly rejects demo seeding entry points."""
-        env_vars = ["ENVIRONMENT", "APP_ENV", "NODE_ENV", "ENV", "SENTINELFLOW_ENV"]
+        """6. Production mode strictly rejects demo seeding entry points unconditionally."""
+        env_vars = ["ENVIRONMENT", "APP_ENV", "NODE_ENV", "ENV", "SENTINELFLOW_ENV", "STAGE", "TARGET_ENV"]
         for env_var in env_vars:
-            with patch.dict(os.environ, {env_var: "production", "ALLOW_DEMO_SEEDING": ""}):
-                with self.assertRaises(PermissionError):
-                    check_demo_environment_guard()
+            for val in ["production", "prod", "live"]:
+                with patch.dict(os.environ, {env_var: val, "ALLOW_DEMO_SEEDING": ""}):
+                    with self.assertRaises(PermissionError):
+                        check_demo_environment_guard()
 
-        # Allowed only with ALLOW_DEMO_SEEDING=true
+        # ALLOW_DEMO_SEEDING=true must NEVER override a production environment
         with patch.dict(os.environ, {"ENVIRONMENT": "production", "ALLOW_DEMO_SEEDING": "true"}):
-            check_demo_environment_guard()
+            with self.assertRaises(PermissionError):
+                check_demo_environment_guard()
 
     def test_07_real_ingestion_creates_no_demo_fixtures(self):
         """7. Real dataset ingestion creates 0 demo alerts, 0 investigations, and 0 demo feedback."""
@@ -523,6 +535,8 @@ class TestMLIntegrityBlockers(unittest.TestCase):
     def test_23_artifact_incorrect_classes_rejected(self):
         """23. Estimator with non-binary classes is rejected."""
         rf = RobustRandomForestClassifier()
+        rf.n_features_in_ = 9
+        rf.feature_names_in_ = CANONICAL_FEATURE_NAMES
         rf.classes_ = np.array([0, 1, 2])  # Multi-class
         meta = {
             "model_version": VERSION_V2_REMEDIATED,
@@ -540,6 +554,10 @@ class TestMLIntegrityBlockers(unittest.TestCase):
     def test_24_artifact_nan_prediction_probabilities_rejected(self):
         """24. Estimator returning NaN probabilities is rejected."""
         class NanPredictor(RobustRandomForestClassifier):
+            n_features_in_ = 9
+            feature_names_in_ = CANONICAL_FEATURE_NAMES
+            classes_ = np.array([0, 1])
+            is_fitted = True
             def predict_proba(self, X):
                 return np.array([[np.nan, np.nan]])
 
@@ -739,6 +757,100 @@ class TestMLIntegrityBlockers(unittest.TestCase):
         is_val2, r2 = validate_model_artifact({"model": m_bad_classes, "metadata": meta})
         self.assertFalse(is_val2)
         self.assertIn("classes_", r2)
+
+    def test_33_unfitted_classifier_has_no_defaults_and_fails_validation(self):
+        """33. Unfitted RobustRandomForestClassifier has is_fitted=False, no default feature attributes, and fails validation."""
+        unfitted = RobustRandomForestClassifier()
+        self.assertFalse(unfitted.is_fitted, "Unfitted classifier reported is_fitted=True!")
+        self.assertIsNone(unfitted.n_features_in_, "Unfitted classifier returned non-None n_features_in_!")
+        self.assertIsNone(unfitted.feature_names_in_, "Unfitted classifier returned non-None feature_names_in_!")
+        self.assertIsNone(unfitted.classes_, "Unfitted classifier returned non-None classes_!")
+
+        meta = {
+            "model_version": VERSION_V2_REMEDIATED,
+            "dataset_name": "SAML_D",
+            "canonical_feature_schema": CANONICAL_FEATURE_NAMES,
+            "train_samples": 14000,
+            "val_samples": 3500,
+            "train_date_range": ("2022-10-07 10:35:19", "2022-10-07 19:26:11"),
+            "threshold_selection_method": "validation_grid_search"
+        }
+        is_valid, reason = validate_model_artifact({"model": unfitted, "metadata": meta})
+        self.assertFalse(is_valid, "Unfitted classifier passed artifact validation!")
+        self.assertIn("n_features_in_", reason.lower(), f"Unexpected failure reason: {reason}")
+
+    def test_34_committed_artifact_validation_and_runtime_bounded_prediction(self):
+        """34. Committed artifact supervised_rf_v2.joblib passes validation, has 60 trees, exact canonical feature order, and bounded predictions."""
+        import joblib
+        from app.detection.supervised import _get_model_storage_path
+
+        artifact_path = _get_model_storage_path()
+        self.assertTrue(os.path.exists(artifact_path), f"Artifact missing at {artifact_path}")
+
+        artifact = joblib.load(artifact_path)
+        is_valid, reason = validate_model_artifact(artifact)
+        self.assertTrue(is_valid, f"Committed artifact failed validation: {reason}")
+
+        model = artifact["model"]
+        self.assertTrue(hasattr(model, "is_fitted") and model.is_fitted, "Committed model is not fitted!")
+        self.assertEqual(len(model.trees), 60, "Committed model does not have 60 estimators!")
+        self.assertEqual(list(model.feature_names_in_), CANONICAL_FEATURE_NAMES, "Committed model feature order mismatch!")
+        self.assertEqual(model.n_features_in_, len(CANONICAL_FEATURE_NAMES))
+
+        # Runtime prediction tests on edge inputs
+        test_inputs = np.array([
+            [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [10.0, 50.0, 1.0, 1.0, 1.0, 1.0, 1.0, 20.0, 100.0],
+            [3.5, 2.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 15.0]
+        ], dtype=float)
+        probs = model.predict_proba(test_inputs)
+        self.assertEqual(probs.shape, (3, 2))
+        self.assertTrue(np.all(np.isfinite(probs)), "Predictions contain NaN or Inf!")
+        self.assertTrue(np.all(probs >= 0.0) and np.all(probs <= 1.0), "Probabilities outside [0, 1]!")
+        self.assertTrue(np.allclose(np.sum(probs, axis=1), 1.0), "Probabilities do not sum to 1.0!")
+
+    def test_35_all_demo_entry_points_unconditionally_reject_production(self):
+        """35. All demo entry points (seed, bulk demo, simulation, reset, scenario) reject production unconditionally."""
+        from scripts.seed_demo_data import seed_demo_database
+        from scripts.bulk_ingest_supabase import seed_demo_investigations_and_feedback
+        from app.services.transaction_simulator import simulation_service
+        from scripts.reset_demo_data import reset_demo_database
+
+        for allow_override in ["", "true", "1"]:
+            env_patch = {"ENVIRONMENT": "production", "ALLOW_DEMO_SEEDING": allow_override}
+            with patch.dict(os.environ, env_patch):
+                # 1. seed_demo_data
+                with self.assertRaises(PermissionError):
+                    seed_demo_database()
+
+                # 2. bulk_ingest_supabase demo seeding
+                with self.assertRaises(PermissionError):
+                    seed_demo_investigations_and_feedback(cur=MagicMock())
+
+                # 3. transaction_simulator streaming
+                with self.assertRaises(PermissionError):
+                    simulation_service.start_simulation()
+
+                # 4. transaction_simulator scenario
+                with self.assertRaises(PermissionError):
+                    simulation_service.run_named_scenario("rapid_movement")
+
+                # 5. reset_demo_data
+                with self.assertRaises(PermissionError):
+                    reset_demo_database()
+
+    def test_36_database_safety_rejects_remote_targets_regardless_of_substrings(self):
+        """36. Database safety check rejects remote and cloud hosts even when URL lacks 'prod' or 'live'."""
+        remote_urls = [
+            "postgresql://app:secret@db.supabase.co:5432/main",
+            "postgresql://user:pass@mydb.rds.amazonaws.com:5432/db",
+            "postgresql://user:pass@external-server.internal:5432/finance",
+            "postgresql://user:pass@192.168.1.100:5432/analytics"
+        ]
+        for url in remote_urls:
+            with patch.dict(os.environ, {"DATABASE_URL": url, "ENVIRONMENT": "development", "ALLOW_DEMO_SEEDING": "true"}):
+                with self.assertRaises(PermissionError):
+                    check_demo_environment_guard("Remote DB Safety Test")
 
 if __name__ == "__main__":
     unittest.main()

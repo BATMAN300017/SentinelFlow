@@ -138,24 +138,45 @@ class RobustRandomForestClassifier:
         self.features_per_tree: List[np.ndarray] = []
 
     @property
-    def n_features_in_(self) -> int:
-        return getattr(self, "_n_features_in", len(CANONICAL_FEATURE_NAMES))
+    def is_fitted(self) -> bool:
+        """True if the ensemble has been genuinely fitted with decision trees."""
+        return (
+            hasattr(self, "trees")
+            and bool(self.trees)
+            and all(hasattr(t, "tree_") and getattr(t, "tree_", None) is not None for t in self.trees)
+        )
+
+    @property
+    def n_features_in_(self) -> Optional[int]:
+        if hasattr(self, "_n_features_in") and self._n_features_in is not None:
+            return self._n_features_in
+        if self.is_fitted:
+            return len(CANONICAL_FEATURE_NAMES)
+        return None
 
     @n_features_in_.setter
     def n_features_in_(self, val: int):
-        self._n_features_in = int(val)
+        self._n_features_in = int(val) if val is not None else None
 
     @property
-    def classes_(self) -> np.ndarray:
-        return getattr(self, "_classes", np.array([0, 1]))
+    def classes_(self) -> Optional[np.ndarray]:
+        if hasattr(self, "_classes") and self._classes is not None:
+            return self._classes
+        if self.is_fitted:
+            return np.array([0, 1])
+        return None
 
     @classes_.setter
     def classes_(self, val: Any):
-        self._classes = np.array(val)
+        self._classes = np.array(val) if val is not None else None
 
     @property
     def feature_names_in_(self) -> Optional[List[str]]:
-        return getattr(self, "_feature_names_in", CANONICAL_FEATURE_NAMES)
+        if hasattr(self, "_feature_names_in") and self._feature_names_in is not None:
+            return self._feature_names_in
+        if self.is_fitted:
+            return list(CANONICAL_FEATURE_NAMES)
+        return None
 
     @feature_names_in_.setter
     def feature_names_in_(self, val: Any):
@@ -273,17 +294,18 @@ def validate_model_artifact(artifact: Any) -> Tuple[bool, Optional[str]]:
     except (ValueError, TypeError):
         return False, "Model n_features_in_ is not an integer."
 
-    # Validate feature names order if present
-    if hasattr(model, "feature_names_in_") and model.feature_names_in_ is not None:
-        try:
-            fnames = list(model.feature_names_in_)
-            if fnames != CANONICAL_FEATURE_NAMES:
-                return False, f"Model feature_names_in_ does not match canonical order: {fnames}."
-        except Exception:
-            return False, "Model feature_names_in_ cannot be inspected."
+    # Validate feature names order (required attribute, must match canonical order)
+    if not hasattr(model, "feature_names_in_") or getattr(model, "feature_names_in_", None) is None:
+        return False, "Model is missing required attribute feature_names_in_."
+    try:
+        fnames = list(model.feature_names_in_)
+        if fnames != CANONICAL_FEATURE_NAMES:
+            return False, f"Model feature_names_in_ ({fnames}) does not match canonical order ({CANONICAL_FEATURE_NAMES})."
+    except Exception as e:
+        return False, f"Model feature_names_in_ cannot be inspected: {e}."
 
     # Validate required binary classes (must exist and equal [0, 1])
-    if not hasattr(model, "classes_") or getattr(model, "classes_") is None:
+    if not hasattr(model, "classes_") or getattr(model, "classes_", None) is None:
         return False, "Model is missing required attribute classes_."
     try:
         cl = list(model.classes_)
@@ -310,6 +332,17 @@ def validate_model_artifact(artifact: Any) -> Tuple[bool, Optional[str]]:
 
     if abs(float(np.sum(probs)) - 1.0) > 1e-3:
         return False, f"Model predict_proba probabilities do not sum to 1.0 (sum={float(np.sum(probs)):.4f})."
+
+    # Validate genuine fitted state
+    if hasattr(model, "is_fitted"):
+        if not model.is_fitted:
+            return False, "Estimator is not in a fitted state (is_fitted is False)."
+    if hasattr(model, "trees"):
+        if not model.trees or not all(hasattr(t, "tree_") and getattr(t, "tree_", None) is not None for t in model.trees):
+            return False, "Estimator contains no fitted decision trees."
+    if hasattr(model, "estimators_"):
+        if not getattr(model, "estimators_", None):
+            return False, "Ensemble estimator has no fitted sub-estimators."
 
     return True, None
 
