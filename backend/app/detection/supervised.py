@@ -18,8 +18,14 @@ import joblib
 import numpy as np
 import pandas as pd
 from typing import Dict, Any, Optional, List, Tuple
+from datetime import datetime, timezone
 from sklearn.tree import DecisionTreeClassifier
 from app.core.logging import logger
+from app.detection.features import (
+    CANONICAL_FEATURE_NAMES,
+    validate_feature_vector,
+    compute_samld_stream_features
+)
 
 VERSION_V1_BASELINE = "RANDOM_FOREST_V1_BASELINE"
 VERSION_V2_REMEDIATED = "RANDOM_FOREST_V2_REMEDIATED"
@@ -29,65 +35,89 @@ _rf_remediated_model: Optional[Any] = None
 _rf_baseline_model: Optional[Any] = None
 _remediated_metadata: Optional[Dict[str, Any]] = None
 
-# Canonical feature schema shared identically by offline training and online inference
-FEATURE_SCHEMA: List[str] = [
-    "log_amount",             # float: log10(max(1.0, amount))
-    "velocity_10m",           # float: number of outbound txns in prior 10m window (including current: >= 1.0)
-    "rapid_movement",         # float: 1.0 if recent inbound (<30m) followed by outbound of comparable amount (0.7-1.25), else 0.0
-    "structuring_flag",       # float: 1.0 if amount near reporting threshold ($8500-$9999 or INR 180k-199.9k), else 0.0
-    "is_cross_border",        # float: 1.0 if sender country != receiver country, else 0.0
-    "is_cash_channel",        # float: 1.0 if payment channel / type is cash, else 0.0
-    "is_new_recipient",       # float: 1.0 if receiver was never seen in sender's prior history, else 0.0
-    "past_recipient_count",   # float: count of distinct prior recipients seen from this sender (>= 0.0)
-    "history_length"          # float: total prior outbound transactions from this sender (>= 0.0)
-]
+# Canonical feature schema shared identically by offline training, online inference and evaluation
+FEATURE_SCHEMA: List[str] = CANONICAL_FEATURE_NAMES
 
 def extract_supervised_feature_vector(features: Dict[str, Any]) -> np.ndarray:
     """
     Validates and extracts the canonical 9-dimensional feature vector from operational features.
-    Guarantees strict schema matching, feature order, and missing-value handling.
+    Guarantees strict schema matching, feature order, and finite numeric values.
+    Fails closed on missing or non-finite features.
     """
-    # 1. log_amount: float >= 0
+    if not isinstance(features, dict):
+        raise ValueError("Features must be provided as a dictionary.")
+
+    # 1. log_amount: float >= 0.0
     if "log_amount" in features and features["log_amount"] is not None:
         log_amt = float(features["log_amount"])
     elif "amount" in features and features["amount"] is not None:
-        log_amt = float(np.log10(max(1.0, float(features["amount"]))))
+        amt = float(features["amount"])
+        if amt < 0.0 or not np.isfinite(amt):
+            raise ValueError(f"Invalid transaction amount: {amt}")
+        log_amt = float(np.log10(max(1.0, amt)))
     else:
-        log_amt = 2.0  # Default log10($100) if missing
+        raise ValueError("Missing required feature: 'amount' or 'log_amount'.")
 
     # 2. velocity_10m: float >= 1.0
-    vel_10m = float(features.get("short_window_count", features.get("velocity_10m", 1.0)))
-    vel_10m = max(1.0, vel_10m)
+    vel_raw = features.get("short_window_count", features.get("velocity_10m"))
+    if vel_raw is None:
+        raise ValueError("Missing required velocity feature: 'short_window_count' or 'velocity_10m'.")
+    vel_10m = float(vel_raw)
+    if vel_10m < 1.0 or not np.isfinite(vel_10m):
+        raise ValueError(f"Invalid velocity_10m value: {vel_10m}")
 
     # 3. rapid_movement: binary {0.0, 1.0}
-    rapid_mov = 1.0 if bool(features.get("rapid_movement_detected", features.get("rapid_movement", 0))) else 0.0
+    rapid_raw = features.get("rapid_movement_detected", features.get("rapid_movement"))
+    if rapid_raw is None:
+        raise ValueError("Missing required feature: 'rapid_movement_detected' or 'rapid_movement'.")
+    rapid_mov = 1.0 if bool(rapid_raw) else 0.0
 
     # 4. structuring_flag: binary {0.0, 1.0}
-    is_struct = 1.0 if bool(features.get("structuring_flag", 0)) else 0.0
+    struct_raw = features.get("structuring_flag")
+    if struct_raw is None:
+        raise ValueError("Missing required feature: 'structuring_flag'.")
+    is_struct = 1.0 if bool(struct_raw) else 0.0
 
     # 5. is_cross_border: binary {0.0, 1.0}
-    is_cross = 1.0 if bool(features.get("is_cross_border", 0)) else 0.0
+    cross_raw = features.get("is_cross_border")
+    if cross_raw is None:
+        raise ValueError("Missing required feature: 'is_cross_border'.")
+    is_cross = 1.0 if bool(cross_raw) else 0.0
 
     # 6. is_cash_channel: binary {0.0, 1.0}
-    is_cash = 1.0 if bool(features.get("is_cash_channel", 0)) else 0.0
+    cash_raw = features.get("is_cash_channel")
+    if cash_raw is None:
+        raise ValueError("Missing required feature: 'is_cash_channel'.")
+    is_cash = 1.0 if bool(cash_raw) else 0.0
 
     # 7. is_new_recipient: binary {0.0, 1.0}
-    is_new = 1.0 if bool(features.get("is_new_beneficiary", features.get("is_new_recipient", 0))) else 0.0
+    new_raw = features.get("is_new_beneficiary", features.get("is_new_recipient"))
+    if new_raw is None:
+        raise ValueError("Missing required feature: 'is_new_beneficiary' or 'is_new_recipient'.")
+    is_new = 1.0 if bool(new_raw) else 0.0
 
     # 8. past_recipient_count: float >= 0.0
-    past_recips = float(features.get("unique_counterparties", features.get("past_recipient_count", 0.0)))
-    past_recips = max(0.0, past_recips)
+    recip_raw = features.get("past_recipient_count", features.get("unique_counterparties"))
+    if recip_raw is None:
+        raise ValueError("Missing required feature: 'past_recipient_count' or 'unique_counterparties'.")
+    past_recips = float(recip_raw)
+    if past_recips < 0.0 or not np.isfinite(past_recips):
+        raise ValueError(f"Invalid past_recipient_count value: {past_recips}")
 
     # 9. history_length: float >= 0.0
-    hist_len = float(features.get("history_count", features.get("history_length", 0.0)))
-    hist_len = max(0.0, hist_len)
+    hist_raw = features.get("history_length", features.get("history_count"))
+    if hist_raw is None:
+        raise ValueError("Missing required feature: 'history_length' or 'history_count'.")
+    hist_len = float(hist_raw)
+    if hist_len < 0.0 or not np.isfinite(hist_len):
+        raise ValueError(f"Invalid history_length value: {hist_len}")
 
     vec = np.array([
         log_amt, vel_10m, rapid_mov, is_struct, is_cross,
         is_cash, is_new, past_recips, hist_len
-    ], dtype=float)
+    ], dtype=float).reshape(1, -1)
 
-    return vec.reshape(1, -1)
+    return validate_feature_vector(vec)
 
 
 class RobustRandomForestClassifier:
@@ -180,76 +210,28 @@ def _get_model_storage_path() -> str:
 def _train_from_saml_canonical(csv_path: str) -> Tuple[RobustRandomForestClassifier, Dict[str, Any]]:
     """
     Trains a RobustRandomForestClassifier strictly on the first 70% chronological partition
-    of SAML-D (14,000 train, 3,500 validation) using genuine event-time feature extraction.
+    of SAML-D (14,000 train, 3,500 validation) using the shared event-time feature extraction pipeline.
+    Thresholds are tuned strictly on validation data; test partition is untouched.
     """
-    df = pd.read_csv(csv_path)
-    df['DateTime'] = pd.to_datetime(df['Date'] + ' ' + df['Time'])
-    df = df.sort_values('DateTime').reset_index(drop=True)
-
-    sender_out_history: Dict[str, List] = {}
-    receiver_in_history: Dict[str, List] = {}
-    feature_rows = []
-
-    for idx, r in df.iterrows():
-        sender = str(r['Sender_account'])
-        receiver = str(r['Receiver_account'])
-        amt = float(r['Amount'])
-        dt = r['DateTime']
-        curr = str(r.get('Payment_currency', 'USD')).upper()
-        p_type = str(r.get('Payment_type', 'TRANSFER')).lower()
-        src_loc = str(r.get('Sender_bank_location', ''))
-        dest_loc = str(r.get('Receiver_bank_location', ''))
-
-        out_hist = sender_out_history.get(sender, [])
-        t_10m = dt - pd.Timedelta(minutes=10)
-        vel_10m = len([a for (t, a, rec) in out_hist if t >= t_10m]) + 1.0
-
-        in_hist = receiver_in_history.get(sender, [])
-        t_30m = dt - pd.Timedelta(minutes=30)
-        recent_in = [a for (t, a, snd) in in_hist if t >= t_30m]
-        rapid_movement = 0.0
-        if recent_in and amt > 0:
-            for in_a in recent_in:
-                if 0.70 <= (amt / (in_a + 1.0)) <= 1.25:
-                    rapid_movement = 1.0
-                    break
-
-        is_struct = 1.0 if (('POUND' in curr or 'USD' in curr or 'EUR' in curr) and (8500 <= amt < 10000)) else 0.0
-        is_cross = 1.0 if (src_loc and dest_loc and src_loc != dest_loc) else 0.0
-        is_cash = 1.0 if 'cash' in p_type else 0.0
-        log_amt = np.log10(max(1.0, amt))
-
-        prior_recipients = set(rec for (t, a, rec) in out_hist)
-        is_new_recip = 1.0 if (receiver and receiver not in prior_recipients) else 0.0
-        past_recip_count = float(len(prior_recipients))
-        hist_len = float(len(out_hist))
-
-        feature_rows.append([log_amt, vel_10m, rapid_movement, is_struct, is_cross, is_cash, is_new_recip, past_recip_count, hist_len])
-
-        out_hist.append((dt, amt, receiver))
-        sender_out_history[sender] = out_hist
-        in_h = receiver_in_history.get(receiver, [])
-        in_h.append((dt, amt, sender))
-        receiver_in_history[receiver] = in_h
-
-    X_all = np.array(feature_rows, dtype=float)
+    df_raw = pd.read_csv(csv_path)
+    X_all, feature_names, df = compute_samld_stream_features(df_raw, validate=True)
     y_all = df['Is_laundering'].values.astype(int)
 
-    # First 70% chronological split (17,500 records)
+    # First 70% chronological split (17,500 records: 14,000 train / 3,500 validation)
     X_train, y_train = X_all[:14000], y_all[:14000]
     X_val, y_val = X_all[14000:17500], y_all[14000:17500]
 
     model = RobustRandomForestClassifier(n_estimators=60, max_depth=5, random_state=42)
     model.fit(X_train, y_train)
 
-    # Threshold calibration strictly on validation set
+    # Threshold selection strictly on validation set (never test)
     val_probs = model.predict_proba(X_val)[:, 1]
     best_f1, best_tau = 0.0, 0.55
     for tau in np.arange(0.20, 0.85, 0.05):
         preds = (val_probs >= tau).astype(int)
-        tp = np.sum((y_val == 1) & (preds == 1))
-        fp = np.sum((y_val == 0) & (preds == 1))
-        fn = np.sum((y_val == 1) & (preds == 0))
+        tp = int(np.sum((y_val == 1) & (preds == 1)))
+        fp = int(np.sum((y_val == 0) & (preds == 1)))
+        fn = int(np.sum((y_val == 1) & (preds == 0)))
         prec = tp / max(1, tp + fp)
         rec = tp / max(1, tp + fn)
         f1 = (2 * prec * rec) / max(1e-6, prec + rec)
@@ -258,17 +240,30 @@ def _train_from_saml_canonical(csv_path: str) -> Tuple[RobustRandomForestClassif
             best_tau = round(float(tau), 2)
 
     metadata = {
+        "model_version": VERSION_V2_REMEDIATED,
         "version": VERSION_V2_REMEDIATED,
-        "feature_schema": FEATURE_SCHEMA,
+        "code_version": "2.0.0-remediated",
+        "canonical_feature_schema": CANONICAL_FEATURE_NAMES,
+        "feature_schema": CANONICAL_FEATURE_NAMES,
+        "dataset_name": "SAML_D",
+        "dataset_version": "canonical_2022_v1",
+        "training_dataset_identity": "SAML-D Canonical Stream Partition (Kaggle)",
         "train_samples": int(len(X_train)),
         "train_positives": int(np.sum(y_train == 1)),
+        "train_date_range": (str(df['DateTime'].iloc[0]), str(df['DateTime'].iloc[13999])),
         "val_samples": int(len(X_val)),
         "val_positives": int(np.sum(y_val == 1)),
+        "val_date_range": (str(df['DateTime'].iloc[14000]), str(df['DateTime'].iloc[17499])),
+        "test_samples": int(len(df) - 17500),
+        "test_positives": int(np.sum(y_all[17500:] == 1)),
+        "test_date_range": (str(df['DateTime'].iloc[17500]), str(df['DateTime'].iloc[-1])),
+        "threshold_selection_method": "validation_grid_search_f1_optimal",
         "val_optimal_threshold": best_tau,
         "val_f1": round(float(best_f1), 4),
-        "train_date_range": (str(df['DateTime'].iloc[0]), str(df['DateTime'].iloc[13999])),
-        "val_date_range": (str(df['DateTime'].iloc[14000]), str(df['DateTime'].iloc[17499])),
-        "test_date_range": (str(df['DateTime'].iloc[17500]), str(df['DateTime'].iloc[-1]))
+        "calibration_status": "UNVERIFIED",
+        "is_calibrated": False,
+        "model_type": "RobustRandomForestClassifier",
+        "trained_at": datetime.now(timezone.utc).isoformat()
     }
 
     return model, metadata
@@ -288,12 +283,32 @@ def _init_rf_remediated() -> Optional[RobustRandomForestClassifier]:
     if os.path.exists(storage_path):
         try:
             artifact = joblib.load(storage_path)
+            meta = artifact.get("metadata")
+            # Strict validation of artifact metadata
+            if not isinstance(meta, dict):
+                logger.warning(f"Rejected model artifact at {storage_path}: Missing metadata dictionary.")
+                return None
+
+            schema = meta.get("canonical_feature_schema") or meta.get("feature_schema")
+            if schema != CANONICAL_FEATURE_NAMES:
+                logger.warning(
+                    f"Rejected model artifact at {storage_path}: Incompatible feature schema. "
+                    f"Expected {CANONICAL_FEATURE_NAMES}, got {schema}."
+                )
+                return None
+
+            req_keys = ["model_version", "train_samples", "val_samples", "train_date_range", "threshold_selection_method"]
+            missing_keys = [k for k in req_keys if k not in meta]
+            if missing_keys:
+                logger.warning(f"Rejected model artifact at {storage_path}: Missing required metadata keys: {missing_keys}.")
+                return None
+
             _rf_remediated_model = artifact["model"]
-            _remediated_metadata = artifact.get("metadata", {})
-            logger.info(f"Loaded persistent remediated RF model from {storage_path}")
+            _remediated_metadata = meta
+            logger.info(f"Loaded and verified persistent remediated RF model from {storage_path}")
             return _rf_remediated_model
         except Exception as e:
-            logger.warning(f"Failed to load persistent model from {storage_path}: {e}")
+            logger.warning(f"Failed to load or validate persistent model from {storage_path}: {e}")
 
     # Train from canonical dataset
     base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
@@ -342,9 +357,24 @@ def predict_supervised_risk(features: Dict[str, Any]) -> Dict[str, Any]:
     if _active_version == VERSION_V1_BASELINE:
         model = _init_rf_baseline()
         ver = VERSION_V1_BASELINE
-    else:
-        model = _init_rf_remediated()
-        ver = VERSION_V2_REMEDIATED
+        # Extract validated feature vector
+        vec = extract_supervised_feature_vector(features)
+        prob = float(model.predict_proba(vec)[0][1])
+        return {
+            "supervised_score": round(prob * 100.0, 1),
+            "predicted_risk_probability": round(prob, 4),
+            "model_name": "SyntheticGaussianBaselineClassifier",
+            "model_version": ver,
+            "model_status": "SYNTHETIC_ROLLBACK_ONLY",
+            "is_production_model": False,
+            "is_synthetic": True,
+            "is_calibrated": False,
+            "calibration_status": "UNVERIFIED",
+            "note": "Legacy baseline retained strictly for rollback audit testing; not for production scoring."
+        }
+
+    model = _init_rf_remediated()
+    ver = VERSION_V2_REMEDIATED
 
     if model is None:
         return {
@@ -354,7 +384,8 @@ def predict_supervised_risk(features: Dict[str, Any]) -> Dict[str, Any]:
             "model_version": ver,
             "model_status": "MODEL_UNAVAILABLE",
             "is_calibrated": False,
-            "error": "Model artifact not trained and training data unavailable."
+            "calibration_status": "UNVERIFIED",
+            "error": "Model artifact not trained or failed schema validation."
         }
 
     # Extract validated feature vector
@@ -370,8 +401,9 @@ def predict_supervised_risk(features: Dict[str, Any]) -> Dict[str, Any]:
         "model_name": "RobustRandomForestClassifier",
         "model_version": ver,
         "model_status": "ACTIVE",
-        "is_calibrated": True,
-        "feature_schema": FEATURE_SCHEMA,
+        "is_calibrated": False,
+        "calibration_status": "UNVERIFIED",
+        "feature_schema": CANONICAL_FEATURE_NAMES,
         "feature_contributions": {
             "log_amount": round(float(vec[0][0]), 2),
             "velocity_10m": round(float(vec[0][1]), 1),

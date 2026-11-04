@@ -18,6 +18,19 @@ def analyze_suspicious_account_network(conn: sqlite3.Connection, account_id: str
     to independently predict whether an account operates as a Money Mule.
     NEVER accesses ground-truth labels.
     """
+    if conn is None or not account_id:
+        return {
+            "account_id": account_id,
+            "status": "UNAVAILABLE",
+            "predicted_mule_probability": None,
+            "mule_risk_tier": "UNAVAILABLE",
+            "network_role": "UNKNOWN",
+            "role_description": "Account mule prediction is unavailable (missing connection or account ID).",
+            "signals": {},
+            "supporting_evidence": [],
+            "model_engine": "SentinelFlow Unsupervised Mule Network Detector v2.0"
+        }
+
     cursor = conn.cursor()
     
     # 1. Query outbound transactions (capped at 100 for bounded execution)
@@ -72,6 +85,25 @@ def analyze_suspicious_account_network(conn: sqlite3.Connection, account_id: str
         balance = 0.0
         curr = "USD"
         
+    # If account has zero transaction history, fail closed with INSUFFICIENT_DATA
+    if total_txns == 0:
+        return {
+            "account_id": account_id,
+            "status": "INSUFFICIENT_DATA",
+            "predicted_mule_probability": None,
+            "mule_risk_tier": "UNAVAILABLE",
+            "network_role": "INSUFFICIENT_DATA",
+            "role_description": "No transaction history exists to evaluate account network behavior.",
+            "signals": {
+                "inbound_tx_count": 0,
+                "outbound_tx_count": 0,
+                "total_volume": 0.0,
+                "current_balance": balance
+            },
+            "supporting_evidence": ["Zero historical transactions associated with account."],
+            "model_engine": "SentinelFlow Unsupervised Mule Network Detector v2.0"
+        }
+
     # 4. Multi-Signal Mule Probability Scoring
     # Component scores
     s_passthrough = min(1.0, pass_through_ratio * 1.1)
@@ -121,6 +153,7 @@ def analyze_suspicious_account_network(conn: sqlite3.Connection, account_id: str
 
     return {
         "account_id": account_id,
+        "status": "ACTIVE",
         "predicted_mule_probability": calibrated_prob,
         "mule_risk_tier": "CRITICAL" if calibrated_prob >= 0.80 else "HIGH" if calibrated_prob >= 0.60 else "MEDIUM" if calibrated_prob >= 0.40 else "LOW",
         "network_role": network_role,

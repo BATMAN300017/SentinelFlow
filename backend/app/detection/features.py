@@ -17,8 +17,55 @@ CRITICAL ARCHITECTURAL CONSTRAINTS:
 
 import sqlite3
 import numpy as np
-from typing import Dict, Any, List, Optional
+import pandas as pd
+from typing import Dict, Any, List, Optional, Tuple, Set
 from datetime import datetime, timezone, timedelta
+
+# Single canonical 9-feature schema shared identically across training, inference and evaluation
+CANONICAL_FEATURE_NAMES: List[str] = [
+    "log_amount",             # float: log10(max(1.0, amount))
+    "velocity_10m",           # float: number of outbound txns in prior 10m window (including current: >= 1.0)
+    "rapid_movement",         # float: 1.0 if recent inbound (<30m) followed by outbound of comparable amount (0.7-1.25), else 0.0
+    "structuring_flag",       # float: 1.0 if amount near reporting threshold ($8500-$9999 or INR 180k-199.9k), else 0.0
+    "is_cross_border",        # float: 1.0 if sender country != receiver country, else 0.0
+    "is_cash_channel",        # float: 1.0 if payment channel / type is cash, else 0.0
+    "is_new_recipient",       # float: 1.0 if receiver was never seen in sender's prior history, else 0.0
+    "past_recipient_count",   # float: count of distinct prior recipients seen from this sender (>= 0.0)
+    "history_length"          # float: total prior outbound transactions from this sender (>= 0.0)
+]
+
+def validate_feature_vector(vec: np.ndarray) -> np.ndarray:
+    """
+    Validates that a feature vector matches the canonical 9-feature schema:
+    - Dimensions: (*, 9)
+    - All elements finite numeric floats (no NaN, null, or Inf)
+    - Values within mathematical/operational bounds
+    """
+    if not isinstance(vec, np.ndarray):
+        raise TypeError(f"Expected numpy.ndarray, got {type(vec).__name__}")
+    if vec.ndim == 1:
+        vec = vec.reshape(1, -1)
+    if vec.shape[-1] != len(CANONICAL_FEATURE_NAMES):
+        raise ValueError(
+            f"Feature dimension mismatch: expected {len(CANONICAL_FEATURE_NAMES)} features, "
+            f"got vector with shape {vec.shape}"
+        )
+    if not np.all(np.isfinite(vec)):
+        raise ValueError("Feature vector contains non-finite (NaN, Inf, or None) values.")
+    if np.any(vec[:, 0] < 0.0):
+        raise ValueError(f"log_amount cannot be negative: min={np.min(vec[:, 0])}")
+    if np.any(vec[:, 1] < 1.0):
+        raise ValueError(f"velocity_10m must be >= 1.0 (including current transaction): min={np.min(vec[:, 1])}")
+    for col_idx, col_name in [(2, "rapid_movement"), (3, "structuring_flag"), (4, "is_cross_border"), (5, "is_cash_channel"), (6, "is_new_recipient")]:
+        invalid_mask = ~np.isin(vec[:, col_idx], [0.0, 1.0])
+        if np.any(invalid_mask):
+            raise ValueError(f"Binary feature '{col_name}' contains non-binary values: {vec[invalid_mask, col_idx]}")
+    if np.any(vec[:, 7] < 0.0):
+        raise ValueError(f"past_recipient_count cannot be negative: min={np.min(vec[:, 7])}")
+    if np.any(vec[:, 8] < 0.0):
+        raise ValueError(f"history_length cannot be negative: min={np.min(vec[:, 8])}")
+    return vec
+
 
 def _row_to_dict(row, col_names: List[str]) -> Dict[str, Any]:
     if row is None:
@@ -255,15 +302,175 @@ def extract_transaction_features(conn: sqlite3.Connection, txn: Dict[str, Any]) 
         "in_out_ratio": in_out_ratio,
         "fan_in_ratio": fan_in_ratio,
         "fan_out_ratio": fan_out_ratio,
-        "unique_counterparties": max(1, unique_counterparties),
+        "unique_counterparties": unique_counterparties,
+        "past_recipient_count": float(unique_counterparties),
+        "history_length": float(history_count),
         "is_new_beneficiary": is_new_beneficiary,
+        "is_new_recipient": float(is_new_beneficiary),
         "shared_device_accounts": shared_device_accounts,
         "rapid_movement_detected": rapid_movement,
+        "rapid_movement": float(rapid_movement),
+        "velocity_10m": float(short_window_count),
         "recent_inbound_sum": recent_inbound_sum,
         "recent_inbound_count": recent_inbound_count,
-        "structuring_flag": structuring_flag,
+        "structuring_flag": float(structuring_flag),
         "round_amount_flag": round_amount_flag,
-        "is_cross_border": is_cross_border,
-        "is_cash_channel": is_cash_channel,
+        "is_cross_border": float(is_cross_border),
+        "is_cash_channel": float(is_cash_channel),
         "historical_amounts": amounts
     }
+
+
+def compute_samld_stream_features(
+    df_or_records: Any,
+    validate: bool = True
+) -> Tuple[np.ndarray, List[str], pd.DataFrame]:
+    """
+    Shared, deterministic event-time feature-building implementation for SAML-D.
+    Used identically for offline training, validation, holdout test evaluation,
+    and batch streaming.
+
+    Guarantees:
+    - Same canonical 9-feature schema and ordering as online inference.
+    - Deterministic tie-breaking on same-timestamp records via stable transaction ID.
+    - Zero self-leakage and zero look-ahead bias: a transaction never uses its own
+      features or future transactions as history.
+    - Fails closed on missing timestamps or non-finite values (never substitutes datetime.now()).
+    - Returns (X: ndarray of shape (N, 9), feature_names: List[str], df: DataFrame).
+    """
+    if isinstance(df_or_records, pd.DataFrame):
+        df = df_or_records.copy()
+    elif isinstance(df_or_records, list):
+        df = pd.DataFrame(df_or_records)
+    else:
+        raise ValueError("df_or_records must be a pandas DataFrame or list of dicts.")
+
+    # Validate required columns
+    req_cols = ["Sender_account", "Receiver_account", "Amount"]
+    for c in req_cols:
+        if c not in df.columns:
+            low_map = {col.lower(): col for col in df.columns}
+            if c.lower() in low_map:
+                df[c] = df[low_map[c.lower()]]
+            else:
+                raise ValueError(f"Missing required SAML-D column: '{c}'.")
+
+    # Timestamp handling: require valid Date and Time or created_at
+    if "Date" in df.columns and "Time" in df.columns:
+        if df["Date"].isna().any() or df["Time"].isna().any():
+            raise ValueError("Dataset contains null or missing Date/Time values.")
+        date_str = df["Date"].astype(str).str.strip()
+        time_str = df["Time"].astype(str).str.strip()
+        if (date_str == "").any() or (time_str == "").any():
+            raise ValueError("Dataset contains blank Date or Time values.")
+        df["DateTime"] = pd.to_datetime(date_str + " " + time_str)
+    elif "created_at" in df.columns:
+        if df["created_at"].isna().any():
+            raise ValueError("Dataset contains null or missing 'created_at' timestamps.")
+        df["DateTime"] = pd.to_datetime(df["created_at"])
+    else:
+        raise ValueError("Dataset must contain either ('Date', 'Time') or 'created_at' timestamps.")
+
+    if df["DateTime"].isna().any():
+        raise ValueError("Failed to parse event timestamps into valid datetimes.")
+
+    # Ensure stable transaction ID for deterministic tie-breaking
+    if "id" in df.columns:
+        df["txn_sort_id"] = df["id"].astype(str)
+    elif "transaction_id" in df.columns:
+        df["txn_sort_id"] = df["transaction_id"].astype(str)
+    else:
+        df["txn_sort_id"] = [f"SAML-D-{i:07d}" for i in range(len(df))]
+
+    # Strict deterministic sort by (DateTime, txn_sort_id)
+    df = df.sort_values(by=["DateTime", "txn_sort_id"], ascending=[True, True]).reset_index(drop=True)
+
+    sender_out_history: Dict[str, List[Tuple[Any, float, str, str]]] = {}
+    receiver_in_history: Dict[str, List[Tuple[Any, float, str, str]]] = {}
+    feature_rows = []
+
+    for idx, r in df.iterrows():
+        sender = str(r["Sender_account"])
+        receiver = str(r["Receiver_account"])
+        amt = float(r["Amount"])
+        if amt < 0.0 or not np.isfinite(amt):
+            raise ValueError(f"Transaction at row {idx} has invalid amount: {amt}")
+
+        dt = r["DateTime"]
+        cur_tid = str(r["txn_sort_id"])
+
+        curr = str(r.get("Payment_currency", r.get("currency", "USD"))).upper()
+        p_type = str(r.get("Payment_type", r.get("payment_type", "TRANSFER"))).lower()
+        src_loc = str(r.get("Sender_bank_location", r.get("sender_country", "")))
+        dest_loc = str(r.get("Receiver_bank_location", r.get("receiver_country", "")))
+
+        # 1. log_amount: log10(max(1.0, amt))
+        log_amt = round(float(np.log10(max(1.0, amt))), 4)
+
+        # Sender prior outbound history strictly prior: (t < dt) OR (t == dt AND tid < cur_tid)
+        out_hist = sender_out_history.get(sender, [])
+        prior_out = [
+            item for item in out_hist
+            if (item[0] < dt) or (item[0] == dt and item[3] < cur_tid)
+        ]
+
+        # 2. velocity_10m: prior outbound in last 10m + 1.0
+        t_10m = dt - pd.Timedelta(minutes=10)
+        vel_10m_prior = len([
+            item for item in prior_out
+            if item[0] >= t_10m
+        ])
+        vel_10m = float(vel_10m_prior + 1.0)
+
+        # 3. rapid_movement: recent inbound to sender within 30m followed by comparable outbound (0.70-1.25)
+        in_hist = receiver_in_history.get(sender, [])
+        t_30m = dt - pd.Timedelta(minutes=30)
+        recent_in = [
+            item[1] for item in in_hist
+            if item[0] >= t_30m and ((item[0] < dt) or (item[0] == dt and item[3] < cur_tid))
+        ]
+        rapid_movement = 0.0
+        if recent_in and amt > 0.0:
+            for in_a in recent_in:
+                if 0.70 <= (amt / (in_a + 1.0)) <= 1.25:
+                    rapid_movement = 1.0
+                    break
+
+        # 4. structuring_flag: near reporting threshold
+        is_struct = 1.0 if (
+            (('POUND' in curr or 'USD' in curr or 'EUR' in curr) and (8500.0 <= amt < 10000.0)) or
+            ('INR' in curr and (180000.0 <= amt < 200000.0)) or
+            (8500.0 <= amt < 10000.0)
+        ) else 0.0
+
+        # 5. is_cross_border
+        is_cross = 1.0 if (src_loc and dest_loc and src_loc != dest_loc) else 0.0
+
+        # 6. is_cash_channel
+        is_cash = 1.0 if "cash" in p_type else 0.0
+
+        # 7. is_new_recipient & 8. past_recipient_count
+        prior_recipients = set(item[2] for item in prior_out)
+        is_new_recip = 1.0 if (receiver and receiver not in prior_recipients) else 0.0
+        past_recip_count = float(len(prior_recipients))
+
+        # 9. history_length
+        hist_len = float(len(prior_out))
+
+        row_vec = [log_amt, vel_10m, rapid_movement, is_struct, is_cross, is_cash, is_new_recip, past_recip_count, hist_len]
+        feature_rows.append(row_vec)
+
+        # Update event-time history with current transaction
+        out_hist.append((dt, amt, receiver, cur_tid))
+        sender_out_history[sender] = out_hist
+
+        in_h = receiver_in_history.get(receiver, [])
+        in_h.append((dt, amt, sender, cur_tid))
+        receiver_in_history[receiver] = in_h
+
+    X = np.array(feature_rows, dtype=float)
+
+    if validate:
+        validate_feature_vector(X)
+
+    return X, CANONICAL_FEATURE_NAMES, df

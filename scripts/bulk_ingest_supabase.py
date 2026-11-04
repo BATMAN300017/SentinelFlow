@@ -196,7 +196,6 @@ def ingest_real_data():
         customers_batch = {}
         accounts_batch = {}
         txns_to_insert = []
-        laundering_alerts_seed = []
 
         for idx, row in df_saml.iterrows():
             sender = str(row["Sender_account"]).strip()
@@ -405,104 +404,51 @@ def ingest_real_data():
         gt_conn.close()
         print(f"  [SUCCESS] Isolated ground-truth store populated ({len(protected_txns):,} transactions, {len(protected_accs):,} accounts).")
 
-        # 2.6 Seed Realistic Alerts from Laundering Cases
-        print(f"\n--- 2.6 Generating Alerts from {len(laundering_alerts_seed)} Real Laundering & Mule Cases ---")
-        alerts_to_insert = []
-        findings_to_insert = []
+        # 2.6 Seeded Detections Policy
+        # Seeded alerts and findings masquerading as live engine detections have been removed.
+        # In SentinelFlow, alerts and findings must originate exclusively from the live detection engine
+        # (rules, graph algorithms, and supervised ML models) or be explicitly marked as [DEMO FIXTURE].
 
-        for idx, (t_id, src, dest, cust_id, amt, curr, score, band, scheme, ts) in enumerate(laundering_alerts_seed):
-            alert_id = f"ALT-REAL-{idx+1:04d}"
-            alert_ref = f"REF-ALT-2026-{idx+1:04d}"
-            title = f"High Risk {scheme.replace('_', ' ')} Pattern Detected"
-            summary = f"Automated multi-engine detection flagged {scheme} with risk score {score} on transaction {t_id}. Account {src} transferred {amt:,.2f} {curr} to {dest}."
-            severity = "CRITICAL" if score >= 90.0 else "HIGH"
-
-            alerts_to_insert.append((
-                alert_id, alert_ref, t_id, src, cust_id,
-                severity, "NEW", score, title, summary,
-                "USR-INV-01", None, ts, ts
-            ))
-
-            # Add Alert Findings (Multi-engine evidence)
-            findings_to_insert.append((
-                str(uuid.uuid4()), alert_id, "RULE", "TYPOLOGY_MATCH",
-                f"Rule matched laundering topology {scheme}",
-                35.0, json.dumps({"scheme": scheme, "amount": amt, "currency": curr}),
-                "v1.0", ts
-            ))
-            findings_to_insert.append((
-                str(uuid.uuid4()), alert_id, "ANOMALY", "AMOUNT_DEV",
-                f"Transaction amount {amt:,.2f} deviates significantly from normal profile",
-                25.0, json.dumps({"z_score": 3.8, "historic_mean": amt * 0.1}),
-                "v1.0", ts
-            ))
-            findings_to_insert.append((
-                str(uuid.uuid4()), alert_id, "GRAPH", "NETWORK_CENTRALITY",
-                f"Account {src} exhibits high betweenness centrality in fund transfer network",
-                30.0, json.dumps({"centrality_score": 0.88, "degree": 14}),
-                "v1.0", ts
-            ))
-
-        print(f"  Inserting {len(alerts_to_insert)} alerts...")
-        execute_values(cur, """
-            INSERT INTO alerts (
-                id, alert_ref, transaction_id, account_id, customer_id,
-                severity, status, risk_score, title, summary,
-                assigned_to, dismissal_reason, created_at, updated_at
-            ) VALUES %s
-            ON CONFLICT (id) DO UPDATE SET
-                risk_score = EXCLUDED.risk_score,
-                status = EXCLUDED.status;
-        """, alerts_to_insert, page_size=1000)
-
-        print(f"  Inserting {len(findings_to_insert)} alert findings...")
-        execute_values(cur, """
-            INSERT INTO alert_findings (
-                id, alert_id, source, code, description, score_contribution, feature_values_json, version, created_at
-            ) VALUES %s
-            ON CONFLICT (id) DO NOTHING;
-        """, findings_to_insert, page_size=1000)
-
-        # 2.7 Seed Investigations & Dossiers
-        print("\n--- 2.7 Seeding 8 Comprehensive Investigations Dossiers ---")
+        # 2.7 Seed Investigations & Dossiers (Marked as UI Demo Fixtures)
+        print("\n--- 2.7 Seeding 8 Comprehensive Investigations Dossiers [DEMO FIXTURES] ---")
         inv_cases = [
-            ("INV-2026-001", "CASE-SAML-STRUCTURING", "Organized Structuring Ring Investigation",
+            ("INV-2026-001", "CASE-SAML-STRUCTURING", "[DEMO FIXTURE] Organized Structuring Ring Investigation",
              "Multiple sub-$10k transfers orchestrated across interconnected accounts in SAML-D dataset.",
              "CRITICAL", "IN_PROGRESS", "USR-INV-01", "USR-SR-02", None, None, None, "NONE", None, None,
              (datetime.now(timezone.utc) + timedelta(days=7)).isoformat(), 0.85, "v1.0.0", "v1.0", now_iso, now_iso),
-            ("INV-2026-002", "CASE-NFPC-MULE-CHAIN", "Domestic Multi-Hop Mule Account Ring",
+            ("INV-2026-002", "CASE-NFPC-MULE-CHAIN", "[DEMO FIXTURE] Domestic Multi-Hop Mule Account Ring",
              "NFPC confirmed mule accounts receiving rapid aggregation deposits and cascading transfers.",
              "HIGH", "PENDING_PEER_REVIEW", "USR-INV-01", "USR-SR-02", "CONFIRMED_FRAUD",
              "Accounts linked to documented cyber fraud complaints with immediate ATM/Wire extraction.",
              now_iso, "REQUESTED", "Awaiting Marcus Vance supervisory signoff.", None,
              (datetime.now(timezone.utc) + timedelta(days=3)).isoformat(), 0.95, "v1.0.0", "v1.0", now_iso, now_iso),
-            ("INV-2026-003", "CASE-CROSS-BORDER-AML", "Cross-Border Layering & Conversion Ring",
+            ("INV-2026-003", "CASE-CROSS-BORDER-AML", "[DEMO FIXTURE] Cross-Border Layering & Conversion Ring",
              "Foreign currency exchange transactions traversing intermediary accounts without business rationale.",
              "CRITICAL", "RESOLVED", "USR-SR-02", "USR-ADM-03", "CONFIRMED_FRAUD",
              "Verified illicit funds laundering via offshore entities; SAR submitted to FIU.",
              now_iso, "APPROVED", "Approved for regulatory disclosure.", now_iso,
              (datetime.now(timezone.utc) - timedelta(days=1)).isoformat(), 1.0, "v1.0.0", "v1.0", now_iso, now_iso),
-            ("INV-2026-004", "CASE-FAN-OUT-SCATTER", "Layered Fan-Out Disbursement Syndicate",
+            ("INV-2026-004", "CASE-FAN-OUT-SCATTER", "[DEMO FIXTURE] Layered Fan-Out Disbursement Syndicate",
              "Single corporate account dispersing rapid micro-payments across 25 personal recipient wallets.",
              "HIGH", "IN_PROGRESS", "USR-INV-01", None, None, None, None, "NONE", None, None,
              (datetime.now(timezone.utc) + timedelta(days=10)).isoformat(), 0.70, "v1.0.0", "v1.0", now_iso, now_iso),
-            ("INV-2026-005", "CASE-FALSE-POSITIVE-01", "High Net-Worth Seasonal Property Purchase",
+            ("INV-2026-005", "CASE-FALSE-POSITIVE-01", "[DEMO FIXTURE] High Net-Worth Seasonal Property Purchase",
              "Spike in payment velocity during annual tax and real estate closing schedule.",
              "MEDIUM", "RESOLVED", "USR-INV-01", "USR-SR-02", "LEGITIMATE_ACTIVITY",
              "Customer provided escrow contracts, verified notarized deeds, legitimate wealth source.",
              now_iso, "APPROVED", "Verified legitimate source of funds.", now_iso,
              (datetime.now(timezone.utc) - timedelta(days=2)).isoformat(), 1.0, "v1.0.0", "v1.0", now_iso, now_iso),
-            ("INV-2026-006", "CASE-CYCLE-WASH-TRADE", "Circular Fund Flow Round-Tripping",
+            ("INV-2026-006", "CASE-CYCLE-WASH-TRADE", "[DEMO FIXTURE] Circular Fund Flow Round-Tripping",
              "Funds transferred across four accounts returning to origin account within 48 hours.",
              "CRITICAL", "NEW", "USR-INV-01", None, None, None, None, "NONE", None, None,
              (datetime.now(timezone.utc) + timedelta(days=14)).isoformat(), 0.50, "v1.0.0", "v1.0", now_iso, now_iso),
-            ("INV-2026-007", "CASE-PAYROLL-ANOMALY", "Quarterly Executive Compensation Distribution",
+            ("INV-2026-007", "CASE-PAYROLL-ANOMALY", "[DEMO FIXTURE] Quarterly Executive Compensation Distribution",
              "Unusual batch transfers occurring on the last business day of financial quarter.",
              "LOW", "RESOLVED", "USR-INV-01", "USR-SR-02", "LEGITIMATE_ACTIVITY",
              "Routine board-approved dividend disbursement verified against corporate filings.",
              now_iso, "APPROVED", "Verified corporate dividends.", now_iso,
              (datetime.now(timezone.utc) - timedelta(days=5)).isoformat(), 1.0, "v1.0.0", "v1.0", now_iso, now_iso),
-            ("INV-2026-008", "CASE-SMURF-SYNDICATE", "Micro-Smurfing ATM Ingestion Campaign",
+            ("INV-2026-008", "CASE-SMURF-SYNDICATE", "[DEMO FIXTURE] Micro-Smurfing ATM Ingestion Campaign",
              "Repeated cash deposits right below threshold limits at multiple regional ATM kiosks.",
              "CRITICAL", "IN_PROGRESS", "USR-SR-02", "USR-ADM-03", None, None, None, "NONE", None, None,
              (datetime.now(timezone.utc) + timedelta(days=5)).isoformat(), 0.75, "v1.0.0", "v1.0", now_iso, now_iso)
@@ -524,31 +470,21 @@ def ingest_real_data():
                     evidence_completeness_score = EXCLUDED.evidence_completeness_score;
             """, inv)
 
-        # Link Alerts to Investigations
-        for i in range(min(len(alerts_to_insert), 8)):
-            alt_id = alerts_to_insert[i][0]
-            inv_id = inv_cases[i][0]
-            cur.execute("""
-                INSERT INTO investigation_alerts (investigation_id, alert_id, added_at)
-                VALUES (%s, %s, %s)
-                ON CONFLICT (investigation_id, alert_id) DO NOTHING;
-            """, (inv_id, alt_id, now_iso))
-
-        # 2.8 Seed Analyst Feedback for Learning Loop
-        print("\n--- 2.8 Seeding Analyst Feedback records ---")
+        # 2.8 Seed Analyst Feedback for Learning Loop (Excluded from Training as DEMO_FIXTURE)
+        print("\n--- 2.8 Seeding Demo Analyst Feedback records (is_eligible_for_training = 0) ---")
         feedbacks = [
             (str(uuid.uuid4()), "INV-2026-002", "USR-INV-01", "CONFIRMED_FRAUD",
              "Demonstrated multi-hop pass-through with 0% balance retention and KYC identity mismatch.",
-             5, 1, 1, None, "v1.0.0", "v1.0", now_iso),
+             5, 0, None, "DEMO_FIXTURE", "v1.0.0", "v1.0", now_iso),
             (str(uuid.uuid4()), "INV-2026-003", "USR-SR-02", "CONFIRMED_FRAUD",
              "Offshore entity layering with circular beneficiary identity; regulatory SAR filed.",
-             6, 1, 1, None, "v1.0.0", "v1.0", now_iso),
+             6, 0, None, "DEMO_FIXTURE", "v1.0.0", "v1.0", now_iso),
             (str(uuid.uuid4()), "INV-2026-005", "USR-INV-01", "LEGITIMATE_ACTIVITY",
              "Real estate closing verified via escrow bank confirmation letters.",
-             4, 1, 0, None, "v1.0.0", "v1.0", now_iso),
+             4, 0, None, "DEMO_FIXTURE", "v1.0.0", "v1.0", now_iso),
             (str(uuid.uuid4()), "INV-2026-007", "USR-INV-01", "LEGITIMATE_ACTIVITY",
              "Confirmed executive quarterly bonus payroll distribution.",
-             3, 1, 0, None, "v1.0.0", "v1.0", now_iso)
+             3, 0, None, "DEMO_FIXTURE", "v1.0.0", "v1.0", now_iso)
         ]
         for fb in feedbacks:
             cur.execute("""
@@ -560,108 +496,10 @@ def ingest_real_data():
                 ON CONFLICT (id) DO NOTHING;
             """, (fb[0], fb[1], fb[2], fb[3], fb[3], fb[4], fb[5], fb[6], fb[7], fb[8], fb[9], fb[10], fb[11]))
 
-        # 2.9 Train & Register Machine Learning Models
-        print("\n--- 2.9 Training Machine Learning Models on Real Datasets ---")
-        from sklearn.ensemble import RandomForestClassifier, IsolationForest
-        from sklearn.metrics import precision_score, recall_score, f1_score, average_precision_score
-        import joblib
-
-        # Construct training matrix from ingested real transactions
-        cur.execute("""
-            SELECT amount, risk_score,
-                   CASE WHEN transaction_type = 'TRANSFER' THEN 1 ELSE 0 END as is_transfer,
-                   CASE WHEN payment_channel = 'WIRE' THEN 1 ELSE 0 END as is_wire,
-                   CASE WHEN currency = 'INR' THEN 1 ELSE 0 END as is_inr,
-                   CASE WHEN status = 'COMPLETED' THEN 1 ELSE 0 END as is_completed
-            FROM transactions LIMIT 20000;
-        """)
-        rows = cur.fetchall()
-        import numpy as np
-        X = np.array(rows, dtype=np.float32)
-
-        # Labels: use realistic fraud probability threshold
-        y = np.where(X[:, 1] >= 80.0, 1, 0)
-        print(f"  Training dataset: {len(X)} samples, {np.sum(y)} positive labels ({np.mean(y)*100:.2f}%).")
-
-        rf = RandomForestClassifier(n_estimators=100, max_depth=8, random_state=42)
-        rf.fit(X, y)
-        y_pred = rf.predict(X)
-        y_prob = rf.predict_proba(X)[:, 1]
-
-        p = float(precision_score(y, y_pred, zero_division=0))
-        r = float(recall_score(y, y_pred, zero_division=0))
-        f1 = float(f1_score(y, y_pred, zero_division=0))
-        pr_auc = float(average_precision_score(y, y_prob)) if np.sum(y) > 0 else 1.0
-
-        iso = IsolationForest(n_estimators=100, contamination=0.02, random_state=42)
-        iso.fit(X)
-
-        models_dir = os.path.join(BASE_DIR, "models")
-        os.makedirs(models_dir, exist_ok=True)
-        rf_path = os.path.join(models_dir, "random_forest_v1.0.0.joblib")
-        iso_path = os.path.join(models_dir, "isolation_forest_v1.0.0.joblib")
-        joblib.dump(rf, rf_path)
-        joblib.dump(iso, iso_path)
-
-        eval_report = {
-            "model_version": "v1.0.0",
-            "model_type": "RandomForestClassifier",
-            "training_samples": len(X),
-            "positive_samples": int(np.sum(y)),
-            "precision": round(p, 4),
-            "recall": round(r, 4),
-            "f1": round(f1, 4),
-            "pr_auc": round(pr_auc, 4),
-            "status": "PROMOTED",
-            "evaluated_at": now_iso
-        }
-        eval_report_path = os.path.join(models_dir, "eval_v1.0.0.json")
-        with open(eval_report_path, "w") as f:
-            json.dump(eval_report, f, indent=2)
-
-        # Upload models to Supabase Storage bucket 'sentinelflow-models'
-        supabase_client = get_supabase_client()
-        upload_file_to_storage(supabase_client, "sentinelflow-models", rf_path, "random-forest/v1.0.0/model.joblib")
-        upload_file_to_storage(supabase_client, "sentinelflow-models", iso_path, "isolation-forest/v1.0.0/model.joblib")
-        upload_file_to_storage(supabase_client, "sentinelflow-models", eval_report_path, "evaluation-reports/eval_v1.0.0.json", "application/json")
-
-        # Register in model_versions
-        mod_version_id = "mod-v1-0-0"
-        cur.execute("""
-            INSERT INTO model_versions (
-                id, model_name, version, dataset_versions,
-                training_config_json, evaluation_metrics_json, artifact_storage_path,
-                is_active, status, promoted_by, promoted_at, created_at, updated_at
-            ) VALUES (
-                %s, %s, %s, %s,
-                %s, %s, %s,
-                1, 'ACTIVE', %s, NOW(), NOW(), NOW()
-            )
-            ON CONFLICT (id) DO UPDATE SET
-                is_active = 1,
-                evaluation_metrics_json = EXCLUDED.evaluation_metrics_json;
-        """, (
-            mod_version_id, "RandomForestClassifier", "v1.0.0", "SAML_D_25K+NFPC_25K",
-            json.dumps({"n_estimators": 100, "max_depth": 8}), json.dumps(eval_report),
-            "sentinelflow-models/random-forest/v1.0.0/model.joblib",
-            "USR-ADM-03"
-        ))
-
-        # Register sample predictions in model_predictions
-        preds_to_insert = []
-        for (t_id, src, dest, cust_id, amt, curr, score, band, scheme, ts) in laundering_alerts_seed:
-            preds_to_insert.append((
-                str(uuid.uuid4()), t_id, mod_version_id, 1, score, 0.94,
-                json.dumps({"typology": scheme, "model": "RandomForestClassifier", "features_matched": 4}),
-                ts
-            ))
-        if preds_to_insert:
-            execute_values(cur, """
-                INSERT INTO model_predictions (
-                    id, transaction_id, model_version_id, prediction, risk_score, confidence, detection_reasons, prediction_timestamp
-                ) VALUES %s
-                ON CONFLICT (id) DO NOTHING;
-            """, preds_to_insert, page_size=500)
+        # 2.9 Model Training Policy Notice
+        # NOTE: Model training is decoupled from ingestion. Real models are trained via reproducible
+        # pipelines using event-time features and isolated ground truth in app.detection.supervised,
+        # never by fitting against database transaction risk scores.
 
         conn.commit()
         print("\n" + "=" * 60)

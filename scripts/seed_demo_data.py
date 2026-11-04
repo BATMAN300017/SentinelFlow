@@ -179,8 +179,8 @@ def seed_demo_database():
                     peer_review_status, evidence_completeness_score, created_at, updated_at
                 ) VALUES (?, ?, ?, ?, 'HIGH', ?, 'USR-INV-01', ?, ?, ?, ?, ?, ?)
             """, (
-                inv_id, case_num, f"Investigation: Priority Case {100 + i}",
-                f"Investigation into anomalous activity on Account {account_ids[i]}. Flagged for rapid fund forwarding.",
+                inv_id, case_num, f"[DEMO FIXTURE] Priority Case {100 + i}",
+                f"Demo investigation fixture into simulated activity on Account {account_ids[i]}.",
                 stat, disp, rationale,
                 "REQUESTED" if stat == "PENDING_PEER_REVIEW" else "NONE",
                 80.0 if stat == "RESOLVED" else 40.0,
@@ -225,18 +225,16 @@ def seed_demo_database():
                 VALUES (?, ?, 'USR-INV-01', 'Initial case review completed. Evidence bundle generated.', ?)
             """, (f"NOT-{inv_id}", inv_id, now.isoformat()))
             
-            # Feedback for resolved cases
+            # Feedback for resolved cases (Explicitly excluded from ML training as DEMO_FIXTURE)
             if disp:
                 cursor.execute("""
                     INSERT OR REPLACE INTO analyst_feedback (
                         id, investigation_id, analyst_id, disposition, rationale,
                         evidence_reviewed_count, is_eligible_for_training, training_label,
-                        model_version, rule_version, created_at
-                    ) VALUES (?, ?, 'USR-INV-01', ?, ?, 4, ?, ?, 'v1.0', 'v1.0', ?)
+                        exclusion_reason, model_version, rule_version, created_at
+                    ) VALUES (?, ?, 'USR-INV-01', ?, ?, 4, 0, NULL, 'DEMO_FIXTURE', 'v1.0', 'v1.0', ?)
                 """, (
                     f"FDB-{inv_id}", inv_id, disp, rationale,
-                    1 if disp in ("CONFIRMED_FRAUD", "LEGITIMATE_ACTIVITY") else 0,
-                    1 if disp == "CONFIRMED_FRAUD" else (0 if disp == "LEGITIMATE_ACTIVITY" else None),
                     now.isoformat()
                 ))
 

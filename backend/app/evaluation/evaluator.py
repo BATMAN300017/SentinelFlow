@@ -106,6 +106,68 @@ class IndependentEvaluator:
         missing_prediction_ids = sorted(list(prot_ids.difference(pred_ids)))
         unmatched_prediction_ids = sorted(list(pred_ids.difference(prot_ids)))
 
+        # Enforce evaluation split boundaries if eval_split is specified
+        if dataset_name == "SAML_D":
+            split_clean = str(eval_split).upper().strip() if eval_split else "ALL"
+            supported_splits = {"ALL", "FULL", "TEST", "UNTOUCHED_TEST", "VALIDATION", "TRAIN"}
+            if split_clean not in supported_splits:
+                return {
+                    "dataset_name": dataset_name,
+                    "status": "NOT EVALUATED",
+                    "message": f"Unsupported or unverifiable evaluation split '{eval_split}'. Supported splits for SAML_D: {sorted(list(supported_splits))}.",
+                    "sample_accounting": {
+                        "total_protected_labels": len(prot_ids),
+                        "matched_predictions": 0,
+                        "missing_predictions": len(missing_prediction_ids),
+                        "unmatched_predictions": len(unmatched_prediction_ids),
+                        "invalid_labels": 0
+                    }
+                }
+
+            if split_clean in ("TEST", "UNTOUCHED_TEST"):
+                # Filter matched_ids to only records with event timestamp >= 2022-10-07T21:44:14
+                test_matched_ids = []
+                for tid in matched_ids:
+                    t_time = prot_txns[tid].get("created_at") or prot_txns[tid].get("timestamp") or ""
+                    if str(t_time) >= "2022-10-07T21:44:14":
+                        test_matched_ids.append(tid)
+                matched_ids = test_matched_ids
+                eval_scope = "UNTOUCHED_TEST_PARTITION"
+            elif split_clean == "VALIDATION":
+                val_matched_ids = []
+                for tid in matched_ids:
+                    t_time = prot_txns[tid].get("created_at") or prot_txns[tid].get("timestamp") or ""
+                    if "2022-10-07T19:26:12" <= str(t_time) <= "2022-10-07T21:44:11":
+                        val_matched_ids.append(tid)
+                matched_ids = val_matched_ids
+                eval_scope = "VALIDATION_PARTITION"
+            elif split_clean == "TRAIN":
+                train_matched_ids = []
+                for tid in matched_ids:
+                    t_time = prot_txns[tid].get("created_at") or prot_txns[tid].get("timestamp") or ""
+                    if str(t_time) < "2022-10-07T19:26:12":
+                        train_matched_ids.append(tid)
+                matched_ids = train_matched_ids
+                eval_scope = "TRAIN_PARTITION"
+            else:
+                eval_scope = "FULL_DATASET_BENCHMARK"
+        else:
+            split_clean = str(eval_split).upper().strip() if eval_split else "ALL"
+            if split_clean not in ("ALL", "FULL"):
+                return {
+                    "dataset_name": dataset_name,
+                    "status": "NOT EVALUATED",
+                    "message": f"Dataset '{dataset_name}' does not define partition '{eval_split}'.",
+                    "sample_accounting": {
+                        "total_protected_labels": len(prot_ids),
+                        "matched_predictions": 0,
+                        "missing_predictions": len(missing_prediction_ids),
+                        "unmatched_predictions": len(unmatched_prediction_ids),
+                        "invalid_labels": 0
+                    }
+                }
+            eval_scope = "FULL_DATASET_BENCHMARK" 
+
         # Evaluate only matched transactions with valid ground-truth labels
         y_true: List[int] = []
         y_pred: List[int] = []
@@ -187,6 +249,8 @@ class IndependentEvaluator:
             "dataset_name": dataset_name,
             "status": "EVALUATED",
             "evaluation_granularity": "TRANSACTION_LEVEL",
+            "evaluation_scope": eval_scope,
+            "scope_note": "Evaluates all matched database records; this is NOT untouched holdout test set performance." if eval_scope == "FULL_DATASET_BENCHMARK" else f"Evaluated strictly on {eval_scope}.",
             "risk_score_threshold": risk_threshold,
             "sample_accounting": {
                 "total_protected_labels": len(prot_ids),
@@ -330,58 +394,9 @@ class IndependentEvaluator:
                 "message": f"SAML-D dataset not found at {csv_path}"
             }
 
-        df = pd.read_csv(csv_path)
-        df['DateTime'] = pd.to_datetime(df['Date'] + ' ' + df['Time'])
-        df = df.sort_values('DateTime').reset_index(drop=True)
-
-        # Maintain event-time history across the full stream
-        sender_out_history: Dict[str, List] = {}
-        receiver_in_history: Dict[str, List] = {}
-        feature_rows = []
-
-        for idx, r in df.iterrows():
-            sender = str(r['Sender_account'])
-            receiver = str(r['Receiver_account'])
-            amt = float(r['Amount'])
-            dt = r['DateTime']
-            curr = str(r.get('Payment_currency', 'USD')).upper()
-            p_type = str(r.get('Payment_type', 'TRANSFER')).lower()
-            src_loc = str(r.get('Sender_bank_location', ''))
-            dest_loc = str(r.get('Receiver_bank_location', ''))
-
-            out_hist = sender_out_history.get(sender, [])
-            t_10m = dt - pd.Timedelta(minutes=10)
-            vel_10m = len([a for (t, a, rec) in out_hist if t >= t_10m]) + 1.0
-
-            in_hist = receiver_in_history.get(sender, [])
-            t_30m = dt - pd.Timedelta(minutes=30)
-            recent_in = [a for (t, a, snd) in in_hist if t >= t_30m]
-            rapid_movement = 0.0
-            if recent_in and amt > 0:
-                for in_a in recent_in:
-                    if 0.70 <= (amt / (in_a + 1.0)) <= 1.25:
-                        rapid_movement = 1.0
-                        break
-
-            is_struct = 1.0 if (('POUND' in curr or 'USD' in curr or 'EUR' in curr) and (8500 <= amt < 10000)) else 0.0
-            is_cross = 1.0 if (src_loc and dest_loc and src_loc != dest_loc) else 0.0
-            is_cash = 1.0 if 'cash' in p_type else 0.0
-            log_amt = np.log10(max(1.0, amt))
-
-            prior_recipients = set(rec for (t, a, rec) in out_hist)
-            is_new_recip = 1.0 if (receiver and receiver not in prior_recipients) else 0.0
-            past_recip_count = float(len(prior_recipients))
-            hist_len = float(len(out_hist))
-
-            feature_rows.append([log_amt, vel_10m, rapid_movement, is_struct, is_cross, is_cash, is_new_recip, past_recip_count, hist_len])
-
-            out_hist.append((dt, amt, receiver))
-            sender_out_history[sender] = out_hist
-            in_h = receiver_in_history.get(receiver, [])
-            in_h.append((dt, amt, sender))
-            receiver_in_history[receiver] = in_h
-
-        X_all = np.array(feature_rows, dtype=float)
+        df_raw = pd.read_csv(csv_path)
+        from app.detection.features import compute_samld_stream_features
+        X_all, feature_names, df = compute_samld_stream_features(df_raw, validate=True)
         y_all = df['Is_laundering'].values.astype(int)
 
         # Untouched 30% test partition: records 17,500 to 24,999
@@ -434,8 +449,32 @@ class IndependentEvaluator:
         return {
             "dataset_name": "SAML_D",
             "evaluation_type": "UNTOUCHED_CHRONOLOGICAL_TEST_SET",
-            "evaluation_split": "FINAL_30_PERCENT",
+            "evaluation_split": "FINAL_30_PERCENT_HOLD_OUT",
             "date_range": (str(test_df['DateTime'].iloc[0]), str(test_df['DateTime'].iloc[-1])),
+            "partition_accounting": {
+                "train_partition": {
+                    "sample_count": 14000,
+                    "positive_count": int(np.sum(y_all[:14000] == 1)),
+                    "negative_count": int(np.sum(y_all[:14000] == 0)),
+                    "date_range": (str(df['DateTime'].iloc[0]), str(df['DateTime'].iloc[13999])),
+                    "role": "Model training exclusively"
+                },
+                "validation_partition": {
+                    "sample_count": 3500,
+                    "positive_count": int(np.sum(y_all[14000:17500] == 1)),
+                    "negative_count": int(np.sum(y_all[14000:17500] == 0)),
+                    "date_range": (str(df['DateTime'].iloc[14000]), str(df['DateTime'].iloc[17499])),
+                    "role": "Threshold selection exclusively (tau = 0.55 tuned here; test set untouched)"
+                },
+                "test_partition": {
+                    "sample_count": n_eval,
+                    "positive_count": int(np.sum(y_test == 1)),
+                    "negative_count": int(np.sum(y_test == 0)),
+                    "date_range": (str(test_df['DateTime'].iloc[0]), str(test_df['DateTime'].iloc[-1])),
+                    "role": "Untouched evaluation; never seen during training or tuning"
+                }
+            },
+            "threshold_tuning_provenance": "Fitted on validation partition; test partition untouched",
             "total_evaluated_samples": n_eval,
             "positive_laundering_count": int(np.sum(y_test == 1)),
             "negative_legitimate_count": int(np.sum(y_test == 0)),

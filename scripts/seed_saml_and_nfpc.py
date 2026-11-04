@@ -260,14 +260,14 @@ def seed_saml_and_nfpc_database(saml_limit: int = 5000, nfpc_limit: int = 5000):
         # 6. Instantiate Formal Investigations Linked to Alerts
         print("\n--- 6. Instantiating Investigation Dossiers & Forensic Workbenches ---")
         inv_cases = [
-            ("CASE-2026-001", "SAML-D Multi-Hop Cross-Border Layering", "CRITICAL", "NEW", 94.0, "CONFIRMED_FRAUD"),
-            ("CASE-2026-002", "SAML-D Fan-Out Rapid Dispersal Cluster", "HIGH", "IN_PROGRESS", 86.5, "SUSPICIOUS_UNCONFIRMED"),
-            ("CASE-2026-003", "SAML-D Circular Round-Tripping Ring", "HIGH", "PENDING_PEER_REVIEW", 82.0, "CONFIRMED_FRAUD"),
-            ("CASE-2026-004", "SAML-D Commercial Remittance Lookalike", "MEDIUM", "RESOLVED", 54.0, "LEGITIMATE_ACTIVITY"),
-            ("CASE-2026-005", "SAML-D Rapid Inbound-Outbound Pass-Through", "CRITICAL", "IN_PROGRESS", 91.0, None),
-            ("CASE-2026-006", "SAML-D High-Value Currency Conversion Spike", "HIGH", "TRIAGED", 79.5, None),
-            ("CASE-2026-007", "NFPC Indian Banking Mule Network Infiltration", "CRITICAL", "IN_PROGRESS", 88.0, "CONFIRMED_FRAUD"),
-            ("CASE-2026-008", "NFPC High Velocity IMPS Aggregation Point", "HIGH", "TRIAGED", 76.5, None)
+            ("CASE-2026-001", "[DEMO FIXTURE] SAML-D Multi-Hop Cross-Border Layering", "CRITICAL", "NEW", 94.0, "CONFIRMED_FRAUD"),
+            ("CASE-2026-002", "[DEMO FIXTURE] SAML-D Fan-Out Rapid Dispersal Cluster", "HIGH", "IN_PROGRESS", 86.5, "SUSPICIOUS_UNCONFIRMED"),
+            ("CASE-2026-003", "[DEMO FIXTURE] SAML-D Circular Round-Tripping Ring", "HIGH", "PENDING_PEER_REVIEW", 82.0, "CONFIRMED_FRAUD"),
+            ("CASE-2026-004", "[DEMO FIXTURE] SAML-D Commercial Remittance Lookalike", "MEDIUM", "RESOLVED", 54.0, "LEGITIMATE_ACTIVITY"),
+            ("CASE-2026-005", "[DEMO FIXTURE] SAML-D Rapid Inbound-Outbound Pass-Through", "CRITICAL", "IN_PROGRESS", 91.0, None),
+            ("CASE-2026-006", "[DEMO FIXTURE] SAML-D High-Value Currency Conversion Spike", "HIGH", "TRIAGED", 79.5, None),
+            ("CASE-2026-007", "[DEMO FIXTURE] NFPC Indian Banking Mule Network Infiltration", "CRITICAL", "IN_PROGRESS", 88.0, "CONFIRMED_FRAUD"),
+            ("CASE-2026-008", "[DEMO FIXTURE] NFPC High Velocity IMPS Aggregation Point", "HIGH", "TRIAGED", 76.5, None)
         ]
 
         for idx, (c_num, c_title, c_prio, c_status, c_score, c_disp) in enumerate(inv_cases):
@@ -357,9 +357,9 @@ def seed_saml_and_nfpc_database(saml_limit: int = 5000, nfpc_limit: int = 5000):
                     INSERT OR REPLACE INTO analyst_feedback (
                         id, investigation_id, analyst_id, disposition, rationale,
                         evidence_reviewed_count, is_eligible_for_training, training_label,
-                        model_version, rule_version, created_at
-                    ) VALUES (?, ?, 'USR-INV-01', ?, ?, 4, 1, ?, 'v1.0', 'v1.0', ?)
-                """, (fb_id, inv_ref, disp_type, rationale_text, is_scam, ts))
+                        exclusion_reason, model_version, rule_version, created_at
+                    ) VALUES (?, ?, 'USR-INV-01', ?, ?, 4, 0, NULL, 'DEMO_FIXTURE', 'v1.0', 'v1.0', ?)
+                """, (fb_id, inv_ref, disp_type, rationale_text, ts))
 
                 # Also ensure stored in protected store
                 store_protected_account_label(
