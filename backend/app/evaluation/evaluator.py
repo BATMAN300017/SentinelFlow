@@ -7,11 +7,13 @@ CRITICAL ARCHITECTURAL CONSTRAINTS:
 2. Verified Transaction ID Matching: Matches predictions to ground truth strictly by ID.
    NEVER substitutes missing predictions with zero.
 3. Transparent Sample Accounting: Explicitly reports matched, unmatched, missing-prediction,
-   and invalid-label counts.
+   invalid-prediction, and invalid-label counts.
 4. Partition Hygiene: Training records are never evaluated as untouched test records.
 5. Exact Reconciled Accounting: Confusion matrix totals (TP + FP + TN + FN) MUST reconcile
    exactly to the evaluated sample count.
 6. Honest Status Reporting: If no valid untouched test predictions exist, reports NOT EVALUATED.
+7. No Fabricated AUC Metrics: If ROC-AUC or PR-AUC cannot be computed (e.g. single-class or
+   calculation error), reports metric as None / NOT EVALUATED; never substitutes 0.50 or prevalence.
 """
 
 import sqlite3
@@ -23,27 +25,47 @@ from app.data_ingestion.label_isolation import get_protected_evaluation_labels
 from app.detection.features import parse_event_time
 from app.core.logging import logger
 
+
 def _compute_auc_roc_and_pr(y_true: List[int], y_scores: List[float]):
+    """
+    Computes exact ROC-AUC and PR-AUC.
+    Requires both positive and negative examples, and bounded finite prediction probabilities in [0, 1].
+    Raises ValueError on single-class inputs or invalid/non-finite prediction scores.
+    """
     y_t = np.array(y_true, dtype=int)
     y_s = np.array(y_scores, dtype=float)
+
+    if np.any(~np.isfinite(y_s)):
+        raise ValueError("Prediction scores contain non-finite values (NaN or Inf).")
+
+    if np.any(y_s < 0.0) or np.any(y_s > 1.0):
+        raise ValueError("Prediction scores outside valid probability range [0, 1].")
+
     n_pos = int(np.sum(y_t == 1))
     n_neg = int(np.sum(y_t == 0))
+
     if n_pos == 0 or n_neg == 0:
-        return 0.5000, round(float(n_pos / max(1, len(y_true))), 4)
+        raise ValueError(f"Single-class evaluation set: AUC cannot be computed without both positive and negative examples (pos={n_pos}, neg={n_neg}).")
+
     desc_idx = np.argsort(-y_s)
     y_t_sorted = y_t[desc_idx]
     y_s_sorted = y_s[desc_idx]
+
     distinct_mask = np.diff(y_s_sorted, append=np.nan) != 0
     tps = np.cumsum(y_t_sorted)[distinct_mask]
     fps = np.cumsum(1 - y_t_sorted)[distinct_mask]
+
     tpr = np.r_[0, tps / n_pos, 1]
     fpr = np.r_[0, fps / n_neg, 1]
     roc_auc = float(np.sum((fpr[1:] - fpr[:-1]) * (tpr[1:] + tpr[:-1]) / 2.0))
+
     prec_curve = tps / (tps + fps)
     rec_curve = tps / n_pos
     rec_diff = np.diff(np.r_[0, rec_curve])
     pr_auc = float(np.sum(prec_curve * rec_diff))
+
     return round(roc_auc, 4), round(pr_auc, 4)
+
 
 class IndependentEvaluator:
     """Computes verified, non-leaking performance metrics against protected ground-truth labels."""
@@ -59,6 +81,7 @@ class IndependentEvaluator:
         """
         Evaluates transaction-level predictions against protected transaction labels.
         Matches strictly by transaction ID; never substitutes missing predictions with zero.
+        Validates prediction scores for finite numeric values and bounds [0, 100].
         """
         # Read protected ground truth from Pipeline B isolated store
         protected_data = get_protected_evaluation_labels(dataset_name=dataset_name)
@@ -75,6 +98,7 @@ class IndependentEvaluator:
                     "matched_predictions": 0,
                     "missing_predictions": 0,
                     "unmatched_predictions": 0,
+                    "invalid_predictions": 0,
                     "invalid_labels": 0
                 }
             }
@@ -89,6 +113,7 @@ class IndependentEvaluator:
                     "matched_predictions": 0,
                     "missing_predictions": 0,
                     "unmatched_predictions": 0,
+                    "invalid_predictions": 0,
                     "invalid_labels": 0
                 }
             }
@@ -103,15 +128,23 @@ class IndependentEvaluator:
         """, (dataset_name,))
         rows = cursor.fetchall()
 
-        # Strict separation: only records with non-null risk_score are valid predictions
+        # Strict separation: validate predictions for finite values and score ranges [0, 100]
         valid_predictions: Dict[str, float] = {}
         null_predictions: Set[str] = set()
+        invalid_predictions: Dict[str, Any] = {}
+
         for r in rows:
             t_id = str(r[0])
             score = r[1]
             if score is not None:
                 try:
-                    valid_predictions[t_id] = float(score)
+                    val = float(score)
+                    if not np.isfinite(val):
+                        invalid_predictions[t_id] = val
+                    elif val < 0.0 or val > 100.0:
+                        invalid_predictions[t_id] = val
+                    else:
+                        valid_predictions[t_id] = val
                 except (ValueError, TypeError):
                     null_predictions.add(t_id)
             else:
@@ -125,14 +158,31 @@ class IndependentEvaluator:
         missing_prediction_ids = sorted(list(prot_ids.difference(pred_ids)))
         unmatched_prediction_ids = sorted(list(pred_ids.difference(prot_ids)))
 
-        # SAML-D chronological partition boundaries (datetime objects, never raw string comparisons)
+        # Fail closed on invalid / non-finite predictions
+        if invalid_predictions:
+            return {
+                "dataset_name": dataset_name,
+                "status": "NOT EVALUATED",
+                "message": f"Evaluation rejected: Found {len(invalid_predictions)} non-finite or out-of-bounds prediction scores.",
+                "sample_accounting": {
+                    "total_protected_labels": len(prot_ids),
+                    "matched_predictions": len(matched_ids),
+                    "missing_predictions": len(missing_prediction_ids),
+                    "unmatched_predictions": len(unmatched_prediction_ids),
+                    "invalid_predictions": len(invalid_predictions),
+                    "invalid_labels": 0
+                }
+            }
+
+        # SAML-D chronological partition boundaries
         SAMLD_TRAIN_BOUND_DT = datetime(2022, 10, 7, 19, 26, 11, tzinfo=timezone.utc)
         SAMLD_VAL_START_DT = datetime(2022, 10, 7, 19, 26, 12, tzinfo=timezone.utc)
         SAMLD_VAL_END_DT = datetime(2022, 10, 7, 21, 44, 11, tzinfo=timezone.utc)
         SAMLD_TEST_START_DT = datetime(2022, 10, 7, 21, 44, 14, tzinfo=timezone.utc)
         SAMLD_TEST_END_DT = datetime(2022, 10, 8, 8, 38, 47, tzinfo=timezone.utc)
 
-        # Enforce evaluation split boundaries if eval_split is specified
+        partition_accounting: Optional[Dict[str, Any]] = None
+
         if dataset_name == "SAML_D":
             split_clean = str(eval_split).upper().strip() if eval_split else "ALL"
             supported_splits = {"ALL", "FULL", "TEST", "UNTOUCHED_TEST", "VALIDATION", "TRAIN"}
@@ -146,6 +196,7 @@ class IndependentEvaluator:
                         "matched_predictions": 0,
                         "missing_predictions": len(missing_prediction_ids),
                         "unmatched_predictions": len(unmatched_prediction_ids),
+                        "invalid_predictions": len(invalid_predictions),
                         "invalid_labels": 0
                     }
                 }
@@ -156,6 +207,10 @@ class IndependentEvaluator:
             train_matched_ids = []
             unverified_partition_ids = []
 
+            train_dts: List[datetime] = []
+            val_dts: List[datetime] = []
+            test_dts: List[datetime] = []
+
             for tid in matched_ids:
                 t_item = prot_txns[tid]
                 t_time_raw = t_item.get("created_at") or t_item.get("timestamp")
@@ -165,7 +220,6 @@ class IndependentEvaluator:
                     unverified_partition_ids.append(tid)
                     continue
 
-                # Check canonical index if ID conforms to TXN-SAML-######
                 m = re.match(r"^TXN-SAML-(\d+)$", str(tid))
                 idx = int(m.group(1)) if m else None
 
@@ -174,34 +228,100 @@ class IndependentEvaluator:
                 if idx is not None:
                     if idx >= 17500 and dt >= SAMLD_TEST_START_DT:
                         test_matched_ids.append(tid)
+                        test_dts.append(dt)
                     elif 14000 <= idx < 17500 and SAMLD_VAL_START_DT <= dt <= SAMLD_VAL_END_DT:
                         val_matched_ids.append(tid)
+                        val_dts.append(dt)
                     elif idx < 14000 and dt <= SAMLD_TRAIN_BOUND_DT:
                         train_matched_ids.append(tid)
+                        train_dts.append(dt)
                     else:
                         unverified_partition_ids.append(tid)
                 else:
-                    # Verified purely by datetime boundaries (datetime objects, never raw strings)
                     if dt >= SAMLD_TEST_START_DT:
                         test_matched_ids.append(tid)
+                        test_dts.append(dt)
                     elif SAMLD_VAL_START_DT <= dt <= SAMLD_VAL_END_DT:
                         val_matched_ids.append(tid)
+                        val_dts.append(dt)
                     elif dt <= SAMLD_TRAIN_BOUND_DT:
                         train_matched_ids.append(tid)
+                        train_dts.append(dt)
                     else:
                         unverified_partition_ids.append(tid)
+
+            # Dynamically derive partition accounting from verified records
+            def _dt_range_str(dt_list):
+                if not dt_list:
+                    return ("N/A", "N/A")
+                return (min(dt_list).isoformat(), max(dt_list).isoformat())
+
+            train_pos = sum(1 for tid in train_matched_ids if prot_txns[tid].get("is_laundering") == 1)
+            val_pos = sum(1 for tid in val_matched_ids if prot_txns[tid].get("is_laundering") == 1)
+            test_pos = sum(1 for tid in test_matched_ids if prot_txns[tid].get("is_laundering") == 1)
+
+            partition_accounting = {
+                "train_partition": {
+                    "sample_count": len(train_matched_ids),
+                    "verified_sample_count": len(train_matched_ids),
+                    "positive_count": train_pos,
+                    "negative_count": len(train_matched_ids) - train_pos,
+                    "date_range": _dt_range_str(train_dts),
+                    "role": "Model training exclusively"
+                },
+                "validation_partition": {
+                    "sample_count": len(val_matched_ids),
+                    "verified_sample_count": len(val_matched_ids),
+                    "positive_count": val_pos,
+                    "negative_count": len(val_matched_ids) - val_pos,
+                    "date_range": _dt_range_str(val_dts),
+                    "role": "Threshold selection exclusively (tau = 0.55 tuned here; test set untouched)"
+                },
+                "test_partition": {
+                    "sample_count": len(test_matched_ids),
+                    "verified_sample_count": len(test_matched_ids),
+                    "positive_count": test_pos,
+                    "negative_count": len(test_matched_ids) - test_pos,
+                    "date_range": _dt_range_str(test_dts),
+                    "role": "Untouched holdout evaluation; never seen during training or tuning"
+                },
+                "unverified_partition_records": len(unverified_partition_ids)
+            }
 
             if split_clean in ("TEST", "UNTOUCHED_TEST"):
                 matched_ids = test_matched_ids
                 eval_scope = "UNTOUCHED_TEST_PARTITION"
+                is_untouched_test = True
+                scope_note = "Evaluated strictly on verified untouched holdout test partition."
+                if not matched_ids:
+                    return {
+                        "dataset_name": dataset_name,
+                        "status": "NOT EVALUATED",
+                        "message": "Zero verified untouched test partition records found in evaluation set.",
+                        "partition_accounting": partition_accounting,
+                        "sample_accounting": {
+                            "total_protected_labels": len(prot_ids),
+                            "matched_predictions": 0,
+                            "missing_predictions": len(missing_prediction_ids),
+                            "unmatched_predictions": len(unmatched_prediction_ids),
+                            "invalid_predictions": len(invalid_predictions),
+                            "invalid_labels": 0
+                        }
+                    }
             elif split_clean == "VALIDATION":
                 matched_ids = val_matched_ids
                 eval_scope = "VALIDATION_PARTITION"
+                is_untouched_test = False
+                scope_note = "Evaluated strictly on validation partition (used for threshold selection)."
             elif split_clean == "TRAIN":
                 matched_ids = train_matched_ids
                 eval_scope = "TRAIN_PARTITION"
+                is_untouched_test = False
+                scope_note = "Evaluated strictly on training partition."
             else:
                 eval_scope = "FULL_DATASET_BENCHMARK"
+                is_untouched_test = False
+                scope_note = "Evaluates all matched database records across all splits; this is a full-dataset benchmark and NOT independent holdout test performance."
         else:
             split_clean = str(eval_split).upper().strip() if eval_split else "ALL"
             if split_clean not in ("ALL", "FULL"):
@@ -214,10 +334,13 @@ class IndependentEvaluator:
                         "matched_predictions": 0,
                         "missing_predictions": len(missing_prediction_ids),
                         "unmatched_predictions": len(unmatched_prediction_ids),
+                        "invalid_predictions": len(invalid_predictions),
                         "invalid_labels": 0
                     }
                 }
-            eval_scope = "FULL_DATASET_BENCHMARK" 
+            eval_scope = "FULL_DATASET_BENCHMARK"
+            is_untouched_test = False
+            scope_note = f"Full dataset benchmark on {dataset_name}; NOT an independent holdout test."
 
         # Evaluate only matched transactions with valid ground-truth labels
         y_true: List[int] = []
@@ -260,6 +383,7 @@ class IndependentEvaluator:
                     "matched_predictions": 0,
                     "missing_predictions": len(missing_prediction_ids),
                     "unmatched_predictions": len(unmatched_prediction_ids),
+                    "invalid_predictions": len(invalid_predictions),
                     "invalid_labels": invalid_label_count
                 }
             }
@@ -276,17 +400,29 @@ class IndependentEvaluator:
 
         # Standard scientific metrics
         accuracy = round(float((tp + tn) / max(1, n_evaluated)), 4)
-        prec = round(float(tp / max(1, (tp + fp))), 4)
-        rec = round(float(tp / max(1, (tp + fn))), 4)
-        f1 = round(float((2 * prec * rec) / max(1e-6, (prec + rec))), 4)
-        fpr = round(float(fp / max(1, (fp + tn))), 4)
-        fnr = round(float(fn / max(1, (fn + tp))), 4)
+        prec = round(float(tp / max(1, (tp + fp))), 4) if (tp + fp) > 0 else 0.0
+        rec = round(float(tp / max(1, (tp + fn))), 4) if (tp + fn) > 0 else 0.0
+        f1 = round(float((2 * prec * rec) / max(1e-6, (prec + rec))), 4) if (prec + rec) > 0 else 0.0
+        fpr = round(float(fp / max(1, (fp + tn))), 4) if (fp + tn) > 0 else 0.0
+        fnr = round(float(fn / max(1, (fn + tp))), 4) if (fn + tp) > 0 else 0.0
 
-        try:
-            auc_roc, pr_auc = _compute_auc_roc_and_pr(y_true, y_scores)
-        except Exception:
-            auc_roc = 0.50
-            pr_auc = round(float(sum(y_true) / max(1, n_evaluated)), 4)
+        # AUC calculations: strictly fail open with None / status, NEVER fabricate 0.50 or prevalence
+        auc_roc: Optional[float] = None
+        pr_auc: Optional[float] = None
+        auc_status: str = "EVALUATED"
+
+        n_pos = int(sum(y_true))
+        n_neg = int(n_evaluated - n_pos)
+
+        if n_pos == 0:
+            auc_status = "UNAVAILABLE_NO_POSITIVE_EXAMPLES"
+        elif n_neg == 0:
+            auc_status = "UNAVAILABLE_NO_NEGATIVE_EXAMPLES"
+        else:
+            try:
+                auc_roc, pr_auc = _compute_auc_roc_and_pr(y_true, y_scores)
+            except Exception as e:
+                auc_status = f"CALCULATION_UNAVAILABLE: {e}"
 
         typology_report = {}
         for typ, data in typology_breakdown.items():
@@ -296,47 +432,26 @@ class IndependentEvaluator:
                 "recall_rate": round(data["detected"] / max(1, data["total"]), 3)
             }
 
-        return {
+        result_payload = {
             "dataset_name": dataset_name,
             "status": "EVALUATED",
             "evaluation_granularity": "TRANSACTION_LEVEL",
             "evaluation_scope": eval_scope,
-            "scope_note": "Evaluates all matched database records across all splits; this is a full-dataset benchmark and NOT untouched holdout test set performance." if eval_scope == "FULL_DATASET_BENCHMARK" else f"Evaluated strictly on {eval_scope}.",
-            "partition_accounting": {
-                "train_partition": {
-                    "sample_count": 14000,
-                    "positive_count": 17,
-                    "negative_count": 13983,
-                    "date_range": ("2022-10-07T10:35:19Z", "2022-10-07T19:26:11Z"),
-                    "role": "Model training exclusively"
-                },
-                "validation_partition": {
-                    "sample_count": 3500,
-                    "positive_count": 5,
-                    "negative_count": 3495,
-                    "date_range": ("2022-10-07T19:26:12Z", "2022-10-07T21:44:11Z"),
-                    "role": "Threshold selection exclusively (tau = 0.55 tuned here; test set untouched)"
-                },
-                "test_partition": {
-                    "sample_count": 7500,
-                    "positive_count": 12,
-                    "negative_count": 7488,
-                    "date_range": ("2022-10-07T21:44:14Z", "2022-10-08T08:38:47Z"),
-                    "role": "Untouched evaluation; never seen during training or tuning"
-                }
-            },
-            "threshold_tuning_provenance": "Threshold tau = 0.55 tuned exclusively on validation partition; test partition untouched",
+            "evaluation_type": eval_scope,
+            "is_untouched_test": is_untouched_test,
+            "scope_note": scope_note,
             "risk_score_threshold": risk_threshold,
             "sample_accounting": {
                 "total_protected_labels": len(prot_ids),
                 "matched_predictions": n_evaluated,
                 "missing_predictions": len(missing_prediction_ids),
                 "unmatched_predictions": len(unmatched_prediction_ids),
+                "invalid_predictions": len(invalid_predictions),
                 "invalid_labels": invalid_label_count
             },
             "total_evaluated_samples": n_evaluated,
-            "positive_laundering_count": int(sum(y_true)),
-            "negative_legitimate_count": int(n_evaluated - sum(y_true)),
+            "positive_laundering_count": n_pos,
+            "negative_legitimate_count": n_neg,
             "confusion_matrix": {
                 "true_positives": tp,
                 "false_positives": fp,
@@ -352,10 +467,17 @@ class IndependentEvaluator:
                 "false_positive_rate": fpr,
                 "false_negative_rate": fnr,
                 "roc_auc": auc_roc,
-                "pr_auc": pr_auc
+                "pr_auc": pr_auc,
+                "auc_status": auc_status
             },
             "typology_performance": typology_report
         }
+
+        if partition_accounting is not None:
+            result_payload["partition_accounting"] = partition_accounting
+            result_payload["threshold_tuning_provenance"] = "Threshold tau = 0.55 tuned exclusively on validation partition; test partition untouched"
+
+        return result_payload
 
     @classmethod
     def evaluate_account_level(
@@ -413,11 +535,11 @@ class IndependentEvaluator:
         assert reconciled == n_accs
 
         accuracy = round(float((tp + tn) / max(1, n_accs)), 4)
-        prec = round(float(tp / max(1, (tp + fp))), 4)
-        rec = round(float(tp / max(1, (tp + fn))), 4)
-        f1 = round(float((2 * prec * rec) / max(1e-6, (prec + rec))), 4)
-        fpr = round(float(fp / max(1, (fp + tn))), 4)
-        fnr = round(float(fn / max(1, (fn + tp))), 4)
+        prec = round(float(tp / max(1, (tp + fp))), 4) if (tp + fp) > 0 else 0.0
+        rec = round(float(tp / max(1, (tp + fn))), 4) if (tp + fn) > 0 else 0.0
+        f1 = round(float((2 * prec * rec) / max(1e-6, (prec + rec))), 4) if (prec + rec) > 0 else 0.0
+        fpr = round(float(fp / max(1, (fp + tn))), 4) if (fp + tn) > 0 else 0.0
+        fnr = round(float(fn / max(1, (fn + tp))), 4) if (fn + tp) > 0 else 0.0
 
         return {
             "dataset_name": dataset_name,
@@ -501,13 +623,28 @@ class IndependentEvaluator:
         assert reconciled == n_eval
 
         accuracy = round(float((tp + tn) / max(1, n_eval)), 4)
-        prec = round(float(tp / max(1, (tp + fp))), 4)
-        rec = round(float(tp / max(1, (tp + fn))), 4)
-        f1 = round(float((2 * prec * rec) / max(1e-6, (prec + rec))), 4)
-        fpr = round(float(fp / max(1, (fp + tn))), 4)
-        fnr = round(float(fn / max(1, (fn + tp))), 4)
+        prec = round(float(tp / max(1, (tp + fp))), 4) if (tp + fp) > 0 else 0.0
+        rec = round(float(tp / max(1, (tp + fn))), 4) if (tp + fn) > 0 else 0.0
+        f1 = round(float((2 * prec * rec) / max(1e-6, (prec + rec))), 4) if (prec + rec) > 0 else 0.0
+        fpr = round(float(fp / max(1, (fp + tn))), 4) if (fp + tn) > 0 else 0.0
+        fnr = round(float(fn / max(1, (fn + tp))), 4) if (fn + tp) > 0 else 0.0
 
-        auc_roc, pr_auc = _compute_auc_roc_and_pr(y_test.tolist(), probs.tolist())
+        auc_roc: Optional[float] = None
+        pr_auc: Optional[float] = None
+        auc_status = "EVALUATED"
+
+        n_pos = int(np.sum(y_test == 1))
+        n_neg = int(np.sum(y_test == 0))
+
+        if n_pos == 0:
+            auc_status = "UNAVAILABLE_NO_POSITIVE_EXAMPLES"
+        elif n_neg == 0:
+            auc_status = "UNAVAILABLE_NO_NEGATIVE_EXAMPLES"
+        else:
+            try:
+                auc_roc, pr_auc = _compute_auc_roc_and_pr(y_test.tolist(), probs.tolist())
+            except Exception as e:
+                auc_status = f"CALCULATION_UNAVAILABLE: {e}"
 
         # Typology breakdown
         typology_report = {}
@@ -518,17 +655,19 @@ class IndependentEvaluator:
             typology_report[typ] = {
                 "total_instances": tot,
                 "detected_count": det,
-                "recall_rate": round(det / max(1, tot), 3)
+                "recall_rate": round(det / max(1, tot), 3) if tot > 0 else 0.0
             }
 
         return {
             "dataset_name": "SAML_D",
             "evaluation_type": "UNTOUCHED_CHRONOLOGICAL_TEST_SET",
             "evaluation_split": "FINAL_30_PERCENT_HOLD_OUT",
+            "is_untouched_test": True,
             "date_range": (str(test_df['DateTime'].iloc[0]), str(test_df['DateTime'].iloc[-1])),
             "partition_accounting": {
                 "train_partition": {
                     "sample_count": 14000,
+                    "verified_sample_count": 14000,
                     "positive_count": int(np.sum(y_all[:14000] == 1)),
                     "negative_count": int(np.sum(y_all[:14000] == 0)),
                     "date_range": (str(df['DateTime'].iloc[0]), str(df['DateTime'].iloc[13999])),
@@ -536,6 +675,7 @@ class IndependentEvaluator:
                 },
                 "validation_partition": {
                     "sample_count": 3500,
+                    "verified_sample_count": 3500,
                     "positive_count": int(np.sum(y_all[14000:17500] == 1)),
                     "negative_count": int(np.sum(y_all[14000:17500] == 0)),
                     "date_range": (str(df['DateTime'].iloc[14000]), str(df['DateTime'].iloc[17499])),
@@ -543,10 +683,11 @@ class IndependentEvaluator:
                 },
                 "test_partition": {
                     "sample_count": n_eval,
+                    "verified_sample_count": n_eval,
                     "positive_count": int(np.sum(y_test == 1)),
                     "negative_count": int(np.sum(y_test == 0)),
                     "date_range": (str(test_df['DateTime'].iloc[0]), str(test_df['DateTime'].iloc[-1])),
-                    "role": "Untouched evaluation; never seen during training or tuning"
+                    "role": "Untouched holdout evaluation; never seen during training or tuning"
                 }
             },
             "threshold_tuning_provenance": "Fitted on validation partition; test partition untouched",
@@ -569,7 +710,8 @@ class IndependentEvaluator:
                 "false_positive_rate": fpr,
                 "false_negative_rate": fnr,
                 "roc_auc": auc_roc,
-                "pr_auc": pr_auc
+                "pr_auc": pr_auc,
+                "auc_status": auc_status
             },
             "typology_performance": typology_report
         }

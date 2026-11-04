@@ -5,8 +5,10 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(BASE_DIR, "backend"))
 
 from app.core.database import transaction_scope
+from app.core.guards import check_demo_environment_guard
 
 def reset_demo_database():
+    check_demo_environment_guard("Demo database reset")
     print("Safely wiping demo simulation transactions and alerts...")
     with transaction_scope() as conn:
         cursor = conn.cursor()

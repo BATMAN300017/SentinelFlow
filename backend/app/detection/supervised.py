@@ -11,6 +11,8 @@ CRITICAL ARCHITECTURAL CONSTRAINTS:
 4. Full Rollback Support: Legacy baseline model is preserved under VERSION_V1_BASELINE
    via set_active_model_version(VERSION_V1_BASELINE).
 5. Zero Label Access at Inference: Model predicts solely on operational features.
+6. Rigorous Model Artifact Verification: Persisted artifacts must pass comprehensive structure,
+   metadata, schema, estimator type, interface, feature count, classes, and output probability checks.
 """
 
 import os
@@ -37,6 +39,7 @@ _remediated_metadata: Optional[Dict[str, Any]] = None
 
 # Canonical feature schema shared identically by offline training, online inference and evaluation
 FEATURE_SCHEMA: List[str] = CANONICAL_FEATURE_NAMES
+
 
 def extract_supervised_feature_vector(features: Dict[str, Any]) -> np.ndarray:
     """
@@ -133,9 +136,37 @@ class RobustRandomForestClassifier:
         self.random_state = random_state
         self.trees: List[DecisionTreeClassifier] = []
         self.features_per_tree: List[np.ndarray] = []
-        
+
+    @property
+    def n_features_in_(self) -> int:
+        return getattr(self, "_n_features_in", len(CANONICAL_FEATURE_NAMES))
+
+    @n_features_in_.setter
+    def n_features_in_(self, val: int):
+        self._n_features_in = int(val)
+
+    @property
+    def classes_(self) -> np.ndarray:
+        return getattr(self, "_classes", np.array([0, 1]))
+
+    @classes_.setter
+    def classes_(self, val: Any):
+        self._classes = np.array(val)
+
+    @property
+    def feature_names_in_(self) -> Optional[List[str]]:
+        return getattr(self, "_feature_names_in", CANONICAL_FEATURE_NAMES)
+
+    @feature_names_in_.setter
+    def feature_names_in_(self, val: Any):
+        self._feature_names_in = list(val) if val is not None else None
+
     def fit(self, X: np.ndarray, y: np.ndarray):
         n_samples, n_feats = X.shape
+        self._n_features_in = n_feats
+        self._classes = np.unique(y)
+        self._feature_names_in = CANONICAL_FEATURE_NAMES if n_feats == len(CANONICAL_FEATURE_NAMES) else None
+
         rng = np.random.RandomState(self.random_state)
         self.trees = []
         self.features_per_tree = []
@@ -181,6 +212,104 @@ class RobustRandomForestClassifier:
             probs += p
         probs /= max(1, len(self.trees))
         return probs
+
+
+def validate_model_artifact(artifact: Any) -> Tuple[bool, Optional[str]]:
+    """
+    Rigorously validates a persisted model artifact:
+    1. Structure: must be dictionary with 'model' and 'metadata'.
+    2. Metadata: required keys, canonical feature schema, training provenance, threshold provenance.
+    3. Estimator: supported estimator type, implements callable predict_proba, expected feature count,
+       classes [0, 1], and finite valid prediction probabilities.
+    """
+    if not isinstance(artifact, dict):
+        return False, "Artifact must be a dictionary."
+
+    if "model" not in artifact:
+        return False, "Missing 'model' object in artifact."
+
+    if "metadata" not in artifact:
+        return False, "Missing 'metadata' dictionary in artifact."
+
+    meta = artifact["metadata"]
+    if not isinstance(meta, dict):
+        return False, "Metadata must be a dictionary."
+
+    req_keys = [
+        "model_version",
+        "dataset_name",
+        "train_samples",
+        "val_samples",
+        "train_date_range",
+        "threshold_selection_method"
+    ]
+    missing_keys = [k for k in req_keys if k not in meta or meta[k] is None]
+    if missing_keys:
+        return False, f"Missing required metadata keys: {missing_keys}."
+
+    schema = meta.get("canonical_feature_schema") or meta.get("feature_schema")
+    if schema != CANONICAL_FEATURE_NAMES:
+        return False, f"Incompatible feature schema. Expected {CANONICAL_FEATURE_NAMES}, got {schema}."
+
+    model = artifact["model"]
+    if model is None:
+        return False, "Model object is None."
+
+    # Confirm model implements required prediction interface
+    if not hasattr(model, "predict_proba") or not callable(model.predict_proba):
+        return False, "Model does not implement callable predict_proba interface."
+
+    # Estimator type validation
+    if isinstance(model, (int, str, list, dict, set, float, tuple)):
+        return False, f"Unsupported estimator object type: {type(model).__name__}."
+
+    # Validate feature count if present
+    if hasattr(model, "n_features_in_"):
+        try:
+            n_in = int(model.n_features_in_)
+            if n_in != len(CANONICAL_FEATURE_NAMES):
+                return False, f"Model n_features_in_ ({n_in}) != canonical count ({len(CANONICAL_FEATURE_NAMES)})."
+        except (ValueError, TypeError):
+            return False, "Model n_features_in_ is not an integer."
+
+    # Validate feature names order if present
+    if hasattr(model, "feature_names_in_") and model.feature_names_in_ is not None:
+        try:
+            fnames = list(model.feature_names_in_)
+            if fnames != CANONICAL_FEATURE_NAMES:
+                return False, f"Model feature_names_in_ does not match canonical order: {fnames}."
+        except Exception:
+            return False, "Model feature_names_in_ cannot be inspected."
+
+    # Validate classes if present
+    if hasattr(model, "classes_"):
+        try:
+            cl = list(model.classes_)
+            if cl not in ([0, 1], [0.0, 1.0], (0, 1)):
+                return False, f"Model classes_ ({cl}) does not match expected binary classes [0, 1]."
+        except Exception:
+            return False, "Model classes_ cannot be inspected."
+
+    # Run execution test vector on canonical 9-feature input
+    test_vec = np.ones((1, len(CANONICAL_FEATURE_NAMES)), dtype=float)
+    try:
+        probs = model.predict_proba(test_vec)
+    except Exception as e:
+        return False, f"Model execution failed on test vector: {e}."
+
+    if not isinstance(probs, np.ndarray) or probs.shape != (1, 2):
+        return False, f"Model predict_proba returned invalid shape {getattr(probs, 'shape', None)}, expected (1, 2)."
+
+    if not np.all(np.isfinite(probs)):
+        return False, "Model predict_proba returned non-finite probabilities (NaN or Inf)."
+
+    if np.any(probs < 0.0) or np.any(probs > 1.0):
+        return False, "Model predict_proba returned probabilities outside [0, 1]."
+
+    if abs(float(np.sum(probs)) - 1.0) > 1e-3:
+        return False, f"Model predict_proba probabilities do not sum to 1.0 (sum={float(np.sum(probs)):.4f})."
+
+    return True, None
 
 
 def _init_rf_baseline() -> RobustRandomForestClassifier:
@@ -283,55 +412,47 @@ def _init_rf_remediated() -> Optional[RobustRandomForestClassifier]:
     if os.path.exists(storage_path):
         try:
             artifact = joblib.load(storage_path)
-            meta = artifact.get("metadata")
-            # Strict validation of artifact metadata
-            if not isinstance(meta, dict):
-                logger.warning(f"Rejected model artifact at {storage_path}: Missing metadata dictionary.")
+            is_valid, reason = validate_model_artifact(artifact)
+            if is_valid:
+                _rf_remediated_model = artifact["model"]
+                _remediated_metadata = artifact["metadata"]
+                logger.info(f"Loaded and verified persistent remediated RF model from {storage_path}")
+                return _rf_remediated_model
+            else:
+                logger.warning(f"Rejected model artifact at {storage_path}: {reason}")
                 return None
-
-            schema = meta.get("canonical_feature_schema") or meta.get("feature_schema")
-            if schema != CANONICAL_FEATURE_NAMES:
-                logger.warning(
-                    f"Rejected model artifact at {storage_path}: Incompatible feature schema. "
-                    f"Expected {CANONICAL_FEATURE_NAMES}, got {schema}."
-                )
-                return None
-
-            req_keys = ["model_version", "train_samples", "val_samples", "train_date_range", "threshold_selection_method"]
-            missing_keys = [k for k in req_keys if k not in meta]
-            if missing_keys:
-                logger.warning(f"Rejected model artifact at {storage_path}: Missing required metadata keys: {missing_keys}.")
-                return None
-
-            _rf_remediated_model = artifact["model"]
-            _remediated_metadata = meta
-            logger.info(f"Loaded and verified persistent remediated RF model from {storage_path}")
-            return _rf_remediated_model
         except Exception as e:
             logger.warning(f"Failed to load or validate persistent model from {storage_path}: {e}")
+            return None
 
-    # Train from canonical dataset
+    # Canonical dataset fallback
     base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
     csv_path = os.path.join(base_dir, "data", "saml_d", "saml_d_real.csv")
 
     if os.path.exists(csv_path):
         try:
             model, meta = _train_from_saml_canonical(csv_path)
-            _rf_remediated_model = model
-            _remediated_metadata = meta
-            # Persist artifact
-            try:
-                joblib.dump({"model": model, "metadata": meta}, storage_path)
-                logger.info(f"Persisted remediated RF model artifact to {storage_path}")
-            except Exception as e:
-                logger.warning(f"Could not persist model artifact: {e}")
-            return _rf_remediated_model
+            artifact = {"model": model, "metadata": meta}
+            is_valid, reason = validate_model_artifact(artifact)
+            if is_valid:
+                _rf_remediated_model = model
+                _remediated_metadata = meta
+                try:
+                    joblib.dump(artifact, storage_path)
+                    logger.info(f"Persisted remediated RF model artifact to {storage_path}")
+                except Exception as e:
+                    logger.warning(f"Could not persist model artifact: {e}")
+                return _rf_remediated_model
+            else:
+                logger.error(f"Trained model failed artifact validation: {reason}")
+                _rf_remediated_model = None
+                return None
         except Exception as e:
             logger.error(f"Error training from canonical SAML-D: {e}")
             _rf_remediated_model = None
             return None
     else:
-        logger.warning(f"SAML-D dataset not found at {csv_path}. Model unavailable.")
+        logger.warning(f"SAML-D dataset not found at {csv_path} and no valid artifact exists. Model unavailable.")
         _rf_remediated_model = None
         return None
 
@@ -357,7 +478,6 @@ def predict_supervised_risk(features: Dict[str, Any]) -> Dict[str, Any]:
     if _active_version == VERSION_V1_BASELINE:
         model = _init_rf_baseline()
         ver = VERSION_V1_BASELINE
-        # Extract validated feature vector
         vec = extract_supervised_feature_vector(features)
         prob = float(model.predict_proba(vec)[0][1])
         return {
@@ -393,6 +513,20 @@ def predict_supervised_risk(features: Dict[str, Any]) -> Dict[str, Any]:
 
     # Random Forest inference
     prob = float(model.predict_proba(vec)[0][1])
+
+    # Validate finite probability in [0, 1]
+    if not np.isfinite(prob) or prob < 0.0 or prob > 1.0:
+        return {
+            "supervised_score": None,
+            "predicted_risk_probability": None,
+            "model_name": "RobustRandomForestClassifier",
+            "model_version": ver,
+            "model_status": "PREDICTION_FAILED",
+            "is_calibrated": False,
+            "calibration_status": "UNVERIFIED",
+            "error": f"Model produced non-finite or out-of-bounds probability: {prob}"
+        }
+
     score = round(prob * 100.0, 1)
 
     return {

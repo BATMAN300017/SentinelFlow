@@ -14,15 +14,7 @@ from app.utils.ids import (
     generate_alert_id, generate_investigation_id, generate_evidence_id, generate_user_id
 )
 from app.detection.rules import ensure_default_rules
-
-def check_demo_environment_guard():
-    env = os.environ.get("ENVIRONMENT", "development").strip().lower()
-    allow_demo = os.environ.get("ALLOW_DEMO_SEEDING", "").strip().lower() in ("true", "1", "yes")
-    if env in ("production", "prod") and not allow_demo:
-        raise PermissionError(
-            "Demo seeding is strictly prohibited in production environments (ENVIRONMENT=production). "
-            "To permit demo seeding in a dedicated, isolated demo sandbox, set ALLOW_DEMO_SEEDING=true."
-        )
+from app.core.guards import check_demo_environment_guard
 
 def seed_demo_database():
     check_demo_environment_guard()

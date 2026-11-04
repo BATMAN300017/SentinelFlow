@@ -135,7 +135,7 @@ def post_convert_investigation(
             "transaction_id": dossier.get("transaction", {}).get("id") or res.get("transaction_id"),
             "account_id": dossier.get("transaction", {}).get("source_account_id") or res.get("account_id"),
             "destination_account_id": dossier.get("transaction", {}).get("destination_account_id"),
-            "risk_score": float(dossier.get("risk_score") or 0.0),
+            "risk_score": float(dossier["risk_score"]) if dossier.get("risk_score") is not None else None,
             "findings": dossier.get("findings", []),
             "network": {
                 "nodes": network_nodes,
