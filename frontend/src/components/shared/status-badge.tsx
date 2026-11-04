@@ -7,20 +7,27 @@ import { SEVERITIES, CASE_STATUSES } from '@/lib/constants';
 interface StatusBadgeProps {
   type: 'risk' | 'severity' | 'case_status' | 'channel';
   value: string | number;
+  showLabel?: boolean;
   className?: string;
 }
 
-export function StatusBadge({ type, value, className = '' }: StatusBadgeProps) {
+export function StatusBadge({ type, value, showLabel = true, className = '' }: StatusBadgeProps) {
   if (type === 'risk') {
     const score = Number(value) || 0;
     const bandKey = getRiskBand(score);
-    const band = RISK_BANDS[bandKey];
+    const band = RISK_BANDS[bandKey] || RISK_BANDS.NEUTRAL;
     return (
       <span
-        className={`inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold font-mono border ${band.color} ${className}`}
+        className={`inline-flex items-center space-x-1.5 px-2 py-0.5 rounded text-[11px] font-mono font-medium border ${band.color} ${className}`}
+        title={`Risk Score: ${score.toFixed(0)}/100 (${band.label})`}
       >
-        <span className={`w-1.5 h-1.5 rounded-full ${band.dot}`} />
-        <span>{score.toFixed(0)}</span>
+        <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${band.dot}`} />
+        <span className="tabular-nums font-bold">{score.toFixed(0)}</span>
+        {showLabel && (
+          <span className="text-[10px] tracking-tight uppercase opacity-85">
+            {band.label}
+          </span>
+        )}
       </span>
     );
   }
@@ -30,7 +37,7 @@ export function StatusBadge({ type, value, className = '' }: StatusBadgeProps) {
     const sev = SEVERITIES[key] || SEVERITIES.LOW;
     return (
       <span
-        className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold font-mono uppercase tracking-wider border ${sev.bg} ${sev.text} ${sev.border} ${className}`}
+        className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold font-mono uppercase tracking-wider border ${sev.bg} ${sev.text} ${sev.border} ${className}`}
       >
         {sev.label}
       </span>
@@ -42,7 +49,7 @@ export function StatusBadge({ type, value, className = '' }: StatusBadgeProps) {
     const st = CASE_STATUSES[key] || CASE_STATUSES.NEW;
     return (
       <span
-        className={`inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium font-mono border ${st.color} ${className}`}
+        className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium font-mono border ${st.color} ${className}`}
       >
         {st.label}
       </span>
@@ -52,7 +59,7 @@ export function StatusBadge({ type, value, className = '' }: StatusBadgeProps) {
   if (type === 'channel') {
     return (
       <span
-        className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-mono font-bold bg-slate-800 text-slate-300 border border-slate-700 ${className}`}
+        className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-slate-900 text-slate-300 border border-slate-750 ${className}`}
       >
         {String(value)}
       </span>
@@ -60,7 +67,7 @@ export function StatusBadge({ type, value, className = '' }: StatusBadgeProps) {
   }
 
   return (
-    <span className={`px-2 py-0.5 rounded text-xs bg-slate-800 text-slate-300 ${className}`}>
+    <span className={`px-2 py-0.5 rounded text-[11px] font-mono bg-slate-900 text-slate-300 border border-slate-800 ${className}`}>
       {String(value)}
     </span>
   );

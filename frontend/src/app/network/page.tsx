@@ -55,7 +55,7 @@ export default function NetworkPage() {
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold font-mono text-slate-100 tracking-tight flex items-center space-x-3">
               <span>Network Intelligence</span>
-              <span className="text-xs font-mono font-medium px-2 py-0.5 rounded-full bg-indigo-950/80 text-indigo-400 border border-indigo-800">
+              <span className="text-xs font-mono font-medium px-2 py-0.5 rounded-full bg-slate-800 text-emerald-400 border border-slate-700">
                 Topological Surveillance
               </span>
             </h1>

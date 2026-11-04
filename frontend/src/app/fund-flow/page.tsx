@@ -198,20 +198,20 @@ function FundFlowContent() {
       </head>
       <div className="space-y-6 max-w-7xl mx-auto pb-16">
         {/* Workspace Title & Period Indicator */}
-        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-800 pb-4">
+        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-800/80 pb-4">
           <div>
             <div className="flex items-center space-x-3">
-              <span className="p-2.5 rounded-xl bg-indigo-950/80 border border-indigo-800/80 text-indigo-400">
+              <span className="p-2 rounded-lg bg-slate-900 border border-emerald-500/30 text-emerald-400">
                 <Network className="w-5 h-5" />
               </span>
               <div>
-                <h1 className="text-2xl sm:text-3xl font-bold font-mono text-slate-100 tracking-tight flex items-center space-x-3">
+                <h1 className="text-xl sm:text-2xl font-bold font-mono text-slate-100 tracking-tight flex items-center space-x-2.5">
                   <span>Fund Flow Tracing</span>
-                  <span className="text-xs font-mono font-medium px-2.5 py-0.5 rounded-full bg-indigo-950/80 text-indigo-400 border border-indigo-800">
+                  <span className="text-[10px] font-mono font-medium px-2 py-0.5 rounded bg-emerald-950/60 text-emerald-400 border border-emerald-800/60">
                     Sankey Capital Analytics
                   </span>
                 </h1>
-                <p className="text-xs sm:text-sm text-slate-400 font-mono mt-0.5">
+                <p className="text-xs text-slate-400 font-mono mt-0.5">
                   Multi-hop capital routing analysis across originators, intermediary layering mules, and cash-out off-ramps.
                 </p>
               </div>
@@ -222,7 +222,7 @@ function FundFlowContent() {
             <button
               onClick={loadFundFlow}
               disabled={loading}
-              className="flex items-center space-x-1.5 px-3.5 py-1.5 rounded-lg text-xs font-mono font-semibold bg-slate-800 hover:bg-slate-700 disabled:opacity-50 text-slate-200 border border-slate-700 transition"
+              className="flex items-center space-x-1.5 px-3 py-1.5 rounded-md text-xs font-mono font-semibold bg-slate-800 hover:bg-slate-750 disabled:opacity-50 text-slate-200 border border-slate-700/80 transition"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
               <span>Refresh Topology</span>
@@ -231,19 +231,19 @@ function FundFlowContent() {
         </div>
 
         {/* Lucinity Reference: Date Presets & Custom Date Range Filter */}
-        <div className="p-4 rounded-2xl bg-slate-900/90 border border-slate-800 shadow-xl space-y-3">
+        <div className="p-4 rounded-lg bg-[#111722] border border-slate-800/80 space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-3">
             {/* Presets */}
-            <div className="flex items-center space-x-1.5 overflow-x-auto pb-1 sm:pb-0">
-              <span className="text-[11px] font-mono text-slate-500 uppercase mr-1">Period:</span>
+            <div className="flex items-center space-x-1 overflow-x-auto pb-1 sm:pb-0">
+              <span className="text-[10px] font-mono text-slate-400 uppercase tracking-wider mr-1">Period:</span>
               {DATE_PRESETS.map((p) => (
                 <button
                   key={p.days}
                   onClick={() => handlePresetChange(p.days)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-mono font-semibold transition ${
+                  className={`px-2.5 py-1 rounded-md text-xs font-mono font-semibold transition-colors ${
                     selectedPreset === p.days && !customStart
-                      ? 'bg-indigo-950 text-indigo-300 border border-indigo-700 shadow-sm'
-                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+                      ? 'bg-emerald-950/60 text-emerald-400 border border-emerald-700/60'
+                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900 border border-transparent'
                   }`}
                 >
                   {p.label}
@@ -253,11 +253,11 @@ function FundFlowContent() {
 
             {/* Currency Selector */}
             <div className="flex items-center space-x-2 text-xs font-mono">
-              <span className="text-slate-500 text-[10px] uppercase">Currency:</span>
+              <span className="text-slate-400 text-[10px] uppercase tracking-wider">Currency:</span>
               <select
                 value={currency}
                 onChange={(e) => setCurrency(e.target.value)}
-                className="bg-slate-950 border border-slate-800 rounded px-2.5 py-1 text-slate-200 font-bold"
+                className="bg-[#0B0F17] border border-slate-800 rounded px-2.5 py-1 text-slate-200 font-bold"
               >
                 <option value="INR">INR (₹)</option>
                 <option value="GBP">GBP (£)</option>
@@ -271,7 +271,7 @@ function FundFlowContent() {
           {/* Search & Custom Date Filters */}
           <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 pt-2 border-t border-slate-800/80 text-xs font-mono">
             <div>
-              <label className="text-slate-500 text-[10px] block mb-1">Focus Account ID</label>
+              <label className="text-slate-400 text-[10px] block mb-1 uppercase tracking-wider">Focus Account ID</label>
               <div className="relative">
                 <Search className="w-3.5 h-3.5 absolute left-2.5 top-2 text-slate-500" />
                 <input
@@ -279,28 +279,28 @@ function FundFlowContent() {
                   placeholder="e.g. ACCT_000150"
                   value={searchAccount}
                   onChange={(e) => setSearchAccount(e.target.value)}
-                  className="w-full pl-8 pr-2.5 py-1 bg-slate-950 border border-slate-800 rounded text-slate-200"
+                  className="w-full pl-8 pr-2.5 py-1 bg-[#0B0F17] border border-slate-800 rounded text-slate-200"
                 />
               </div>
             </div>
 
             <div>
-              <label className="text-slate-500 text-[10px] block mb-1">Start Date</label>
+              <label className="text-slate-400 text-[10px] block mb-1 uppercase tracking-wider">Start Date</label>
               <input
                 type="date"
                 value={customStart}
                 onChange={(e) => setCustomStart(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 rounded px-2 py-1 text-slate-200"
+                className="w-full bg-[#0B0F17] border border-slate-800 rounded px-2 py-1 text-slate-200"
               />
             </div>
 
             <div>
-              <label className="text-slate-500 text-[10px] block mb-1">End Date</label>
+              <label className="text-slate-400 text-[10px] block mb-1 uppercase tracking-wider">End Date</label>
               <input
                 type="date"
                 value={customEnd}
                 onChange={(e) => setCustomEnd(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 rounded px-2 py-1 text-slate-200"
+                className="w-full bg-[#0B0F17] border border-slate-800 rounded px-2 py-1 text-slate-200"
               />
             </div>
 
@@ -316,7 +316,7 @@ function FundFlowContent() {
                   setSelectedNode(null);
                   setSelectedLink(null);
                 }}
-                className="w-full py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded font-semibold transition"
+                className="w-full py-1.5 bg-slate-800 hover:bg-slate-750 text-slate-300 border border-slate-700/80 rounded font-semibold transition text-xs"
               >
                 Reset Canvas
               </button>
@@ -327,22 +327,22 @@ function FundFlowContent() {
         {/* Workspace Period & KPI Bar */}
         {data && data.summary && (
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs font-mono">
-            <div className="p-3.5 rounded-xl bg-slate-900/80 border border-slate-800">
-              <div className="text-[10px] text-slate-500 uppercase">Gross Flow Volume</div>
-              <div className="text-lg font-bold text-slate-100 mt-0.5">
+            <div className="p-3.5 rounded-lg bg-[#111722] border border-slate-800/80">
+              <div className="text-[10px] text-slate-400 uppercase tracking-wider">Gross Flow Volume</div>
+              <div className="text-lg font-bold text-slate-100 mt-0.5 tabular-nums">
                 {currency} {Number(data.summary.total_volume).toLocaleString(undefined, { minimumFractionDigits: 0 })}
               </div>
             </div>
-            <div className="p-3.5 rounded-xl bg-slate-900/80 border border-slate-800">
-              <div className="text-[10px] text-slate-500 uppercase">Active Streams</div>
-              <div className="text-lg font-bold text-indigo-400 mt-0.5">{data.summary.flow_count} Empirical Flows</div>
+            <div className="p-3.5 rounded-lg bg-[#111722] border border-slate-800/80">
+              <div className="text-[10px] text-slate-400 uppercase tracking-wider">Active Streams</div>
+              <div className="text-lg font-bold text-emerald-400 mt-0.5 tabular-nums">{data.summary.flow_count} Empirical Flows</div>
             </div>
-            <div className="p-3.5 rounded-xl bg-slate-900/80 border border-slate-800">
-              <div className="text-[10px] text-slate-500 uppercase">Layering Switches</div>
-              <div className="text-lg font-bold text-amber-400 mt-0.5">{data.summary.intermediaries_count} Intermediary Mules</div>
+            <div className="p-3.5 rounded-lg bg-[#111722] border border-slate-800/80">
+              <div className="text-[10px] text-slate-400 uppercase tracking-wider">Layering Switches</div>
+              <div className="text-lg font-bold text-amber-400 mt-0.5 tabular-nums">{data.summary.intermediaries_count} Intermediary Mules</div>
             </div>
-            <div className="p-3.5 rounded-xl bg-slate-900/80 border border-slate-800">
-              <div className="text-[10px] text-slate-500 uppercase">Active Analysis Window</div>
+            <div className="p-3.5 rounded-lg bg-[#111722] border border-slate-800/80">
+              <div className="text-[10px] text-slate-400 uppercase tracking-wider">Active Analysis Window</div>
               <div className="text-xs font-bold text-slate-300 mt-1.5">{data.period_label}</div>
             </div>
           </div>

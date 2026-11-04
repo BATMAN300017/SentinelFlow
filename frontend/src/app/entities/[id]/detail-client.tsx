@@ -54,7 +54,7 @@ export default function EntityDetailPageClient() {
             <span>Back to Entity Profiles</span>
           </Link>
           {profile && (
-            <span className="font-mono text-xs font-bold text-sky-400 bg-sky-950/80 px-2.5 py-1 rounded border border-sky-800">
+            <span className="font-mono text-xs font-bold text-emerald-400 bg-slate-800 px-2.5 py-1 rounded border border-slate-700">
               {profile.id}
             </span>
           )}
@@ -70,10 +70,10 @@ export default function EntityDetailPageClient() {
           />
         ) : (
           <div className="space-y-6">
-            <div className="p-6 rounded-2xl border border-slate-800 bg-slate-900/80 shadow-lg backdrop-blur-sm space-y-4">
+            <div className="p-6 rounded-2xl border border-slate-800/80 bg-[#111722] shadow-lg space-y-4">
               <div className="flex items-start justify-between">
                 <div>
-                  <span className="text-xs font-mono font-bold text-sky-400">
+                  <span className="text-xs font-mono font-bold text-emerald-400">
                     {profile.entity_type || 'ACCOUNT'}
                   </span>
                   <h1 className="text-xl font-bold font-mono text-slate-100 mt-1">{profile.label || profile.id}</h1>
@@ -81,20 +81,20 @@ export default function EntityDetailPageClient() {
                 <StatusBadge type="severity" value={profile.risk_level || 'ROUTINE'} />
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs font-mono pt-4 border-t border-slate-850">
-                <div className="p-3 rounded-xl bg-slate-950 border border-slate-850">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs font-mono pt-4 border-t border-slate-800/80">
+                <div className="p-3 rounded-xl bg-[#0B0F17] border border-slate-800/80">
                   <span className="text-slate-500 text-[10px]">Associated Alerts</span>
-                  <div className="text-lg font-bold text-amber-400 mt-1">{profile.alert_count || 0}</div>
+                  <div className="text-lg font-bold text-amber-400 mt-1 tabular-nums">{profile.alert_count || 0}</div>
                 </div>
-                <div className="p-3 rounded-xl bg-slate-950 border border-slate-850">
+                <div className="p-3 rounded-xl bg-[#0B0F17] border border-slate-800/80">
                   <span className="text-slate-500 text-[10px]">Open Cases</span>
-                  <div className="text-lg font-bold text-purple-400 mt-1">{profile.investigation_count || 0}</div>
+                  <div className="text-lg font-bold text-slate-200 mt-1 tabular-nums">{profile.investigation_count || 0}</div>
                 </div>
-                <div className="p-3 rounded-xl bg-slate-950 border border-slate-850">
+                <div className="p-3 rounded-xl bg-[#0B0F17] border border-slate-800/80">
                   <span className="text-slate-500 text-[10px]">Risk Score</span>
-                  <div className="text-lg font-bold text-rose-400 mt-1">{profile.risk_score || 24}/100</div>
+                  <div className="text-lg font-bold text-rose-400 mt-1 tabular-nums">{profile.risk_score || 24}/100</div>
                 </div>
-                <div className="p-3 rounded-xl bg-slate-950 border border-slate-850">
+                <div className="p-3 rounded-xl bg-[#0B0F17] border border-slate-800/80">
                   <span className="text-slate-500 text-[10px]">Graph Role</span>
                   <div className="text-lg font-bold text-slate-200 mt-1">Intermediary</div>
                 </div>

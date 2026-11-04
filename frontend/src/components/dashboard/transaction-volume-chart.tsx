@@ -11,36 +11,36 @@ export function TransactionVolumeChart({ throughputTpm = 42.5 }: TransactionVolu
   const bars = [28, 35, 42, 38, 55, 49, 62, 70, 65, 80, 75, 88, 92, 85, 96, 100, 91, 84, 78, 82, 89, 94, 91, 87];
 
   return (
-    <div className="p-6 rounded-2xl border border-slate-800 bg-slate-900/80 shadow-lg backdrop-blur-sm space-y-4">
+    <div className="p-4 sm:p-5 rounded-lg border border-slate-800/80 bg-[#111722] space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-sm font-semibold text-slate-100 font-mono">
-            Transaction Throughput (24-Hour Velocity)
+          <h3 className="text-xs font-semibold text-slate-100 font-mono uppercase tracking-wider">
+            Transaction Ingestion Velocity (24h Histogram)
           </h3>
-          <p className="text-xs text-slate-400 font-mono mt-0.5">
-            Calibrated real-time stream • {throughputTpm} TPM current load
+          <p className="text-[11px] text-slate-400 font-mono mt-0.5">
+            Calibrated stream rate &bull; <span className="text-slate-200 tabular-nums">{throughputTpm} TPM</span> current load
           </p>
         </div>
-        <span className="text-xs font-mono px-2.5 py-1 rounded bg-sky-950/80 text-sky-400 border border-sky-800/80">
-          Live Window
+        <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-900 text-slate-300 border border-slate-800">
+          Rolling 24h
         </span>
       </div>
 
-      <div className="h-44 flex items-end justify-between gap-1.5 pt-6 pb-2 px-1">
+      <div className="h-40 flex items-end justify-between gap-1 pt-6 pb-2 px-1">
         {bars.map((height, i) => (
           <div key={i} className="flex-1 flex flex-col items-center gap-1 group relative">
             <div
               style={{ height: `${height}%` }}
-              className="w-full rounded-t bg-gradient-to-t from-sky-600/40 via-sky-500/70 to-sky-400 group-hover:from-sky-500 group-hover:to-sky-300 transition-all duration-200"
+              className="w-full rounded-t bg-slate-700/60 hover:bg-emerald-500/70 transition-colors"
             />
-            <span className="text-[9px] font-mono text-slate-500 opacity-0 group-hover:opacity-100 transition-opacity absolute -top-5">
+            <span className="text-[9px] font-mono text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity absolute -top-5 tabular-nums pointer-events-none">
               {Math.round(height * (throughputTpm / 70))}
             </span>
           </div>
         ))}
       </div>
 
-      <div className="flex items-center justify-between text-[10px] font-mono text-slate-500 border-t border-slate-850 pt-2">
+      <div className="flex items-center justify-between text-[10px] font-mono text-slate-500 border-t border-slate-800/80 pt-2">
         <span>-24h</span>
         <span>-18h</span>
         <span>-12h</span>

@@ -12,41 +12,43 @@ interface PriorityCasesProps {
 
 export function PriorityCases({ cases = [] }: PriorityCasesProps) {
   return (
-    <div className="p-6 rounded-2xl border border-slate-800 bg-slate-900/80 shadow-lg backdrop-blur-sm space-y-4">
+    <div className="p-4 sm:p-5 rounded-lg border border-slate-800/80 bg-[#111722] space-y-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-2">
-          <ShieldAlert className="w-4 h-4 text-rose-400" />
-          <h3 className="text-sm font-semibold text-slate-100 font-mono">
-            Active Priority Investigations
+          <ShieldAlert className="w-4 h-4 text-orange-400" />
+          <h3 className="text-xs font-semibold text-slate-100 font-mono uppercase tracking-wider">
+            Active Priority Dossiers
           </h3>
         </div>
         <Link
           href="/investigations"
-          className="text-xs font-mono text-sky-400 hover:text-sky-300 flex items-center space-x-1"
+          className="text-xs font-mono text-emerald-400 hover:text-emerald-300 flex items-center space-x-1"
         >
-          <span>View All</span>
+          <span>All Cases</span>
           <ArrowRight className="w-3.5 h-3.5" />
         </Link>
       </div>
 
-      <div className="space-y-2.5">
+      <div className="space-y-2">
         {cases.length > 0 ? (
           cases.slice(0, 4).map((c) => (
             <Link
               key={c.id}
               href={`/investigations?id=${c.id}`}
-              className="p-3.5 rounded-xl border border-slate-800 bg-slate-950/60 hover:bg-slate-800/50 hover:border-slate-700 transition flex items-center justify-between group block"
+              className="p-3 rounded-md border border-slate-800/80 bg-[#0B0F17] hover:bg-slate-900/90 hover:border-slate-700 transition-colors flex items-center justify-between group block"
             >
-              <div className="space-y-1 pr-3">
+              <div className="space-y-1 pr-3 min-w-0">
                 <div className="flex items-center space-x-2">
-                  <span className="text-xs font-mono font-bold text-sky-400 group-hover:text-sky-300 transition">
+                  <span className="text-xs font-mono font-bold text-slate-200 group-hover:text-emerald-400 transition-colors">
                     {c.case_number}
                   </span>
                   <StatusBadge type="severity" value={c.priority} />
                 </div>
-                <h4 className="text-xs text-slate-300 font-medium line-clamp-1">{c.title}</h4>
+                <h4 className="text-xs text-slate-300 font-medium truncate">{c.title}</h4>
               </div>
-              <StatusBadge type="case_status" value={c.status} />
+              <div className="shrink-0">
+                <StatusBadge type="case_status" value={c.status} />
+              </div>
             </Link>
           ))
         ) : (

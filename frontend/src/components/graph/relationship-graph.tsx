@@ -60,19 +60,21 @@ export function RelationshipGraph({
   const getNodeColor = (node: GraphNode) => {
     switch (node.risk_level) {
       case 'CRITICAL':
-      case 'HIGH':
         return '#f43f5e'; // rose-500
+      case 'HIGH':
+        return '#f97316'; // orange-500
       case 'ELEVATED':
+      case 'MEDIUM':
         return '#f59e0b'; // amber-500
       case 'LOW':
-        return '#0284c7'; // sky-600
-      default:
         return '#10b981'; // emerald-500
+      default:
+        return '#94a3b8'; // slate-400
     }
   };
 
   return (
-    <div className="relative w-full h-[450px] rounded-2xl border border-slate-800 bg-slate-950 overflow-hidden shadow-2xl flex items-center justify-center">
+    <div className="relative w-full h-[450px] rounded-2xl border border-slate-800/80 bg-[#0B0F17] overflow-hidden shadow-2xl flex items-center justify-center">
       {/* Background grid */}
       <div className="absolute inset-0 bg-[radial-gradient(#1e293b_1px,transparent_1px)] [background-size:24px_24px] opacity-40 pointer-events-none" />
 
@@ -89,7 +91,7 @@ export function RelationshipGraph({
             refY="3"
             orient="auto"
           >
-            <polygon points="0 0, 8 3, 0 6" fill="#38bdf8" />
+            <polygon points="0 0, 8 3, 0 6" fill="#10b981" />
           </marker>
         </defs>
 
@@ -111,7 +113,7 @@ export function RelationshipGraph({
                 strokeWidth="1.5"
                 strokeDasharray="4 2"
                 markerEnd="url(#arrowhead)"
-                className="group-hover:stroke-sky-400 group-hover:stroke-2 transition"
+                className="group-hover:stroke-emerald-400 group-hover:stroke-2 transition"
               />
               <text
                 x={midX}
@@ -142,7 +144,7 @@ export function RelationshipGraph({
               transform={`translate(${pos.x}, ${pos.y})`}
             >
               {isSelected && (
-                <circle r="22" fill="none" stroke="#38bdf8" strokeWidth="2" strokeDasharray="3 3" className="animate-spin" />
+                <circle r="22" fill="none" stroke="#10b981" strokeWidth="1.5" strokeDasharray="3 3" />
               )}
               <circle
                 r="14"
@@ -159,7 +161,7 @@ export function RelationshipGraph({
                 fontFamily="monospace"
                 fontWeight="600"
                 textAnchor="middle"
-                className="group-hover:fill-sky-400 transition"
+                className="group-hover:fill-emerald-400 transition"
               >
                 {n.label || n.id}
               </text>

@@ -45,7 +45,7 @@ export function OutcomeForm() {
   };
 
   return (
-    <div className="p-6 rounded-2xl border border-slate-800 bg-slate-900/80 shadow-lg backdrop-blur-sm space-y-4">
+    <div className="p-6 rounded-2xl border border-slate-800/80 bg-[#111722] shadow-lg space-y-4">
       <div className="flex items-center space-x-2">
         <CheckCircle2 className="w-5 h-5 text-emerald-400" />
         <h3 className="text-sm font-semibold text-slate-100 font-mono">
@@ -68,7 +68,7 @@ export function OutcomeForm() {
               value={transactionId}
               onChange={(e) => setTransactionId(e.target.value)}
               placeholder="e.g. TXN_0000602333"
-              className="w-full px-3 py-2 rounded-xl text-xs font-mono bg-slate-950 text-slate-200 border border-slate-750 focus:outline-none focus:border-sky-500"
+              className="w-full px-3 py-2 rounded-xl text-xs font-mono bg-[#0B0F17] text-slate-200 border border-slate-700/80 focus:outline-none focus:border-emerald-500"
             />
           </div>
 
@@ -79,7 +79,7 @@ export function OutcomeForm() {
             <select
               value={analystDecision}
               onChange={(e) => setAnalystDecision(e.target.value)}
-              className="w-full px-3 py-2 rounded-xl text-xs font-mono bg-slate-950 text-slate-200 border border-slate-750 focus:outline-none focus:border-sky-500"
+              className="w-full px-3 py-2 rounded-xl text-xs font-mono bg-[#0B0F17] text-slate-200 border border-slate-700/80 focus:outline-none focus:border-emerald-500"
             >
               <option value="CONFIRMED_FRAUD">CONFIRMED_FRAUD (Positive Label)</option>
               <option value="FALSE_POSITIVE">FALSE_POSITIVE (Negative Label)</option>
@@ -97,7 +97,7 @@ export function OutcomeForm() {
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             placeholder="Document evidentiary proof or rationale..."
-            className="w-full p-3 rounded-xl text-xs font-mono bg-slate-950 text-slate-200 border border-slate-750 focus:outline-none focus:border-sky-500"
+            className="w-full p-3 rounded-xl text-xs font-mono bg-[#0B0F17] text-slate-200 border border-slate-700/80 focus:outline-none focus:border-emerald-500"
           />
         </div>
 
@@ -117,7 +117,7 @@ export function OutcomeForm() {
           <button
             type="submit"
             disabled={submitting || !transactionId.trim()}
-            className="flex items-center space-x-2 px-4 py-2 rounded-xl text-xs font-mono font-bold bg-sky-600 hover:bg-sky-500 disabled:opacity-50 text-white transition shadow-lg shadow-sky-600/20"
+            className="flex items-center space-x-2 px-4 py-2 rounded-xl text-xs font-mono font-bold bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white transition shadow-lg shadow-emerald-950/30"
           >
             <Send className="w-3.5 h-3.5" />
             <span>{submitting ? 'Submitting...' : 'Record Feedback'}</span>

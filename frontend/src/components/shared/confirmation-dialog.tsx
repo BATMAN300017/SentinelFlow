@@ -28,12 +28,12 @@ export function ConfirmationDialog({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-sm animate-fade-in overflow-y-auto">
-      <div className="w-full max-w-md max-h-[92vh] overflow-y-auto rounded-2xl border border-slate-800 bg-slate-900 p-4 sm:p-6 shadow-2xl space-y-4">
+      <div className="w-full max-w-md max-h-[92vh] overflow-y-auto rounded-2xl border border-slate-800/80 bg-[#111722] p-4 sm:p-6 shadow-2xl space-y-4">
         <div className="flex items-start justify-between">
           <div className="flex items-center space-x-3">
             <div
               className={`p-2 rounded-xl ${
-                isDestructive ? 'bg-rose-950/80 text-rose-400 border border-rose-800' : 'bg-sky-950/80 text-sky-400 border border-sky-800'
+                isDestructive ? 'bg-rose-950/80 text-rose-400 border border-rose-800/80' : 'bg-emerald-950/80 text-emerald-400 border border-emerald-800/80'
               }`}
             >
               <AlertTriangle className="w-5 h-5" />
@@ -47,10 +47,10 @@ export function ConfirmationDialog({
 
         <p className="text-xs text-slate-400 font-mono leading-relaxed">{description}</p>
 
-        <div className="flex items-center justify-end space-x-3 pt-3 border-t border-slate-800">
+        <div className="flex items-center justify-end space-x-3 pt-3 border-t border-slate-800/80">
           <button
             onClick={onClose}
-            className="px-4 py-2 rounded-lg text-xs font-mono font-medium text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition"
+            className="px-4 py-2 rounded-lg text-xs font-mono font-medium text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 transition"
           >
             {cancelLabel}
           </button>
@@ -61,8 +61,8 @@ export function ConfirmationDialog({
             }}
             className={`px-4 py-2 rounded-lg text-xs font-mono font-bold transition shadow-lg ${
               isDestructive
-                ? 'bg-rose-600 hover:bg-rose-500 text-white shadow-rose-900/30'
-                : 'bg-sky-600 hover:bg-sky-500 text-white shadow-sky-900/30'
+                ? 'bg-rose-600 hover:bg-rose-500 text-white shadow-rose-950/30'
+                : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-950/30'
             }`}
           >
             {confirmLabel}

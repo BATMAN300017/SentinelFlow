@@ -36,7 +36,7 @@ export function RecommendedAction({ onAction }: RecommendedActionProps) {
   ];
 
   return (
-    <div className="p-6 rounded-2xl border border-slate-800 bg-slate-900/80 shadow-lg backdrop-blur-sm space-y-4">
+    <div className="p-6 rounded-2xl border border-slate-800/80 bg-[#111722] shadow-lg space-y-4">
       <h3 className="text-sm font-semibold text-slate-100 font-mono">
         Prescriptive Next-Best Actions
       </h3>
@@ -45,7 +45,7 @@ export function RecommendedAction({ onAction }: RecommendedActionProps) {
         {actions.map((act) => (
           <div
             key={act.key}
-            className="p-4 rounded-xl border border-slate-850 bg-slate-950/60 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+            className="p-4 rounded-xl border border-slate-800/80 bg-[#0B0F17] flex flex-col sm:flex-row sm:items-center justify-between gap-4"
           >
             <div className="space-y-1">
               <div className="flex items-center space-x-2">

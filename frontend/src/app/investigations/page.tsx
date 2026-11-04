@@ -162,52 +162,52 @@ function InvestigationsContent() {
               /* Full Case Dossier Workspace */
               <div className="space-y-6 animate-in fade-in">
                 {/* Header Banner */}
-                <div className="p-6 rounded-2xl border border-sky-900/60 bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 shadow-2xl space-y-4">
+                <div className="p-5 sm:p-6 rounded-lg border border-slate-800/80 bg-[#111722] space-y-4">
                   <div className="flex flex-wrap items-start justify-between gap-4">
                     <div className="space-y-2">
-                      <div className="flex items-center space-x-3">
-                        <span className="font-mono text-xs font-bold text-sky-400 bg-sky-950/80 px-2.5 py-1 rounded border border-sky-800">
+                      <div className="flex items-center space-x-2.5">
+                        <span className="font-mono text-xs font-bold text-slate-200 bg-slate-900 px-2 py-0.5 rounded border border-slate-800">
                           {activeCase.case_number || activeCase.id}
                         </span>
                         <StatusBadge type="case_status" value={activeCase.status} />
                         <StatusBadge type="severity" value={activeCase.priority} />
                       </div>
                       <h1 className="text-xl sm:text-2xl font-bold font-mono text-slate-100">{activeCase.title}</h1>
-                      <p className="text-xs sm:text-sm text-slate-400 font-mono max-w-3xl leading-relaxed">
+                      <p className="text-xs text-slate-400 font-mono max-w-3xl leading-relaxed">
                         {activeCase.summary}
                       </p>
                     </div>
 
                     <div className="flex flex-col items-end space-y-2 text-xs font-mono">
                       <div className="text-right">
-                        <span className="text-slate-500 text-[10px] uppercase">Disposition</span>
+                        <span className="text-slate-400 text-[10px] uppercase tracking-wider">Disposition</span>
                         <div className="text-sm font-bold text-emerald-400">{activeCase.disposition || 'UNDER_TRIAGE'}</div>
                       </div>
                       <div className="text-right">
-                        <span className="text-slate-500 text-[10px] uppercase">Evidence Completeness</span>
-                        <div className="text-sm font-bold text-sky-400">
+                        <span className="text-slate-400 text-[10px] uppercase tracking-wider">Evidence Completeness</span>
+                        <div className="text-sm font-bold text-slate-200 tabular-nums">
                           {activeCase.evidence_completeness_score ? `${Number(activeCase.evidence_completeness_score) * (Number(activeCase.evidence_completeness_score) <= 1 ? 100 : 1)}%` : '95%'}
                         </div>
                       </div>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-4 border-t border-slate-800/80 text-xs font-mono">
-                    <div className="bg-slate-900/80 p-3 rounded-lg border border-slate-800">
-                      <span className="text-slate-500 text-[10px]">Assigned Investigator</span>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-3 border-t border-slate-800/80 text-xs font-mono">
+                    <div className="bg-[#0B0F17] p-2.5 rounded-md border border-slate-800/80">
+                      <span className="text-slate-500 text-[10px] uppercase">Assigned Investigator</span>
                       <div className="font-bold text-slate-200 mt-0.5">{activeCase.assigned_investigator_id || 'Marcus Vance (Lead)'}</div>
                     </div>
-                    <div className="bg-slate-900/80 p-3 rounded-lg border border-slate-800">
-                      <span className="text-slate-500 text-[10px]">Supervisory Review</span>
+                    <div className="bg-[#0B0F17] p-2.5 rounded-md border border-slate-800/80">
+                      <span className="text-slate-500 text-[10px] uppercase">Supervisory Review</span>
                       <div className="font-bold text-amber-300 mt-0.5">{activeCase.peer_review_status || 'REQUESTED'}</div>
                     </div>
-                    <div className="bg-slate-900/80 p-3 rounded-lg border border-slate-800">
-                      <span className="text-slate-500 text-[10px]">Model Heuristic Version</span>
+                    <div className="bg-[#0B0F17] p-2.5 rounded-md border border-slate-800/80">
+                      <span className="text-slate-500 text-[10px] uppercase">Model Version</span>
                       <div className="font-bold text-slate-200 mt-0.5">{activeCase.model_version || 'v2.0-consensus'}</div>
                     </div>
-                    <div className="bg-slate-900/80 p-3 rounded-lg border border-slate-800">
-                      <span className="text-slate-500 text-[10px]">Created Date</span>
-                      <div className="font-bold text-slate-200 mt-0.5">
+                    <div className="bg-[#0B0F17] p-2.5 rounded-md border border-slate-800/80">
+                      <span className="text-slate-500 text-[10px] uppercase">Created Date</span>
+                      <div className="font-bold text-slate-200 mt-0.5 tabular-nums">
                         {new Date(activeCase.created_at || Date.now()).toLocaleDateString([], { month: 'short', day: '2-digit', year: 'numeric' })}
                       </div>
                     </div>
@@ -217,17 +217,17 @@ function InvestigationsContent() {
                 {/* Evidence & Findings Breakdown */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {/* Evidentiary Items */}
-                  <div className="p-5 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-4">
-                    <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-                      <h3 className="text-sm font-bold font-mono text-slate-100 flex items-center space-x-2">
-                        <FileText className="w-4 h-4 text-sky-400" />
+                  <div className="p-4 sm:p-5 rounded-lg bg-[#111722] border border-slate-800/80 space-y-4">
+                    <div className="flex items-center justify-between border-b border-slate-800/80 pb-3">
+                      <h3 className="text-xs font-bold font-mono text-slate-100 uppercase tracking-wider flex items-center space-x-2">
+                        <FileText className="w-3.5 h-3.5 text-slate-400" />
                         <span>Evidentiary Items & Records</span>
                       </h3>
-                      <span className="text-[10px] font-mono text-slate-500">Verified Chain of Custody</span>
+                      <span className="text-[10px] font-mono text-slate-500">Chain of Custody Verified</span>
                     </div>
 
                     <div className="space-y-2">
-                      <div className="p-3 rounded-lg bg-slate-950 border border-slate-800 text-xs font-mono space-y-1">
+                      <div className="p-3 rounded-md bg-[#0B0F17] border border-slate-800/80 text-xs font-mono space-y-1">
                         <div className="flex items-center justify-between font-bold text-slate-200">
                           <span>Primary Settlement Record</span>
                           <span className="text-emerald-400 text-[10px]">VERIFIED</span>
@@ -237,17 +237,17 @@ function InvestigationsContent() {
                         </p>
                       </div>
 
-                      <div className="p-3 rounded-lg bg-slate-950 border border-slate-800 text-xs font-mono space-y-1">
+                      <div className="p-3 rounded-md bg-[#0B0F17] border border-slate-800/80 text-xs font-mono space-y-1">
                         <div className="flex items-center justify-between font-bold text-slate-200">
                           <span>Graph Topology & Centrality</span>
-                          <span className="text-sky-400 text-[10px]">CALIBRATED</span>
+                          <span className="text-emerald-400 text-[10px]">CALIBRATED</span>
                         </div>
                         <p className="text-slate-400 text-[11px]">
                           Multi-hop traversal identifies rapid fan-in/fan-out patterns consistent with mule syndicate layering.
                         </p>
                       </div>
 
-                      <div className="p-3 rounded-lg bg-slate-950 border border-slate-800 text-xs font-mono space-y-1">
+                      <div className="p-3 rounded-md bg-[#0B0F17] border border-slate-800/80 text-xs font-mono space-y-1">
                         <div className="flex items-center justify-between font-bold text-slate-200">
                           <span>Model Consensus Evaluation</span>
                           <span className="text-amber-400 text-[10px]">5-MODEL SIGNAL</span>
@@ -339,16 +339,16 @@ function InvestigationsContent() {
             </div>
 
             {/* Filter Tabs */}
-            <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-950/80 p-3 rounded-xl border border-slate-800">
-              <div className="flex flex-wrap items-center gap-1.5">
+            <div className="flex flex-wrap items-center justify-between gap-3 bg-[#0B0F17] p-2.5 rounded-lg border border-slate-800/80">
+              <div className="flex flex-wrap items-center gap-1">
                 {['ALL', 'UNDER_INVESTIGATION', 'PENDING_PEER_REVIEW', 'RESOLVED'].map(st => (
                   <button
                     key={st}
                     onClick={() => setStatusFilter(st)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-mono font-semibold transition ${
+                    className={`px-2.5 py-1 rounded-md text-xs font-mono font-semibold transition-colors ${
                       statusFilter === st
-                        ? 'bg-sky-950 text-sky-400 border border-sky-700/80 shadow-sm'
-                        : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
+                        ? 'bg-emerald-950/60 text-emerald-400 border border-emerald-700/60'
+                        : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900 border border-transparent'
                     }`}
                   >
                     {st === 'ALL' ? 'All Statuses' : st.replace(/_/g, ' ')}
@@ -356,15 +356,15 @@ function InvestigationsContent() {
                 ))}
               </div>
 
-              <div className="flex flex-wrap items-center gap-1.5">
+              <div className="flex flex-wrap items-center gap-1">
                 {['ALL', 'CRITICAL', 'HIGH', 'MEDIUM'].map(prio => (
                   <button
                     key={prio}
                     onClick={() => setPriorityFilter(prio)}
-                    className={`px-2.5 py-1 rounded text-xs font-mono font-semibold transition ${
+                    className={`px-2 py-0.5 rounded text-[11px] font-mono font-medium transition-colors ${
                       priorityFilter === prio
-                        ? 'bg-slate-800 text-slate-200'
-                        : 'text-slate-500 hover:text-slate-300'
+                        ? 'bg-slate-800 text-slate-200 border border-slate-700'
+                        : 'text-slate-400 hover:text-slate-300'
                     }`}
                   >
                     {prio}
@@ -374,26 +374,26 @@ function InvestigationsContent() {
             </div>
 
             {/* Cases Table */}
-            <div className="bg-slate-900/90 rounded-2xl border border-slate-800 overflow-hidden shadow-2xl backdrop-blur-sm">
+            <div className="bg-[#111722] rounded-lg border border-slate-800/80 overflow-hidden shadow-lg">
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs font-mono">
-                <thead className="bg-slate-950/90 text-slate-400 font-semibold border-b border-slate-800 uppercase tracking-wider text-[11px]">
+                <thead className="bg-[#0B0F17] text-slate-400 font-semibold border-b border-slate-800 uppercase tracking-wider text-[10px]">
                   <tr>
-                    <th className="px-5 py-3.5">Case Number</th>
-                    <th className="px-5 py-3.5">Investigation Title</th>
-                    <th className="px-5 py-3.5">Priority</th>
-                    <th className="px-5 py-3.5">Status</th>
-                    <th className="px-5 py-3.5">Completeness</th>
-                    <th className="px-5 py-3.5">Disposition</th>
-                    <th className="px-5 py-3.5 text-right">Actions</th>
+                    <th className="px-4 py-3">Case Number</th>
+                    <th className="px-4 py-3">Investigation Title</th>
+                    <th className="px-4 py-3">Priority</th>
+                    <th className="px-4 py-3">Status</th>
+                    <th className="px-4 py-3">Completeness</th>
+                    <th className="px-4 py-3">Disposition</th>
+                    <th className="px-4 py-3 text-right">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-850">
+                <tbody className="divide-y divide-slate-800/60">
                   {loading ? (
                     <tr>
                       <td colSpan={7} className="text-center py-12 text-slate-400 font-mono">
                         <div className="flex items-center justify-center space-x-2">
-                          <div className="w-4 h-4 border-2 border-sky-500 border-t-transparent rounded-full animate-spin" />
+                          <div className="w-4 h-4 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
                           <span>Loading active investigations...</span>
                         </div>
                       </td>
@@ -405,47 +405,47 @@ function InvestigationsContent() {
                       </td>
                     </tr>
                   ) : filteredCases.map(c => (
-                    <tr key={c.id} className="hover:bg-slate-800/40 transition">
-                      <td className="px-5 py-3.5 font-bold font-mono text-sky-400">
+                    <tr key={c.id} className="hover:bg-slate-800/40 transition-colors">
+                      <td className="px-4 py-3 font-bold font-mono text-slate-200">
                         <button
                           onClick={() => router.push(`/investigations?id=${c.id}`)}
-                          className="hover:underline text-left"
+                          className="hover:text-emerald-400 text-left transition-colors"
                         >
                           {c.case_number}
                         </button>
                       </td>
-                      <td className="px-5 py-3.5">
+                      <td className="px-4 py-3">
                         <div className="font-semibold text-slate-100 max-w-sm truncate">{c.title}</div>
                         <div className="text-[10px] text-slate-500 max-w-sm truncate">{c.summary}</div>
                       </td>
-                      <td className="px-5 py-3.5">
+                      <td className="px-4 py-3">
                         <StatusBadge type="severity" value={c.priority} />
                       </td>
-                      <td className="px-5 py-3.5">
+                      <td className="px-4 py-3">
                         <StatusBadge type="case_status" value={c.status} />
                       </td>
-                      <td className="px-5 py-3.5">
+                      <td className="px-4 py-3">
                         <div className="flex items-center space-x-1.5">
-                          <div className="w-12 h-1.5 rounded-full bg-slate-800 overflow-hidden">
+                          <div className="w-12 h-1.5 rounded-full bg-slate-900 border border-slate-800 overflow-hidden">
                             <div
                               style={{ width: `${Number(c.evidence_completeness_score) * (Number(c.evidence_completeness_score) <= 1 ? 100 : 1)}%` }}
-                              className="h-full bg-sky-500 rounded-full"
+                              className="h-full bg-emerald-500 rounded-full"
                             />
                           </div>
-                          <span className="text-[11px] font-bold text-sky-400">
+                          <span className="text-[11px] font-bold text-slate-300 tabular-nums">
                             {Number(c.evidence_completeness_score) * (Number(c.evidence_completeness_score) <= 1 ? 100 : 1)}%
                           </span>
                         </div>
                       </td>
-                      <td className="px-5 py-3.5 font-bold text-slate-300">
+                      <td className="px-4 py-3 font-medium text-slate-300 text-[11px]">
                         {c.disposition || 'Under Triage'}
                       </td>
-                      <td className="px-5 py-3.5 text-right whitespace-nowrap">
-                        <div className="flex items-center justify-end space-x-2">
+                      <td className="px-4 py-3 text-right whitespace-nowrap">
+                        <div className="flex items-center justify-end space-x-1.5">
                           {/* Open Case Action */}
                           <button
                             onClick={() => router.push(`/investigations?id=${c.id}`)}
-                            className="px-2.5 py-1.5 rounded-lg text-[11px] font-bold font-mono bg-sky-600 hover:bg-sky-500 text-white transition flex items-center space-x-1 shadow-sm"
+                            className="px-2.5 py-1 rounded-md text-[10px] font-mono font-semibold bg-emerald-600 hover:bg-emerald-500 text-white transition-colors flex items-center space-x-1"
                             title="Open the complete evidentiary case dossier"
                           >
                             <Briefcase className="w-3 h-3" />
@@ -455,9 +455,20 @@ function InvestigationsContent() {
                           {/* Open Full Audit Action */}
                           <Link
                             href={`/audit?resource_id=${c.id}&resource_type=CASE`}
-                            className="px-2.5 py-1.5 rounded-lg text-[11px] font-bold font-mono bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition flex items-center space-x-1"
+                            className="px-2.5 py-1 rounded-md text-[10px] font-mono font-medium bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-700 transition-colors flex items-center space-x-1"
                             title="Open immutable audit trail for this investigation"
                           >
+                            <ScrollText className="w-3 h-3 text-slate-400" />
+                            <span>Full Audit</span>
+                          </Link>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+                </table>
+              </div>
+            </div>
                             <ScrollText className="w-3 h-3" />
                             <span>Open Full Audit</span>
                           </Link>

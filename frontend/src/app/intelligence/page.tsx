@@ -50,7 +50,7 @@ export default function IntelligencePage() {
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold font-mono text-slate-100 tracking-tight flex items-center space-x-3">
               <span>Model Intelligence & Learning Center</span>
-              <span className="text-xs font-mono font-medium px-2 py-0.5 rounded-full bg-purple-950/80 text-purple-400 border border-purple-800">
+              <span className="text-xs font-mono font-medium px-2 py-0.5 rounded-full bg-slate-800 text-emerald-400 border border-slate-700">
                 Calibrated Ensemble
               </span>
             </h1>
@@ -83,9 +83,9 @@ export default function IntelligencePage() {
             </div>
 
             {/* Datasets Laboratory Section */}
-            <div className="p-6 rounded-2xl border border-slate-800 bg-slate-900/80 shadow-lg backdrop-blur-sm space-y-4">
+            <div className="p-6 rounded-2xl border border-slate-800/80 bg-[#111722] shadow-lg space-y-4">
               <div className="flex items-center space-x-2">
-                <Database className="w-5 h-5 text-sky-400" />
+                <Database className="w-5 h-5 text-emerald-400" />
                 <h3 className="text-base font-bold font-mono text-slate-100">
                   Dataset Laboratory & Provenance Store
                 </h3>
@@ -98,10 +98,10 @@ export default function IntelligencePage() {
                 {datasets.map((d) => (
                   <div
                     key={d.id}
-                    className="p-4 rounded-xl border border-slate-850 bg-slate-950/60 space-y-2 hover:border-slate-700 transition"
+                    className="p-4 rounded-xl border border-slate-800/80 bg-[#0B0F17] space-y-2 hover:border-slate-700 transition"
                   >
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-mono font-bold text-sky-400">{d.id}</span>
+                      <span className="text-xs font-mono font-bold text-emerald-400">{d.id}</span>
                       <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700">
                         v{d.version}
                       </span>
