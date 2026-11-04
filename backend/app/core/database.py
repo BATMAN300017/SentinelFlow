@@ -272,6 +272,7 @@ CREATE TABLE IF NOT EXISTS transactions (
     ground_truth_label TEXT,
     risk_score REAL DEFAULT 0.0,
     risk_band TEXT DEFAULT 'ROUTINE',
+    scoring_status TEXT DEFAULT 'CURRENT',
     created_at TEXT NOT NULL
 );
 
@@ -291,6 +292,7 @@ CREATE TABLE IF NOT EXISTS alerts (
     alert_type TEXT DEFAULT 'ANOMALOUS_VELOCITY',
     detection_reason TEXT DEFAULT 'Suspicious transaction pattern detected',
     assigned_analyst TEXT,
+    is_demo INTEGER DEFAULT 0,
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL
 );
@@ -326,6 +328,7 @@ CREATE TABLE IF NOT EXISTS investigations (
     evidence_completeness_score REAL DEFAULT 0.0,
     model_version TEXT,
     rule_version TEXT,
+    is_demo INTEGER DEFAULT 0,
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL
 );
@@ -570,6 +573,8 @@ def init_db():
             txn_cols = [c[1] for c in cursor.fetchall()]
             if "dataset_source" not in txn_cols:
                 cursor.execute("ALTER TABLE transactions ADD COLUMN dataset_source TEXT DEFAULT 'INDIA_SIMULATOR'")
+            if "scoring_status" not in txn_cols:
+                cursor.execute("ALTER TABLE transactions ADD COLUMN scoring_status TEXT DEFAULT 'CURRENT'")
 
             cursor.execute("PRAGMA table_info(alerts)")
             alert_cols = [c[1] for c in cursor.fetchall()]
@@ -580,6 +585,13 @@ def init_db():
                     cursor.execute("ALTER TABLE alerts ADD COLUMN detection_reason TEXT DEFAULT 'Suspicious transaction pattern detected'")
                 if "assigned_analyst" not in alert_cols:
                     cursor.execute("ALTER TABLE alerts ADD COLUMN assigned_analyst TEXT")
+                if "is_demo" not in alert_cols:
+                    cursor.execute("ALTER TABLE alerts ADD COLUMN is_demo INTEGER DEFAULT 0")
+
+            cursor.execute("PRAGMA table_info(investigations)")
+            inv_cols = [c[1] for c in cursor.fetchall()]
+            if inv_cols and "is_demo" not in inv_cols:
+                cursor.execute("ALTER TABLE investigations ADD COLUMN is_demo INTEGER DEFAULT 0")
 
             cursor.execute("PRAGMA table_info(analyst_feedback)")
             fb_cols = [c[1] for c in cursor.fetchall()]

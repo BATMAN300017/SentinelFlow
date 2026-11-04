@@ -102,31 +102,31 @@ def record_feedback(conn: sqlite3.Connection, data: Dict[str, Any]) -> Dict[str,
 
 def get_feedback_summary(conn: sqlite3.Connection) -> Dict[str, Any]:
     cursor = conn.cursor()
-    cursor.execute("SELECT COUNT(*) FROM analyst_feedback")
+    cursor.execute("SELECT COUNT(*) FROM analyst_feedback WHERE (exclusion_reason IS NULL OR exclusion_reason != 'DEMO_FIXTURE')")
     total = cursor.fetchone()[0]
     
-    cursor.execute("SELECT COUNT(*) FROM analyst_feedback WHERE disposition = 'CONFIRMED_FRAUD'")
+    cursor.execute("SELECT COUNT(*) FROM analyst_feedback WHERE disposition = 'CONFIRMED_FRAUD' AND (exclusion_reason IS NULL OR exclusion_reason != 'DEMO_FIXTURE')")
     fraud_cnt = cursor.fetchone()[0]
     
-    cursor.execute("SELECT COUNT(*) FROM analyst_feedback WHERE disposition IN ('LEGITIMATE_ACTIVITY', 'FALSE_POSITIVE')")
+    cursor.execute("SELECT COUNT(*) FROM analyst_feedback WHERE disposition IN ('LEGITIMATE_ACTIVITY', 'FALSE_POSITIVE') AND (exclusion_reason IS NULL OR exclusion_reason != 'DEMO_FIXTURE')")
     fp_cnt = cursor.fetchone()[0]
     
-    cursor.execute("SELECT COUNT(*) FROM analyst_feedback WHERE disposition = 'INCONCLUSIVE'")
+    cursor.execute("SELECT COUNT(*) FROM analyst_feedback WHERE disposition = 'INCONCLUSIVE' AND (exclusion_reason IS NULL OR exclusion_reason != 'DEMO_FIXTURE')")
     inconclusive_cnt = cursor.fetchone()[0]
     
-    cursor.execute("SELECT COUNT(*) FROM analyst_feedback WHERE disposition = 'SUSPICIOUS_UNCONFIRMED'")
+    cursor.execute("SELECT COUNT(*) FROM analyst_feedback WHERE disposition = 'SUSPICIOUS_UNCONFIRMED' AND (exclusion_reason IS NULL OR exclusion_reason != 'DEMO_FIXTURE')")
     suspicious_cnt = cursor.fetchone()[0]
     
-    cursor.execute("SELECT COUNT(*) FROM analyst_feedback WHERE is_eligible_for_training = 1")
+    cursor.execute("SELECT COUNT(*) FROM analyst_feedback WHERE is_eligible_for_training = 1 AND (exclusion_reason IS NULL OR exclusion_reason != 'DEMO_FIXTURE')")
     eligible_cnt = cursor.fetchone()[0]
     
-    cursor.execute("SELECT COUNT(*) FROM analyst_feedback WHERE training_label = 1")
+    cursor.execute("SELECT COUNT(*) FROM analyst_feedback WHERE training_label = 1 AND (exclusion_reason IS NULL OR exclusion_reason != 'DEMO_FIXTURE')")
     pos_lbls = cursor.fetchone()[0]
     
-    cursor.execute("SELECT COUNT(*) FROM analyst_feedback WHERE training_label = 0")
+    cursor.execute("SELECT COUNT(*) FROM analyst_feedback WHERE training_label = 0 AND (exclusion_reason IS NULL OR exclusion_reason != 'DEMO_FIXTURE')")
     neg_lbls = cursor.fetchone()[0]
     
-    cursor.execute("SELECT created_at FROM analyst_feedback ORDER BY created_at DESC LIMIT 1")
+    cursor.execute("SELECT created_at FROM analyst_feedback WHERE (exclusion_reason IS NULL OR exclusion_reason != 'DEMO_FIXTURE') ORDER BY created_at DESC LIMIT 1")
     last_row = cursor.fetchone()
     last_fb = last_row[0] if last_row else None
     

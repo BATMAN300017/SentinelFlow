@@ -120,6 +120,98 @@ def sync_storage_assets(client):
 # -------------------------------------------------------------
 # 2. Database Ingestion
 # -------------------------------------------------------------
+def seed_demo_investigations_and_feedback(cur, conn=None):
+    """
+    Seeds demonstration investigations and feedback fixtures.
+    STRICT: Requires explicit authorization via check_demo_environment_guard().
+    Zero demo fixtures may be created during real data ingestion.
+    """
+    check_demo_environment_guard("Bulk Supabase Demo Ingestion")
+    now_iso = datetime.now(timezone.utc).isoformat()
+    print("\n--- Seeding 8 Comprehensive Investigations Dossiers [DEMO FIXTURES] ---")
+    inv_cases = [
+        ("INV-2026-001", "CASE-SAML-STRUCTURING", "[DEMO FIXTURE] Organized Structuring Ring Investigation",
+         "Multiple sub-$10k transfers orchestrated across interconnected accounts in SAML-D dataset.",
+         "CRITICAL", "IN_PROGRESS", "USR-INV-01", "USR-SR-02", None, None, None, "NONE", None, None,
+         (datetime.now(timezone.utc) + timedelta(days=7)).isoformat(), 0.85, "v1.0.0", "v1.0", 1, now_iso, now_iso),
+        ("INV-2026-002", "CASE-NFPC-MULE-CHAIN", "[DEMO FIXTURE] Domestic Multi-Hop Mule Account Ring",
+         "NFPC confirmed mule accounts receiving rapid aggregation deposits and cascading transfers.",
+         "HIGH", "PENDING_PEER_REVIEW", "USR-INV-01", "USR-SR-02", "CONFIRMED_FRAUD",
+         "Accounts linked to documented cyber fraud complaints with immediate ATM/Wire extraction.",
+         now_iso, "REQUESTED", "Awaiting Marcus Vance supervisory signoff.", None,
+         (datetime.now(timezone.utc) + timedelta(days=3)).isoformat(), 0.95, "v1.0.0", "v1.0", 1, now_iso, now_iso),
+        ("INV-2026-003", "CASE-CROSS-BORDER-AML", "[DEMO FIXTURE] Cross-Border Layering & Conversion Ring",
+         "Foreign currency exchange transactions traversing intermediary accounts without business rationale.",
+         "CRITICAL", "RESOLVED", "USR-SR-02", "USR-ADM-03", "CONFIRMED_FRAUD",
+         "Verified illicit funds laundering via offshore entities; SAR submitted to FIU.",
+         now_iso, "APPROVED", "Approved for regulatory disclosure.", now_iso,
+         (datetime.now(timezone.utc) - timedelta(days=1)).isoformat(), 1.0, "v1.0.0", "v1.0", 1, now_iso, now_iso),
+        ("INV-2026-004", "CASE-FAN-OUT-SCATTER", "[DEMO FIXTURE] Layered Fan-Out Disbursement Syndicate",
+         "Single corporate account dispersing rapid micro-payments across 25 personal recipient wallets.",
+         "HIGH", "IN_PROGRESS", "USR-INV-01", None, None, None, None, "NONE", None, None,
+         (datetime.now(timezone.utc) + timedelta(days=10)).isoformat(), 0.70, "v1.0.0", "v1.0", 1, now_iso, now_iso),
+        ("INV-2026-005", "CASE-FALSE-POSITIVE-01", "[DEMO FIXTURE] High Net-Worth Seasonal Property Purchase",
+         "Spike in payment velocity during annual tax and real estate closing schedule.",
+         "MEDIUM", "RESOLVED", "USR-INV-01", "USR-SR-02", "LEGITIMATE_ACTIVITY",
+         "Customer provided escrow contracts, verified notarized deeds, legitimate wealth source.",
+         now_iso, "APPROVED", "Verified legitimate source of funds.", now_iso,
+         (datetime.now(timezone.utc) - timedelta(days=2)).isoformat(), 1.0, "v1.0.0", "v1.0", 1, now_iso, now_iso),
+        ("INV-2026-006", "CASE-CYCLE-WASH-TRADE", "[DEMO FIXTURE] Circular Fund Flow Round-Tripping",
+         "Funds transferred across four accounts returning to origin account within 48 hours.",
+         "CRITICAL", "NEW", "USR-INV-01", None, None, None, None, "NONE", None, None,
+         (datetime.now(timezone.utc) + timedelta(days=14)).isoformat(), 0.50, "v1.0.0", "v1.0", 1, now_iso, now_iso),
+        ("INV-2026-007", "CASE-PAYROLL-ANOMALY", "[DEMO FIXTURE] Quarterly Executive Compensation Distribution",
+         "Unusual batch transfers occurring on the last business day of financial quarter.",
+         "LOW", "RESOLVED", "USR-INV-01", "USR-SR-02", "LEGITIMATE_ACTIVITY",
+         "Routine board-approved dividend disbursement verified against corporate filings.",
+         now_iso, "APPROVED", "Verified corporate dividends.", now_iso,
+         (datetime.now(timezone.utc) - timedelta(days=5)).isoformat(), 1.0, "v1.0.0", "v1.0", 1, now_iso, now_iso),
+        ("INV-2026-008", "CASE-SMURF-SYNDICATE", "[DEMO FIXTURE] Micro-Smurfing ATM Ingestion Campaign",
+         "Repeated cash deposits right below threshold limits at multiple regional ATM kiosks.",
+         "CRITICAL", "IN_PROGRESS", "USR-SR-02", "USR-ADM-03", None, None, None, "NONE", None, None,
+         (datetime.now(timezone.utc) + timedelta(days=5)).isoformat(), 0.75, "v1.0.0", "v1.0", 1, now_iso, now_iso)
+    ]
+    for inv in inv_cases:
+        cur.execute("""
+            INSERT INTO investigations (
+                id, case_number, title, summary, priority, status,
+                assigned_investigator_id, peer_reviewer_id, disposition, disposition_rationale,
+                disposition_submitted_at, peer_review_status, peer_review_notes, peer_reviewed_at,
+                due_date, evidence_completeness_score, model_version, rule_version, is_demo, created_at, updated_at
+            ) VALUES (
+                %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
+            )
+            ON CONFLICT (id) DO UPDATE SET
+                status = EXCLUDED.status,
+                disposition = EXCLUDED.disposition,
+                evidence_completeness_score = EXCLUDED.evidence_completeness_score;
+        """, inv)
+
+    print("\n--- Seeding Demo Analyst Feedback records (is_eligible_for_training = 0) ---")
+    feedbacks = [
+        (str(uuid.uuid4()), "INV-2026-002", "USR-INV-01", "CONFIRMED_FRAUD",
+         "Demonstrated multi-hop pass-through with 0% balance retention and KYC identity mismatch.",
+         5, 0, None, "DEMO_FIXTURE", "v1.0.0", "v1.0", now_iso),
+        (str(uuid.uuid4()), "INV-2026-003", "USR-SR-02", "CONFIRMED_FRAUD",
+         "Offshore entity layering with circular beneficiary identity; regulatory SAR filed.",
+         6, 0, None, "DEMO_FIXTURE", "v1.0.0", "v1.0", now_iso),
+        (str(uuid.uuid4()), "INV-2026-005", "USR-INV-01", "LEGITIMATE_ACTIVITY",
+         "Real estate closing verified via escrow bank confirmation letters.",
+         4, 0, None, "DEMO_FIXTURE", "v1.0.0", "v1.0", now_iso),
+        (str(uuid.uuid4()), "INV-2026-007", "USR-INV-01", "LEGITIMATE_ACTIVITY",
+         "Confirmed executive quarterly bonus payroll distribution.",
+         3, 0, None, "DEMO_FIXTURE", "v1.0.0", "v1.0", now_iso)
+    ]
+    for fb in feedbacks:
+        cur.execute("""
+            INSERT INTO analyst_feedback (
+                id, investigation_id, analyst_id, disposition, analyst_decision, rationale,
+                evidence_reviewed_count, is_eligible_for_training, training_label,
+                exclusion_reason, model_version, rule_version, created_at
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            ON CONFLICT (id) DO NOTHING;
+        """, (fb[0], fb[1], fb[2], fb[3], fb[3], fb[4], fb[5], fb[6], fb[7], fb[8], fb[9], fb[10], fb[11]))
+
 def ingest_real_data():
     check_demo_environment_guard()
     print("\n" + "=" * 60)
@@ -410,92 +502,8 @@ def ingest_real_data():
         # In SentinelFlow, alerts and findings must originate exclusively from the live detection engine
         # (rules, graph algorithms, and supervised ML models) or be explicitly marked as [DEMO FIXTURE].
 
-        # 2.7 Seed Investigations & Dossiers (Marked as UI Demo Fixtures)
-        print("\n--- 2.7 Seeding 8 Comprehensive Investigations Dossiers [DEMO FIXTURES] ---")
-        inv_cases = [
-            ("INV-2026-001", "CASE-SAML-STRUCTURING", "[DEMO FIXTURE] Organized Structuring Ring Investigation",
-             "Multiple sub-$10k transfers orchestrated across interconnected accounts in SAML-D dataset.",
-             "CRITICAL", "IN_PROGRESS", "USR-INV-01", "USR-SR-02", None, None, None, "NONE", None, None,
-             (datetime.now(timezone.utc) + timedelta(days=7)).isoformat(), 0.85, "v1.0.0", "v1.0", now_iso, now_iso),
-            ("INV-2026-002", "CASE-NFPC-MULE-CHAIN", "[DEMO FIXTURE] Domestic Multi-Hop Mule Account Ring",
-             "NFPC confirmed mule accounts receiving rapid aggregation deposits and cascading transfers.",
-             "HIGH", "PENDING_PEER_REVIEW", "USR-INV-01", "USR-SR-02", "CONFIRMED_FRAUD",
-             "Accounts linked to documented cyber fraud complaints with immediate ATM/Wire extraction.",
-             now_iso, "REQUESTED", "Awaiting Marcus Vance supervisory signoff.", None,
-             (datetime.now(timezone.utc) + timedelta(days=3)).isoformat(), 0.95, "v1.0.0", "v1.0", now_iso, now_iso),
-            ("INV-2026-003", "CASE-CROSS-BORDER-AML", "[DEMO FIXTURE] Cross-Border Layering & Conversion Ring",
-             "Foreign currency exchange transactions traversing intermediary accounts without business rationale.",
-             "CRITICAL", "RESOLVED", "USR-SR-02", "USR-ADM-03", "CONFIRMED_FRAUD",
-             "Verified illicit funds laundering via offshore entities; SAR submitted to FIU.",
-             now_iso, "APPROVED", "Approved for regulatory disclosure.", now_iso,
-             (datetime.now(timezone.utc) - timedelta(days=1)).isoformat(), 1.0, "v1.0.0", "v1.0", now_iso, now_iso),
-            ("INV-2026-004", "CASE-FAN-OUT-SCATTER", "[DEMO FIXTURE] Layered Fan-Out Disbursement Syndicate",
-             "Single corporate account dispersing rapid micro-payments across 25 personal recipient wallets.",
-             "HIGH", "IN_PROGRESS", "USR-INV-01", None, None, None, None, "NONE", None, None,
-             (datetime.now(timezone.utc) + timedelta(days=10)).isoformat(), 0.70, "v1.0.0", "v1.0", now_iso, now_iso),
-            ("INV-2026-005", "CASE-FALSE-POSITIVE-01", "[DEMO FIXTURE] High Net-Worth Seasonal Property Purchase",
-             "Spike in payment velocity during annual tax and real estate closing schedule.",
-             "MEDIUM", "RESOLVED", "USR-INV-01", "USR-SR-02", "LEGITIMATE_ACTIVITY",
-             "Customer provided escrow contracts, verified notarized deeds, legitimate wealth source.",
-             now_iso, "APPROVED", "Verified legitimate source of funds.", now_iso,
-             (datetime.now(timezone.utc) - timedelta(days=2)).isoformat(), 1.0, "v1.0.0", "v1.0", now_iso, now_iso),
-            ("INV-2026-006", "CASE-CYCLE-WASH-TRADE", "[DEMO FIXTURE] Circular Fund Flow Round-Tripping",
-             "Funds transferred across four accounts returning to origin account within 48 hours.",
-             "CRITICAL", "NEW", "USR-INV-01", None, None, None, None, "NONE", None, None,
-             (datetime.now(timezone.utc) + timedelta(days=14)).isoformat(), 0.50, "v1.0.0", "v1.0", now_iso, now_iso),
-            ("INV-2026-007", "CASE-PAYROLL-ANOMALY", "[DEMO FIXTURE] Quarterly Executive Compensation Distribution",
-             "Unusual batch transfers occurring on the last business day of financial quarter.",
-             "LOW", "RESOLVED", "USR-INV-01", "USR-SR-02", "LEGITIMATE_ACTIVITY",
-             "Routine board-approved dividend disbursement verified against corporate filings.",
-             now_iso, "APPROVED", "Verified corporate dividends.", now_iso,
-             (datetime.now(timezone.utc) - timedelta(days=5)).isoformat(), 1.0, "v1.0.0", "v1.0", now_iso, now_iso),
-            ("INV-2026-008", "CASE-SMURF-SYNDICATE", "[DEMO FIXTURE] Micro-Smurfing ATM Ingestion Campaign",
-             "Repeated cash deposits right below threshold limits at multiple regional ATM kiosks.",
-             "CRITICAL", "IN_PROGRESS", "USR-SR-02", "USR-ADM-03", None, None, None, "NONE", None, None,
-             (datetime.now(timezone.utc) + timedelta(days=5)).isoformat(), 0.75, "v1.0.0", "v1.0", now_iso, now_iso)
-        ]
-
-        for inv in inv_cases:
-            cur.execute("""
-                INSERT INTO investigations (
-                    id, case_number, title, summary, priority, status,
-                    assigned_investigator_id, peer_reviewer_id, disposition, disposition_rationale,
-                    disposition_submitted_at, peer_review_status, peer_review_notes, peer_reviewed_at,
-                    due_date, evidence_completeness_score, model_version, rule_version, created_at, updated_at
-                ) VALUES (
-                    %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
-                )
-                ON CONFLICT (id) DO UPDATE SET
-                    status = EXCLUDED.status,
-                    disposition = EXCLUDED.disposition,
-                    evidence_completeness_score = EXCLUDED.evidence_completeness_score;
-            """, inv)
-
-        # 2.8 Seed Analyst Feedback for Learning Loop (Excluded from Training as DEMO_FIXTURE)
-        print("\n--- 2.8 Seeding Demo Analyst Feedback records (is_eligible_for_training = 0) ---")
-        feedbacks = [
-            (str(uuid.uuid4()), "INV-2026-002", "USR-INV-01", "CONFIRMED_FRAUD",
-             "Demonstrated multi-hop pass-through with 0% balance retention and KYC identity mismatch.",
-             5, 0, None, "DEMO_FIXTURE", "v1.0.0", "v1.0", now_iso),
-            (str(uuid.uuid4()), "INV-2026-003", "USR-SR-02", "CONFIRMED_FRAUD",
-             "Offshore entity layering with circular beneficiary identity; regulatory SAR filed.",
-             6, 0, None, "DEMO_FIXTURE", "v1.0.0", "v1.0", now_iso),
-            (str(uuid.uuid4()), "INV-2026-005", "USR-INV-01", "LEGITIMATE_ACTIVITY",
-             "Real estate closing verified via escrow bank confirmation letters.",
-             4, 0, None, "DEMO_FIXTURE", "v1.0.0", "v1.0", now_iso),
-            (str(uuid.uuid4()), "INV-2026-007", "USR-INV-01", "LEGITIMATE_ACTIVITY",
-             "Confirmed executive quarterly bonus payroll distribution.",
-             3, 0, None, "DEMO_FIXTURE", "v1.0.0", "v1.0", now_iso)
-        ]
-        for fb in feedbacks:
-            cur.execute("""
-                INSERT INTO analyst_feedback (
-                    id, investigation_id, analyst_id, disposition, analyst_decision, rationale,
-                    evidence_reviewed_count, is_eligible_for_training, training_label,
-                    exclusion_reason, model_version, rule_version, created_at
-                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                ON CONFLICT (id) DO NOTHING;
-            """, (fb[0], fb[1], fb[2], fb[3], fb[3], fb[4], fb[5], fb[6], fb[7], fb[8], fb[9], fb[10], fb[11]))
+        # 2.7 Real Ingestion Complete: Zero demo investigations or demo feedback are seeded during real data ingestion.
+        # Demo fixtures must be explicitly seeded via seed_demo_investigations_and_feedback() in sandbox/demo mode.
 
         # 2.9 Model Training Policy Notice
         # NOTE: Model training is decoupled from ingestion. Real models are trained via reproducible

@@ -136,8 +136,8 @@ def seed_demo_database():
             cursor.execute("""
                 INSERT OR REPLACE INTO alerts (
                     id, alert_ref, transaction_id, account_id, customer_id,
-                    severity, status, risk_score, title, summary, created_at, updated_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    severity, status, risk_score, title, summary, is_demo, created_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)
             """, (
                 aid, ref, t[0], t[1], t[2], sev, stat, t[4],
                 f"[DEMO FIXTURE] High-Risk Signal: Unusual Transfer of ${t[3]:,.2f}",
@@ -178,8 +178,8 @@ def seed_demo_database():
                 INSERT OR REPLACE INTO investigations (
                     id, case_number, title, summary, priority, status,
                     assigned_investigator_id, disposition, disposition_rationale,
-                    peer_review_status, evidence_completeness_score, created_at, updated_at
-                ) VALUES (?, ?, ?, ?, 'HIGH', ?, 'USR-INV-01', ?, ?, ?, ?, ?, ?)
+                    peer_review_status, evidence_completeness_score, is_demo, created_at, updated_at
+                ) VALUES (?, ?, ?, ?, 'HIGH', ?, 'USR-INV-01', ?, ?, ?, ?, 1, ?, ?)
             """, (
                 inv_id, case_num, f"[DEMO FIXTURE] Priority Case {100 + i}",
                 f"Demo investigation fixture into simulated activity on Account {account_ids[i]}.",

@@ -263,14 +263,15 @@ def validate_model_artifact(artifact: Any) -> Tuple[bool, Optional[str]]:
     if isinstance(model, (int, str, list, dict, set, float, tuple)):
         return False, f"Unsupported estimator object type: {type(model).__name__}."
 
-    # Validate feature count if present
-    if hasattr(model, "n_features_in_"):
-        try:
-            n_in = int(model.n_features_in_)
-            if n_in != len(CANONICAL_FEATURE_NAMES):
-                return False, f"Model n_features_in_ ({n_in}) != canonical count ({len(CANONICAL_FEATURE_NAMES)})."
-        except (ValueError, TypeError):
-            return False, "Model n_features_in_ is not an integer."
+    # Validate required feature count (must exist and equal 9)
+    if not hasattr(model, "n_features_in_") or getattr(model, "n_features_in_") is None:
+        return False, "Model is missing required attribute n_features_in_."
+    try:
+        n_in = int(model.n_features_in_)
+        if n_in != len(CANONICAL_FEATURE_NAMES):
+            return False, f"Model n_features_in_ ({n_in}) != canonical count ({len(CANONICAL_FEATURE_NAMES)})."
+    except (ValueError, TypeError):
+        return False, "Model n_features_in_ is not an integer."
 
     # Validate feature names order if present
     if hasattr(model, "feature_names_in_") and model.feature_names_in_ is not None:
@@ -281,14 +282,15 @@ def validate_model_artifact(artifact: Any) -> Tuple[bool, Optional[str]]:
         except Exception:
             return False, "Model feature_names_in_ cannot be inspected."
 
-    # Validate classes if present
-    if hasattr(model, "classes_"):
-        try:
-            cl = list(model.classes_)
-            if cl not in ([0, 1], [0.0, 1.0], (0, 1)):
-                return False, f"Model classes_ ({cl}) does not match expected binary classes [0, 1]."
-        except Exception:
-            return False, "Model classes_ cannot be inspected."
+    # Validate required binary classes (must exist and equal [0, 1])
+    if not hasattr(model, "classes_") or getattr(model, "classes_") is None:
+        return False, "Model is missing required attribute classes_."
+    try:
+        cl = list(model.classes_)
+        if cl not in ([0, 1], [0.0, 1.0], (0, 1)):
+            return False, f"Model classes_ ({cl}) does not match expected binary classes [0, 1]."
+    except Exception:
+        return False, "Model classes_ cannot be inspected."
 
     # Run execution test vector on canonical 9-feature input
     test_vec = np.ones((1, len(CANONICAL_FEATURE_NAMES)), dtype=float)
@@ -338,9 +340,9 @@ def _get_model_storage_path() -> str:
 
 def _train_from_saml_canonical(csv_path: str) -> Tuple[RobustRandomForestClassifier, Dict[str, Any]]:
     """
-    Trains a RobustRandomForestClassifier strictly on the first 70% chronological partition
-    of SAML-D (14,000 train, 3,500 validation) using the shared event-time feature extraction pipeline.
-    Thresholds are tuned strictly on validation data; test partition is untouched.
+    Trains a RobustRandomForestClassifier strictly on the training partition (56.0%, 14,000 records)
+    and validation partition (14.0%, 3,500 records) of SAML-D using the shared event-time feature extraction pipeline.
+    Thresholds are tuned strictly on validation data; the 30.0% test partition (7,500 records) is untouched.
     """
     df_raw = pd.read_csv(csv_path)
     X_all, feature_names, df = compute_samld_stream_features(df_raw, validate=True)
@@ -389,6 +391,9 @@ def _train_from_saml_canonical(csv_path: str) -> Tuple[RobustRandomForestClassif
         "threshold_selection_method": "validation_grid_search_f1_optimal",
         "val_optimal_threshold": best_tau,
         "val_f1": round(float(best_f1), 4),
+        "split_proportions": {"train": 0.56, "validation": 0.14, "test": 0.30},
+        "split_percentages": {"train": "56.0%", "validation": "14.0%", "test": "30.0%"},
+        "split_description": "56.0% train (14,000), 14.0% validation (3,500), 30.0% untouched test (7,500)",
         "calibration_status": "UNVERIFIED",
         "is_calibrated": False,
         "model_type": "RobustRandomForestClassifier",

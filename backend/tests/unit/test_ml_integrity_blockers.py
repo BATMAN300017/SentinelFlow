@@ -12,7 +12,15 @@ Rigorously verifies:
 
 import unittest
 import sqlite3
+import sys
 import os
+
+_BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+if _BASE_DIR not in sys.path:
+    sys.path.insert(0, _BASE_DIR)
+_BACKEND_DIR = os.path.join(_BASE_DIR, "backend")
+if _BACKEND_DIR not in sys.path:
+    sys.path.insert(0, _BACKEND_DIR)
 import tempfile
 import joblib
 import numpy as np
@@ -591,6 +599,146 @@ class TestMLIntegrityBlockers(unittest.TestCase):
                 self.assertEqual(res["model_status"], "MODEL_UNAVAILABLE")
                 self.assertIsNone(res["supervised_score"])
 
+
+
+    # =========================================================================
+    # SECTION 7: Verifiable Partition Provenance, Internal Guards & Upsert Status
+    # =========================================================================
+
+    def test_27_evaluator_rejects_record_with_test_timestamp_lacking_canonical_identity(self):
+        """27. Timestamp alone NEVER qualifies a record as an untouched test record. Unverifiable IDs are rejected."""
+        prot_labels = {
+            "TXN-CUSTOM-UNKNOWN": {"is_laundering": 1, "laundering_type": "TEST", "created_at": "2022-10-07T23:00:00Z"},
+            "TXN-SAML-020000": {"is_laundering": 1, "laundering_type": "TEST", "created_at": "2022-10-07T23:00:00Z"}
+        }
+        with patch("app.evaluation.evaluator.get_protected_evaluation_labels", return_value={"transactions": prot_labels}):
+            # Insert both with test timestamps (>= 2022-10-07T21:44:14Z)
+            self.cursor.execute("""
+                INSERT INTO transactions (id, event_id, source_account_id, customer_id, amount, currency, transaction_type, payment_channel, status, risk_score, risk_band, dataset_source, created_at)
+                VALUES ('TXN-CUSTOM-UNKNOWN', 'EVT-UNK', 'A', 'C', 5000.0, 'USD', 'TRANSFER', 'WIRE', 'COMPLETED', 85.0, 'HIGH', 'SAML_D', '2022-10-07T23:00:00Z')
+            """)
+            self.cursor.execute("""
+                INSERT INTO transactions (id, event_id, source_account_id, customer_id, amount, currency, transaction_type, payment_channel, status, risk_score, risk_band, dataset_source, created_at)
+                VALUES ('TXN-SAML-020000', 'EVT-VALID', 'A', 'C', 5000.0, 'USD', 'TRANSFER', 'WIRE', 'COMPLETED', 85.0, 'HIGH', 'SAML_D', '2022-10-07T23:00:00Z')
+            """)
+            self.conn.commit()
+
+            test_eval = IndependentEvaluator.evaluate_transaction_level(self.conn, dataset_name="SAML_D", eval_split="TEST")
+            self.assertEqual(test_eval["status"], "EVALUATED")
+            # Only TXN-SAML-020000 was evaluated; TXN-CUSTOM-UNKNOWN was rejected as unverified
+            self.assertEqual(test_eval["total_evaluated_samples"], 1)
+            pa = test_eval["partition_accounting"]
+            self.assertEqual(pa["test_partition"]["verified_sample_count"], 1)
+            self.assertEqual(pa["unverified_partition_records"], 1)
+
+    def test_28_evaluator_discloses_actual_split_proportions_56_14_30(self):
+        """28. Evaluation partition accounting explicitly discloses canonical 56% / 14% / 30% split proportions."""
+        res_saml = IndependentEvaluator.evaluate_saml_untouched_test_set(risk_threshold=55.0)
+        pa = res_saml["partition_accounting"]
+        self.assertIn("manifest_provenance", pa)
+        prov = pa["manifest_provenance"]
+        self.assertEqual(prov["split_proportions"]["train"], 0.56)
+        self.assertEqual(prov["split_proportions"]["validation"], 0.14)
+        self.assertEqual(prov["split_proportions"]["test"], 0.30)
+        self.assertIn("56.0% Train", prov["disclosure"])
+        self.assertIn("30.0% Untouched Test", prov["disclosure"])
+        self.assertNotIn("70% / 15% / 15%", str(pa))
+
+    def test_29_guard_rejects_demo_seeding_targeting_production_database(self):
+        """29. Demo environment guard unconditionally rejects execution targeting a production database."""
+        with patch.dict(os.environ, {"DATABASE_URL": "postgresql://app:secret@db-prod.internal.sentinelflow.io:5432/main", "ALLOW_DEMO_SEEDING": "true"}):
+            with self.assertRaises(PermissionError) as ctx:
+                check_demo_environment_guard("Demo seeding")
+            self.assertIn("TARGET DATABASE IS PRODUCTION", str(ctx.exception))
+
+    def test_30_bulk_ingest_supabase_demo_function_has_internal_guard(self):
+        """30. seed_demo_investigations_and_feedback in bulk_ingest_supabase has an internal production guard."""
+        from scripts.bulk_ingest_supabase import seed_demo_investigations_and_feedback
+        with patch.dict(os.environ, {"ENVIRONMENT": "production", "ALLOW_DEMO_SEEDING": ""}):
+            with self.assertRaises(PermissionError):
+                seed_demo_investigations_and_feedback(cur=MagicMock(), conn=MagicMock())
+
+    def test_31_upsert_records_stale_scoring_status_on_scoring_failure(self):
+        """31. Upsert behavior records scoring_status = 'STALE' when re-scoring fails on existing scored record."""
+        from app.api.v1.datasets import _persist_canonical_records
+        
+        # 1. Ingest initial transaction with genuine score
+        initial_batch = [{
+            "id": "TXN-STALE-CHECK-1",
+            "event_id": "EVT-STALE-1",
+            "source_account_id": "ACC-STALE-SRC",
+            "destination_account_id": "ACC-STALE-DST",
+            "customer_id": "CUST-STALE",
+            "amount": 1000.0,
+            "currency": "USD",
+            "transaction_type": "TRANSFER",
+            "payment_channel": "ACH",
+            "created_at": "2026-01-01T12:00:00Z"
+        }]
+        with patch("app.detection.engine.score_transaction", return_value={"final_risk_score": 42.0, "risk_band": "LOW", "triggered_rules": []}):
+            res1 = _persist_canonical_records(self.conn, initial_batch, "AUDIT_DS")
+        self.assertEqual(res1["scored_count"], 1)
+
+        self.cursor.execute("SELECT risk_score, risk_band, scoring_status FROM transactions WHERE id = 'TXN-STALE-CHECK-1'")
+        row1 = self.cursor.fetchone()
+        self.assertEqual(row1[0], 42.0)
+        self.assertEqual(row1[2], "CURRENT")
+
+        # 2. Re-ingest with simulated scoring engine failure
+        with patch("app.detection.engine.score_transaction", side_effect=RuntimeError("Engine offline")):
+            res2 = _persist_canonical_records(self.conn, initial_batch, "AUDIT_DS")
+
+        # Scoring failure must be visible in ingestion results
+        self.assertEqual(res2["failed_count"], 1)
+        self.assertEqual(len(res2["scoring_failures"]), 1)
+        self.assertEqual(res2["scoring_failures"][0]["transaction_id"], "TXN-STALE-CHECK-1")
+
+        # Upsert must preserve previous score without hiding that it is now STALE
+        self.cursor.execute("SELECT risk_score, risk_band, scoring_status FROM transactions WHERE id = 'TXN-STALE-CHECK-1'")
+        row2 = self.cursor.fetchone()
+        self.assertEqual(row2[0], 42.0, "Score was corrupted on failure!")
+        self.assertEqual(row2[2], "STALE", "Scoring failure was silently preserved as CURRENT instead of marked STALE!")
+
+    def test_32_model_artifact_validation_requires_n_features_and_classes(self):
+        """32. Model artifact validation strictly requires n_features_in_ and classes_ attributes."""
+        rf = RobustRandomForestClassifier(n_estimators=5, max_depth=3, random_state=42)
+        X = np.random.randn(20, 9)
+        y = np.random.choice([0, 1], size=20)
+        rf.fit(X, y)
+
+        meta = {
+            "model_version": VERSION_V2_REMEDIATED,
+            "dataset_name": "SAML_D",
+            "canonical_feature_schema": CANONICAL_FEATURE_NAMES,
+            "train_samples": 20,
+            "val_samples": 5,
+            "train_date_range": ("2022-09-01", "2022-10-07"),
+            "threshold_selection_method": "validation_grid_search"
+        }
+
+        # Subclass missing n_features_in_
+        class MissingNFeatures(RobustRandomForestClassifier):
+            @property
+            def n_features_in_(self):
+                return None
+        
+        m_bad_features = MissingNFeatures(n_estimators=5)
+        m_bad_features.fit(X, y)
+        is_val, r = validate_model_artifact({"model": m_bad_features, "metadata": meta})
+        self.assertFalse(is_val)
+        self.assertIn("n_features_in_", r)
+
+        # Subclass missing classes_
+        class MissingClasses(RobustRandomForestClassifier):
+            @property
+            def classes_(self):
+                return None
+
+        m_bad_classes = MissingClasses(n_estimators=5)
+        m_bad_classes.fit(X, y)
+        is_val2, r2 = validate_model_artifact({"model": m_bad_classes, "metadata": meta})
+        self.assertFalse(is_val2)
+        self.assertIn("classes_", r2)
 
 if __name__ == "__main__":
     unittest.main()

@@ -16,7 +16,16 @@ Proves all 10 required acceptance criteria from Section 7:
 
 import unittest
 import sqlite3
+import sys
+import os
 import pandas as pd
+
+_BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+if _BASE_DIR not in sys.path:
+    sys.path.insert(0, _BASE_DIR)
+_BACKEND_DIR = os.path.join(_BASE_DIR, "backend")
+if _BACKEND_DIR not in sys.path:
+    sys.path.insert(0, _BACKEND_DIR)
 import numpy as np
 from datetime import datetime, timezone, timedelta
 from unittest.mock import patch, MagicMock

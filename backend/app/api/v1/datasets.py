@@ -172,6 +172,7 @@ def _persist_canonical_records(conn, txns: list, dataset_name: str) -> dict:
         scoring_res = None
         risk_score = None
         risk_band = "UNSCORED"
+        scoring_status = "CURRENT"
         try:
             scoring_res = score_transaction(conn, {
                 "id": txn["id"],
@@ -188,10 +189,12 @@ def _persist_canonical_records(conn, txns: list, dataset_name: str) -> dict:
             if scoring_res and scoring_res.get("final_risk_score") is not None:
                 risk_score = float(scoring_res["final_risk_score"])
                 risk_band = scoring_res.get("risk_band", "ROUTINE")
+                scoring_status = "CURRENT"
                 scored_count += 1
             else:
                 risk_score = None
                 risk_band = "FAILED"
+                scoring_status = "UNAVAILABLE"
                 scoring_failures.append({
                     "transaction_id": txn["id"],
                     "dataset": dataset_name,
@@ -202,6 +205,7 @@ def _persist_canonical_records(conn, txns: list, dataset_name: str) -> dict:
             logger.warning(f"Scoring failure for {txn['id']} in {dataset_name}: {e}")
             risk_score = None
             risk_band = "FAILED"
+            scoring_status = "UNAVAILABLE"
             scoring_failures.append({
                 "transaction_id": txn["id"],
                 "dataset": dataset_name,
@@ -209,22 +213,31 @@ def _persist_canonical_records(conn, txns: list, dataset_name: str) -> dict:
                 "timestamp": datetime.now(timezone.utc).isoformat()
             })
 
-        # 4. Insert transaction with evaluated risk score & band (preserve non-null on re-ingest)
+        # 4. Insert transaction with evaluated risk score & band (track current, stale, or unavailable)
         cursor.execute("""
             INSERT INTO transactions (
                 id, event_id, source_account_id, destination_account_id, customer_id,
                 amount, currency, transaction_type, payment_channel, status,
-                dataset_source, is_ground_truth_fraud, risk_score, risk_band, created_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?)
+                dataset_source, is_ground_truth_fraud, risk_score, risk_band, scoring_status, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?)
             ON CONFLICT (id) DO UPDATE SET
                 risk_score = COALESCE(EXCLUDED.risk_score, transactions.risk_score),
-                risk_band = COALESCE(EXCLUDED.risk_band, transactions.risk_band);
+                risk_band = CASE 
+                    WHEN EXCLUDED.risk_score IS NOT NULL THEN EXCLUDED.risk_band 
+                    WHEN transactions.risk_score IS NOT NULL THEN transactions.risk_band
+                    ELSE EXCLUDED.risk_band 
+                END,
+                scoring_status = CASE
+                    WHEN EXCLUDED.risk_score IS NOT NULL THEN 'CURRENT'
+                    WHEN transactions.risk_score IS NOT NULL THEN 'STALE'
+                    ELSE 'UNAVAILABLE'
+                END;
         """, (
             txn["id"], txn.get("event_id", f"EVT-{txn['id']}"), src, dest,
             cust_id,
             txn["amount"], curr, txn.get("transaction_type", "TRANSFER"),
             txn.get("payment_channel", "TRANSFER"), txn.get("status", "COMPLETED"),
-            dataset_name, risk_score, risk_band, created_at
+            dataset_name, risk_score, risk_band, scoring_status, created_at
         ))
 
         # 5. Create alert ONLY if real risk score exists and meets investigation threshold

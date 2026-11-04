@@ -168,12 +168,12 @@ def ingest_real_saml_and_nfpc_datasets(
                             final_score = scoring_res.get("final_risk_score") if scoring_res else None
                             if final_score is not None:
                                 final_band = scoring_res.get("risk_band", "ROUTINE")
-                                cursor.execute("UPDATE transactions SET risk_score = ?, risk_band = ? WHERE id = ?", (float(final_score), final_band, txn["id"]))
+                                cursor.execute("UPDATE transactions SET risk_score = ?, risk_band = ?, scoring_status = 'CURRENT' WHERE id = ?", (float(final_score), final_band, txn["id"]))
                             else:
-                                cursor.execute("UPDATE transactions SET risk_score = NULL, risk_band = 'FAILED' WHERE id = ?", (txn["id"],))
+                                cursor.execute("UPDATE transactions SET risk_score = NULL, risk_band = 'FAILED', scoring_status = 'UNAVAILABLE' WHERE id = ?", (txn["id"],))
                         except Exception as e:
                             logger.warning(f"SAML transaction scoring exception on {txn['id']}: {e}")
-                            cursor.execute("UPDATE transactions SET risk_score = NULL, risk_band = 'FAILED' WHERE id = ?", (txn["id"],))
+                            cursor.execute("UPDATE transactions SET risk_score = NULL, risk_band = 'FAILED', scoring_status = 'UNAVAILABLE' WHERE id = ?", (txn["id"],))
 
         # Ingest NFPC if file exists
         total_nfpc_ingested = 0
@@ -245,10 +245,10 @@ def ingest_real_saml_and_nfpc_datasets(
                                 final_band = scoring_res.get("risk_band", "ROUTINE")
                                 cursor.execute("UPDATE transactions SET risk_score = ?, risk_band = ? WHERE id = ?", (float(final_score), final_band, txn["id"]))
                             else:
-                                cursor.execute("UPDATE transactions SET risk_score = NULL, risk_band = 'FAILED' WHERE id = ?", (txn["id"],))
+                                cursor.execute("UPDATE transactions SET risk_score = NULL, risk_band = 'FAILED', scoring_status = 'UNAVAILABLE' WHERE id = ?", (txn["id"],))
                         except Exception as e:
                             logger.warning(f"NFPC transaction scoring exception on {txn['id']}: {e}")
-                            cursor.execute("UPDATE transactions SET risk_score = NULL, risk_band = 'FAILED' WHERE id = ?", (txn["id"],))
+                            cursor.execute("UPDATE transactions SET risk_score = NULL, risk_band = 'FAILED', scoring_status = 'UNAVAILABLE' WHERE id = ?", (txn["id"],))
 
         return {
             "total_saml_ingested": total_saml_ingested,
@@ -308,8 +308,8 @@ def seed_demo_fixtures_from_scored_txns(conn=None, max_alerts: int = 40) -> Dict
             cursor.execute("""
                 INSERT OR REPLACE INTO alerts (
                     id, alert_ref, transaction_id, account_id, customer_id,
-                    severity, status, risk_score, title, summary, created_at, updated_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    severity, status, risk_score, title, summary, is_demo, created_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)
             """, (
                 aid, ref, t_id, src, cust, sev, status, r_score,
                 f"[DEMO FIXTURE] Pattern Signal: {curr} {amt:,.2f} Anomalous Velocity",

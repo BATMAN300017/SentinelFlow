@@ -4,7 +4,11 @@ import os
 
 TESTS_DIR = os.path.dirname(os.path.abspath(__file__))
 BACKEND_DIR = os.path.dirname(TESTS_DIR)
-sys.path.insert(0, BACKEND_DIR)
+REPO_ROOT = os.path.dirname(BACKEND_DIR)
+if REPO_ROOT not in sys.path:
+    sys.path.insert(0, REPO_ROOT)
+if BACKEND_DIR not in sys.path:
+    sys.path.insert(0, BACKEND_DIR)
 
 def run_all_tests():
     print(f"Discovering and running SentinelFlow AI tests in: {TESTS_DIR}...")
