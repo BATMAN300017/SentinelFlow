@@ -16,7 +16,92 @@ import numpy as np
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
-from sklearn.ensemble import IsolationForest
+try:
+    from sklearn.ensemble import IsolationForest
+except ImportError:
+    # Native pure Python / NumPy Isolation Forest fallback
+    # Resistant to Windows Application Control (WDAC) DLL loading policies
+    class NativeIsolationTree:
+        def __init__(self, depth=0, max_depth=10):
+            self.depth = depth
+            self.max_depth = max_depth
+            self.is_leaf = True
+            self.split_feat = None
+            self.split_val = None
+            self.left = None
+            self.right = None
+            self.size = 0
+
+        def fit(self, X, rng):
+            self.size = len(X)
+            if self.depth >= self.max_depth or self.size <= 1:
+                self.is_leaf = True
+                return self
+            min_vals = np.min(X, axis=0)
+            max_vals = np.max(X, axis=0)
+            valid_feats = np.where(max_vals > min_vals)[0]
+            if len(valid_feats) == 0:
+                self.is_leaf = True
+                return self
+            self.split_feat = rng.choice(valid_feats)
+            self.split_val = rng.uniform(min_vals[self.split_feat], max_vals[self.split_feat])
+            left_mask = X[:, self.split_feat] < self.split_val
+            self.left = NativeIsolationTree(self.depth + 1, self.max_depth).fit(X[left_mask], rng)
+            self.right = NativeIsolationTree(self.depth + 1, self.max_depth).fit(X[~left_mask], rng)
+            self.is_leaf = False
+            return self
+
+        def path_length(self, x):
+            if self.is_leaf or self.size <= 1:
+                if self.size <= 1:
+                    return self.depth
+                elif self.size == 2:
+                    return self.depth + 1
+                else:
+                    return self.depth + (2.0 * (np.log(self.size - 1) + 0.5772156649) - 2.0 * (self.size - 1) / self.size)
+            if x[self.split_feat] < self.split_val:
+                return self.left.path_length(x)
+            else:
+                return self.right.path_length(x)
+
+    class IsolationForest:  # type: ignore
+        def __init__(self, n_estimators=50, max_samples=256, contamination=0.05, random_state=42):
+            self.n_estimators = n_estimators
+            self.max_samples = max_samples
+            self.contamination = contamination
+            self.random_state = random_state
+            self.trees = []
+            self._sample_size = 256
+
+        def fit(self, X, y=None):
+            rng = np.random.RandomState(self.random_state)
+            n_samples = len(X)
+            self._sample_size = min(self.max_samples, n_samples)
+            max_depth = int(np.ceil(np.log2(max(self._sample_size, 2))))
+            self.trees = []
+            for _ in range(self.n_estimators):
+                idx = rng.choice(n_samples, size=self._sample_size, replace=False)
+                tree = NativeIsolationTree(depth=0, max_depth=max_depth).fit(X[idx], rng)
+                self.trees.append(tree)
+            return self
+
+        def _c(self, n):
+            if n <= 1:
+                return 1.0
+            if n == 2:
+                return 1.0
+            return 2.0 * (np.log(n - 1) + 0.5772156649) - (2.0 * (n - 1) / n)
+
+        def score_samples(self, X):
+            c_val = self._c(self._sample_size)
+            paths = np.zeros(len(X))
+            for tree in self.trees:
+                paths += np.array([tree.path_length(x) for x in X])
+            avg_paths = paths / len(self.trees)
+            return - (2.0 ** (- avg_paths / c_val))
+
+        def decision_function(self, X):
+            return self.score_samples(X) + 0.5
 from sklearn.preprocessing import RobustScaler
 
 from app.core.logging import logger

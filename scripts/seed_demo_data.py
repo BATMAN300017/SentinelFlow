@@ -14,8 +14,10 @@ from app.utils.ids import (
     generate_alert_id, generate_investigation_id, generate_evidence_id, generate_user_id
 )
 from app.detection.rules import ensure_default_rules
+from app.core.guards import check_demo_environment_guard
 
 def seed_demo_database():
+    check_demo_environment_guard()
     print("Initializing SentinelFlow AI demo database...")
     init_db()
     
@@ -111,8 +113,8 @@ def seed_demo_database():
                 INSERT OR REPLACE INTO transactions (
                     id, event_id, source_account_id, destination_account_id, beneficiary_name,
                     customer_id, amount, currency, transaction_type, payment_channel,
-                    device_id, ip_address, status, risk_score, risk_band, created_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, 'USD', ?, ?, ?, ?, 'COMPLETED', ?, ?, ?)
+                    device_id, ip_address, status, risk_score, risk_band, dataset_source, scenario_id, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, 'USD', ?, ?, ?, ?, 'COMPLETED', ?, ?, 'DEMO_FIXTURE', 'DEMO_FIXTURE', ?)
             """, (
                 tid, eid, src, dst, f"Counterparty {dst}", cust, amt,
                 rng.choice(txn_types), rng.choice(channels), f"DEV-{100 + (i % 30)}",
@@ -134,12 +136,12 @@ def seed_demo_database():
             cursor.execute("""
                 INSERT OR REPLACE INTO alerts (
                     id, alert_ref, transaction_id, account_id, customer_id,
-                    severity, status, risk_score, title, summary, created_at, updated_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    severity, status, risk_score, title, summary, is_demo, created_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)
             """, (
                 aid, ref, t[0], t[1], t[2], sev, stat, t[4],
-                f"High-Risk Signal: Unusual Transfer of ${t[3]:,.2f}",
-                f"Account {t[1]} exhibited unusual transaction velocity and amount deviation exceeding baseline parameters.",
+                f"[DEMO FIXTURE] High-Risk Signal: Unusual Transfer of ${t[3]:,.2f}",
+                f"[DEMO FIXTURE] Simulated anomaly: Account {t[1]} exhibited unusual transaction velocity and amount deviation.",
                 t[6], t[6]
             ))
             alert_ids.append(aid)
@@ -147,7 +149,7 @@ def seed_demo_database():
             # Finding
             cursor.execute("""
                 INSERT OR REPLACE INTO alert_findings (id, alert_id, source, code, description, score_contribution, version, created_at)
-                VALUES (?, ?, 'RULE', 'HIGH_VELOCITY_TRANSFERS', 'Multiple consecutive transfers within short lookback window', 40.0, 'v1', ?)
+                VALUES (?, ?, 'DEMO_FIXTURE', 'DEMO_VELOCITY', '[DEMO FIXTURE] Multiple consecutive transfers within short lookback window', 40.0, 'v1', ?)
             """, (f"FND-{i}", aid, t[6]))
             
         # 7. Seed 10 Investigations across lifecycle stages
@@ -176,11 +178,11 @@ def seed_demo_database():
                 INSERT OR REPLACE INTO investigations (
                     id, case_number, title, summary, priority, status,
                     assigned_investigator_id, disposition, disposition_rationale,
-                    peer_review_status, evidence_completeness_score, created_at, updated_at
-                ) VALUES (?, ?, ?, ?, 'HIGH', ?, 'USR-INV-01', ?, ?, ?, ?, ?, ?)
+                    peer_review_status, evidence_completeness_score, is_demo, created_at, updated_at
+                ) VALUES (?, ?, ?, ?, 'HIGH', ?, 'USR-INV-01', ?, ?, ?, ?, 1, ?, ?)
             """, (
-                inv_id, case_num, f"Investigation: Priority Case {100 + i}",
-                f"Investigation into anomalous activity on Account {account_ids[i]}. Flagged for rapid fund forwarding.",
+                inv_id, case_num, f"[DEMO FIXTURE] Priority Case {100 + i}",
+                f"Demo investigation fixture into simulated activity on Account {account_ids[i]}.",
                 stat, disp, rationale,
                 "REQUESTED" if stat == "PENDING_PEER_REVIEW" else "NONE",
                 80.0 if stat == "RESOLVED" else 40.0,
@@ -194,19 +196,19 @@ def seed_demo_database():
                     VALUES (?, ?, ?)
                 """, (inv_id, alert_ids[i], now.isoformat()))
                 
-            # Seed evidence
+            # Seed evidence (Marked as DEMO FIXTURE)
             cursor.execute("""
                 INSERT OR REPLACE INTO evidence_items (
                     id, investigation_id, evidence_type, description, observed_facts_json,
                     verification_status, collector, created_at
-                ) VALUES (?, ?, 'TRANSACTION', 'Triggering wire transaction of high monetary value', '{}', 'SUPPORTING', 'AGENT', ?)
+                ) VALUES (?, ?, 'TRANSACTION', '[DEMO FIXTURE] Triggering wire transaction of high monetary value', '{"is_demo_fixture": true}', 'SUPPORTING', 'AGENT', ?)
             """, (f"EVD-{inv_id}-1", inv_id, now.isoformat()))
             
             cursor.execute("""
                 INSERT OR REPLACE INTO evidence_items (
                     id, investigation_id, evidence_type, description, observed_facts_json,
                     verification_status, collector, created_at
-                ) VALUES (?, ?, 'BEHAVIORAL_ANOMALY', 'Rolling median deviation robust z-score > 3.5', '{}', 'SUPPORTING', 'AGENT', ?)
+                ) VALUES (?, ?, 'BEHAVIORAL_ANOMALY', '[DEMO FIXTURE] Rolling median deviation robust z-score > 3.5', '{"is_demo_fixture": true}', 'SUPPORTING', 'AGENT', ?)
             """, (f"EVD-{inv_id}-2", inv_id, now.isoformat()))
             
             # Tasks
@@ -225,18 +227,16 @@ def seed_demo_database():
                 VALUES (?, ?, 'USR-INV-01', 'Initial case review completed. Evidence bundle generated.', ?)
             """, (f"NOT-{inv_id}", inv_id, now.isoformat()))
             
-            # Feedback for resolved cases
+            # Feedback for resolved cases (Explicitly excluded from ML training as DEMO_FIXTURE)
             if disp:
                 cursor.execute("""
                     INSERT OR REPLACE INTO analyst_feedback (
                         id, investigation_id, analyst_id, disposition, rationale,
                         evidence_reviewed_count, is_eligible_for_training, training_label,
-                        model_version, rule_version, created_at
-                    ) VALUES (?, ?, 'USR-INV-01', ?, ?, 4, ?, ?, 'v1.0', 'v1.0', ?)
+                        exclusion_reason, model_version, rule_version, created_at
+                    ) VALUES (?, ?, 'USR-INV-01', ?, ?, 4, 0, NULL, 'DEMO_FIXTURE', 'v1.0', 'v1.0', ?)
                 """, (
                     f"FDB-{inv_id}", inv_id, disp, rationale,
-                    1 if disp in ("CONFIRMED_FRAUD", "LEGITIMATE_ACTIVITY") else 0,
-                    1 if disp == "CONFIRMED_FRAUD" else (0 if disp == "LEGITIMATE_ACTIVITY" else None),
                     now.isoformat()
                 ))
 

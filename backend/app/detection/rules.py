@@ -143,15 +143,27 @@ def evaluate_rules(conn: sqlite3.Connection, txn: Dict[str, Any], features: Dict
             min_amt = thresholds.get("min_amount", 5000.0)
             if features.get("is_new_beneficiary", 0) == 1 and amount >= min_amt:
                 is_hit = True
-                contrib = 30.0
-                evidence_fact = {"is_new_beneficiary": 1, "amount": amount, "threshold": min_amt}
+                is_elevated = (
+                    features.get('short_window_count', 1) > 1 or
+                    features.get('is_dormant_account', 0) == 1 or
+                    features.get('rapid_movement_detected', 0) == 1 or
+                    features.get('is_cross_border', 0) == 1
+                )
+                contrib = 25.0 if is_elevated else 10.0
+                evidence_fact = {"is_new_beneficiary": 1, "amount": amount, "threshold": min_amt, "elevated_risk": is_elevated}
                 
         elif code == "REPEATED_REVERSALS":
             min_rev = thresholds.get("min_reversals", 2)
             rev_cnt = features.get("reversal_count", 0)
             if rev_cnt >= min_rev:
                 is_hit = True
-                contrib = 30.0
+                is_elevated = (
+                    features.get('short_window_count', 1) > 1 or
+                    features.get('is_dormant_account', 0) == 1 or
+                    features.get('rapid_movement_detected', 0) == 1 or
+                    features.get('is_cross_border', 0) == 1
+                )
+                contrib = 25.0 if is_elevated else 10.0
                 evidence_fact = {"reversals_count": rev_cnt}
 
         if is_hit:

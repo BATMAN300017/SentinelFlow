@@ -4,27 +4,79 @@ from datetime import datetime, timezone, timedelta
 
 def get_kpi_summary(conn: sqlite3.Connection) -> Dict[str, Any]:
     cursor = conn.cursor()
-    cursor.execute("SELECT COUNT(*) FROM transactions")
+    cursor.execute("""
+        SELECT COUNT(*) FROM transactions 
+        WHERE (dataset_source IS NULL OR dataset_source != 'DEMO_FIXTURE')
+          AND (scenario_id IS NULL OR scenario_id != 'DEMO_FIXTURE')
+    """)
     txns_count = cursor.fetchone()[0]
     
-    cursor.execute("SELECT COUNT(*) FROM alerts")
+    cursor.execute("""
+        SELECT COUNT(*) FROM alerts 
+        WHERE (is_demo IS NULL OR is_demo = 0)
+          AND id NOT LIKE 'ALT-DEMO%'
+          AND title NOT LIKE '[DEMO FIXTURE]%'
+          AND (transaction_id IS NULL OR transaction_id NOT IN (SELECT id FROM transactions WHERE dataset_source = 'DEMO_FIXTURE'))
+    """)
     alerts_count = cursor.fetchone()[0]
     
-    cursor.execute("SELECT COUNT(*) FROM investigations WHERE status != 'RESOLVED'")
+    cursor.execute("""
+        SELECT COUNT(*) FROM investigations 
+        WHERE status != 'RESOLVED' 
+          AND (is_demo IS NULL OR is_demo = 0)
+          AND id NOT LIKE 'INV-DEMO%'
+          AND case_number NOT LIKE 'CASE-DEMO%'
+          AND title NOT LIKE '[DEMO FIXTURE]%'
+    """)
     open_invs = cursor.fetchone()[0]
     
-    cursor.execute("SELECT COUNT(*) FROM investigations WHERE priority = 'HIGH' AND status != 'RESOLVED'")
+    cursor.execute("""
+        SELECT COUNT(*) FROM investigations 
+        WHERE priority = 'HIGH' 
+          AND status != 'RESOLVED' 
+          AND (is_demo IS NULL OR is_demo = 0)
+          AND id NOT LIKE 'INV-DEMO%'
+          AND case_number NOT LIKE 'CASE-DEMO%'
+          AND title NOT LIKE '[DEMO FIXTURE]%'
+    """)
     high_priority = cursor.fetchone()[0]
     
-    cursor.execute("SELECT COUNT(*) FROM investigations WHERE disposition = 'CONFIRMED_FRAUD'")
+    cursor.execute("""
+        SELECT COUNT(*) FROM investigations 
+        WHERE disposition = 'CONFIRMED_FRAUD' 
+          AND (is_demo IS NULL OR is_demo = 0)
+          AND id NOT LIKE 'INV-DEMO%'
+          AND case_number NOT LIKE 'CASE-DEMO%'
+          AND title NOT LIKE '[DEMO FIXTURE]%'
+    """)
     confirmed_fraud = cursor.fetchone()[0]
     
-    cursor.execute("SELECT COUNT(*) FROM investigations WHERE disposition IN ('LEGITIMATE_ACTIVITY', 'FALSE_POSITIVE')")
+    cursor.execute("""
+        SELECT COUNT(*) FROM investigations 
+        WHERE disposition IN ('LEGITIMATE_ACTIVITY', 'FALSE_POSITIVE') 
+          AND (is_demo IS NULL OR is_demo = 0)
+          AND id NOT LIKE 'INV-DEMO%'
+          AND case_number NOT LIKE 'CASE-DEMO%'
+          AND title NOT LIKE '[DEMO FIXTURE]%'
+    """)
     fps = cursor.fetchone()[0]
     
-    cursor.execute("SELECT COUNT(*) FROM investigations WHERE status = 'RESOLVED'")
+    cursor.execute("""
+        SELECT COUNT(*) FROM investigations 
+        WHERE status = 'RESOLVED' 
+          AND (is_demo IS NULL OR is_demo = 0)
+          AND id NOT LIKE 'INV-DEMO%'
+          AND case_number NOT LIKE 'CASE-DEMO%'
+          AND title NOT LIKE '[DEMO FIXTURE]%'
+    """)
     resolved = cursor.fetchone()[0]
-    cursor.execute("SELECT COUNT(*) FROM investigations")
+    cursor.execute("""
+        SELECT COUNT(*) FROM investigations 
+        WHERE (is_demo IS NULL OR is_demo = 0)
+          AND id NOT LIKE 'INV-DEMO%'
+          AND case_number NOT LIKE 'CASE-DEMO%'
+          AND title NOT LIKE '[DEMO FIXTURE]%'
+    """)
     total_invs = cursor.fetchone()[0]
     
     completion_rate = round((resolved / total_invs) * 100.0, 1) if total_invs > 0 else 0.0
@@ -54,6 +106,7 @@ def get_analytics_trends(conn: sqlite3.Connection) -> Dict[str, Any]:
             SUM(CASE WHEN risk_score >= 50 AND risk_score < 75 THEN 1 ELSE 0 END) as elevated,
             SUM(CASE WHEN risk_score >= 75 THEN 1 ELSE 0 END) as high
         FROM transactions
+        WHERE dataset_source IS NULL OR dataset_source != 'DEMO_FIXTURE'
     """)
     b_row = cursor.fetchone()
     risk_distribution = [
@@ -63,35 +116,42 @@ def get_analytics_trends(conn: sqlite3.Connection) -> Dict[str, Any]:
         {"band": "High (75-100)", "count": int(b_row[3] or 0)},
     ]
     
-    # Case outcomes
+    # Case outcomes (Excluding demo fixtures)
     cursor.execute("""
         SELECT disposition, COUNT(*) as cnt
         FROM investigations
-        WHERE disposition IS NOT NULL
+        WHERE disposition IS NOT NULL 
+          AND title NOT LIKE '[DEMO FIXTURE]%'
+          AND case_number NOT LIKE 'CASE-DEMO%'
         GROUP BY disposition
     """)
     outcomes = [{"disposition": r[0], "count": int(r[1])} for r in cursor.fetchall()]
     
-    # Status breakdown
+    # Status breakdown (Excluding demo fixtures)
     cursor.execute("""
         SELECT status, COUNT(*) as cnt
         FROM investigations
+        WHERE title NOT LIKE '[DEMO FIXTURE]%'
+          AND case_number NOT LIKE 'CASE-DEMO%'
         GROUP BY status
     """)
     status_breakdown = [{"status": r[0], "count": int(r[1])} for r in cursor.fetchall()]
     
-    # Alert source counts
+    # Alert source counts (Excluding demo fixtures)
     cursor.execute("""
         SELECT source, COUNT(*) as cnt
         FROM alert_findings
+        WHERE source != 'DEMO_FIXTURE'
+          AND description NOT LIKE '[DEMO FIXTURE]%'
         GROUP BY source
     """)
     sources = [{"source": r[0], "count": int(r[1])} for r in cursor.fetchall()]
 
-    # Transaction types breakdown
+    # Transaction types breakdown (Excluding demo fixtures)
     cursor.execute("""
         SELECT transaction_type, COUNT(*) as cnt
         FROM transactions
+        WHERE dataset_source IS NULL OR dataset_source != 'DEMO_FIXTURE'
         GROUP BY transaction_type
         ORDER BY cnt DESC LIMIT 6
     """)

@@ -6,8 +6,10 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(BASE_DIR, "backend"))
 
 from app.services.transaction_simulator import simulation_service
+from app.core.guards import check_demo_environment_guard
 
 def main():
+    check_demo_environment_guard("Demo scenario execution")
     parser = argparse.ArgumentParser(description="SentinelFlow AI Demo Scenario Runner")
     parser.add_argument("--scenario", choices=["rapid_movement", "connected_network", "legitimate_unusual", "all"], default="rapid_movement", help="Named scenario to execute")
     args = parser.parse_args()

@@ -7,6 +7,7 @@ from app.core.database import transaction_scope
 from app.services.transaction_ingestion import ingest_transaction_event
 from app.utils.ids import generate_id, generate_transaction_id
 from app.utils.time import utc_now_iso
+from app.core.guards import check_demo_environment_guard
 
 class TransactionSimulator:
     def __init__(self):
@@ -33,6 +34,7 @@ class TransactionSimulator:
             }
 
     def start_simulation(self, scenario: str = "NORMAL_OPERATIONS", interval_sec: float = 1.5):
+        check_demo_environment_guard("Transaction simulation")
         with self._lock:
             if self._is_running:
                 return
@@ -64,6 +66,7 @@ class TransactionSimulator:
 
     def run_named_scenario(self, scenario_name: str) -> Dict[str, Any]:
         """Runs a deterministic 1-shot batch of scenario transactions."""
+        check_demo_environment_guard("Deterministic scenario simulation")
         rng = random.Random(self._seed + hash(scenario_name) % 1000)
         events_batch = []
         

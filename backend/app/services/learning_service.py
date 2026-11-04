@@ -10,7 +10,11 @@ def get_complete_learning_status(conn: sqlite3.Connection) -> Dict[str, Any]:
     registry = get_registry_status()
     drift = check_label_and_prediction_drift(conn)
     cursor = conn.cursor()
-    cursor.execute("SELECT COUNT(*) FROM analyst_feedback WHERE is_eligible_for_training = 1")
+    cursor.execute("""
+        SELECT COUNT(*) FROM analyst_feedback 
+        WHERE is_eligible_for_training = 1
+          AND (exclusion_reason IS NULL OR exclusion_reason != 'DEMO_FIXTURE')
+    """)
     eligible_count = cursor.fetchone()[0]
     
     readiness = "INSUFFICIENT"

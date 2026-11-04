@@ -56,10 +56,15 @@ def score_transaction(conn: sqlite3.Connection, txn: Dict[str, Any]) -> Dict[str
         except Exception as e:
             account_mule_prediction = {
                 "account_id": account_id,
-                "predicted_mule_probability": 0.05,
-                "mule_risk_tier": "LOW",
-                "network_role": "STANDARD_OPERATING_ACCOUNT",
-                "error": str(e)
+                "status": "UNAVAILABLE",
+                "predicted_mule_probability": None,
+                "mule_risk_tier": "UNAVAILABLE",
+                "network_role": "UNKNOWN",
+                "role_description": "Account mule prediction is unavailable due to an analysis failure.",
+                "signals": {},
+                "supporting_evidence": [],
+                "error": type(e).__name__,
+                "model_engine": "SentinelFlow Unsupervised Mule Network Detector v2.0"
             }
     
     # 9. Narrative Explanation

@@ -2,6 +2,15 @@ import sqlite3
 from typing import Dict, Any, List
 import numpy as np
 
+def _row_to_dict(row, col_names: List[str]) -> Dict[str, Any]:
+    if row is None:
+        return {}
+    if hasattr(row, "keys"):
+        return dict(row)
+    if isinstance(row, dict):
+        return row
+    return {col: val for col, val in zip(col_names, row)}
+
 def analyze_suspicious_account_network(conn: sqlite3.Connection, account_id: str) -> Dict[str, Any]:
     """
     Distinct Analytical Output: Suspicious Account / Network Prediction.
@@ -9,6 +18,19 @@ def analyze_suspicious_account_network(conn: sqlite3.Connection, account_id: str
     to independently predict whether an account operates as a Money Mule.
     NEVER accesses ground-truth labels.
     """
+    if conn is None or not account_id:
+        return {
+            "account_id": account_id,
+            "status": "UNAVAILABLE",
+            "predicted_mule_probability": None,
+            "mule_risk_tier": "UNAVAILABLE",
+            "network_role": "UNKNOWN",
+            "role_description": "Account mule prediction is unavailable (missing connection or account ID).",
+            "signals": {},
+            "supporting_evidence": [],
+            "model_engine": "SentinelFlow Unsupervised Mule Network Detector v2.0"
+        }
+
     cursor = conn.cursor()
     
     # 1. Query outbound transactions (capped at 100 for bounded execution)
@@ -18,6 +40,7 @@ def analyze_suspicious_account_network(conn: sqlite3.Connection, account_id: str
         WHERE source_account_id = ?
         ORDER BY created_at DESC LIMIT 100
     """, (account_id,))
+    out_cols = ["id", "amount", "destination_account_id", "payment_channel", "created_at"]
     out_rows = cursor.fetchall()
     
     # 2. Query inbound transactions (capped at 100)
@@ -27,10 +50,11 @@ def analyze_suspicious_account_network(conn: sqlite3.Connection, account_id: str
         WHERE destination_account_id = ?
         ORDER BY created_at DESC LIMIT 100
     """, (account_id,))
+    in_cols = ["id", "amount", "source_account_id", "payment_channel", "created_at"]
     in_rows = cursor.fetchall()
     
-    out_txns = [dict(r._dict if hasattr(r, "_dict") else r) for r in out_rows]
-    in_txns = [dict(r._dict if hasattr(r, "_dict") else r) for r in in_rows]
+    out_txns = [_row_to_dict(r, out_cols) for r in out_rows]
+    in_txns = [_row_to_dict(r, in_cols) for r in in_rows]
     
     total_out = sum(float(t.get("amount") or 0.0) for t in out_txns)
     total_in = sum(float(t.get("amount") or 0.0) for t in in_txns)
@@ -52,7 +76,7 @@ def analyze_suspicious_account_network(conn: sqlite3.Connection, account_id: str
     cursor.execute("SELECT balance, is_dormant, currency, created_at FROM accounts WHERE id = ?", (account_id,))
     acc_row = cursor.fetchone()
     if acc_row:
-        acc_dict = dict(acc_row._dict if hasattr(acc_row, "_dict") else acc_row)
+        acc_dict = _row_to_dict(acc_row, ["balance", "is_dormant", "currency", "created_at"])
         is_dormant = bool(acc_dict.get("is_dormant", False))
         balance = float(acc_dict.get("balance") or 0.0)
         curr = acc_dict.get("currency", "USD")
@@ -61,6 +85,25 @@ def analyze_suspicious_account_network(conn: sqlite3.Connection, account_id: str
         balance = 0.0
         curr = "USD"
         
+    # If account has zero transaction history, fail closed with INSUFFICIENT_DATA
+    if total_txns == 0:
+        return {
+            "account_id": account_id,
+            "status": "INSUFFICIENT_DATA",
+            "predicted_mule_probability": None,
+            "mule_risk_tier": "UNAVAILABLE",
+            "network_role": "INSUFFICIENT_DATA",
+            "role_description": "No transaction history exists to evaluate account network behavior.",
+            "signals": {
+                "inbound_tx_count": 0,
+                "outbound_tx_count": 0,
+                "total_volume": 0.0,
+                "current_balance": balance
+            },
+            "supporting_evidence": ["Zero historical transactions associated with account."],
+            "model_engine": "SentinelFlow Unsupervised Mule Network Detector v2.0"
+        }
+
     # 4. Multi-Signal Mule Probability Scoring
     # Component scores
     s_passthrough = min(1.0, pass_through_ratio * 1.1)
@@ -110,6 +153,7 @@ def analyze_suspicious_account_network(conn: sqlite3.Connection, account_id: str
 
     return {
         "account_id": account_id,
+        "status": "ACTIVE",
         "predicted_mule_probability": calibrated_prob,
         "mule_risk_tier": "CRITICAL" if calibrated_prob >= 0.80 else "HIGH" if calibrated_prob >= 0.60 else "MEDIUM" if calibrated_prob >= 0.40 else "LOW",
         "network_role": network_role,

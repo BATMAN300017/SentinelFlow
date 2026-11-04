@@ -15,7 +15,10 @@ def build_training_dataset(conn: sqlite3.Connection) -> Dict[str, Any]:
                i.case_number
         FROM analyst_feedback f
         JOIN investigations i ON f.investigation_id = i.id
-        WHERE f.is_eligible_for_training = 1 AND f.training_label IS NOT NULL
+        WHERE f.is_eligible_for_training = 1 
+          AND f.training_label IS NOT NULL
+          AND (f.exclusion_reason IS NULL OR f.exclusion_reason != 'DEMO_FIXTURE')
+          AND (i.title NOT LIKE '[DEMO FIXTURE]%' AND i.case_number NOT LIKE 'CASE-DEMO%')
         ORDER BY f.created_at ASC
     """)
     rows = cursor.fetchall()

@@ -29,15 +29,16 @@ def calculate_mad_anomaly(amount: float, historical_amounts: List[float], is_col
     reason = "Transaction amount is within normal variance"
     
     if robust_z > 4.5:
-        score = 85.0
-        detected = True
+        # Avoid false positives on minor retail variation below $1,000
+        score = 75.0 if amount >= 1000.0 else 25.0
+        detected = amount >= 1000.0
         reason = f"Transaction amount (${amount:,.2f}) significantly deviates from account median (${median:,.2f}, robust z={robust_z:.2f})"
     elif robust_z > 3.0:
-        score = 60.0
-        detected = True
+        score = 50.0 if amount >= 1000.0 else 20.0
+        detected = amount >= 1000.0
         reason = f"Transaction amount (${amount:,.2f}) is noticeably elevated above median (${median:,.2f}, robust z={robust_z:.2f})"
     elif robust_z > 2.0:
-        score = 30.0
+        score = 25.0
         reason = f"Transaction amount is slightly above typical range (robust z={robust_z:.2f})"
         
     return {

@@ -10,6 +10,7 @@ Endpoints for:
 """
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from datetime import datetime, timezone
 from typing import Dict, Any, Optional
 from pydantic import BaseModel
 
@@ -127,11 +128,13 @@ def get_dataset(dataset_id: str):
 def inspect_dataset_schema(req: SchemaInspectRequest):
     return SchemaInspector.inspect_file(req.file_path, req.sample_rows)
 
-def _persist_canonical_records(conn, txns: list, dataset_name: str):
+def _persist_canonical_records(conn, txns: list, dataset_name: str) -> dict:
     from app.detection.engine import score_transaction
     from app.repositories.alert_repository import create_alert
     from app.utils.ids import generate_alert_id
     cursor = conn.cursor()
+    scoring_failures = []
+    scored_count = 0
     for txn in txns:
         src = txn["source_account_id"]
         dest = txn.get("destination_account_id")
@@ -165,10 +168,11 @@ def _persist_canonical_records(conn, txns: list, dataset_name: str):
                 ON CONFLICT (id) DO NOTHING;
             """, (dest, dest, dest_cust_id, curr, created_at))
 
-        # 3. Score transaction through hybrid engine
+        # 3. Score transaction through hybrid engine - NO silent zero-score substitution
         scoring_res = None
-        risk_score = 0.0
-        risk_band = "ROUTINE"
+        risk_score = None
+        risk_band = "UNSCORED"
+        scoring_status = "CURRENT"
         try:
             scoring_res = score_transaction(conn, {
                 "id": txn["id"],
@@ -182,33 +186,62 @@ def _persist_canonical_records(conn, txns: list, dataset_name: str):
                 "status": txn.get("status", "COMPLETED"),
                 "created_at": created_at
             })
-            risk_score = float(scoring_res.get("final_risk_score", 0.0))
-            risk_band = scoring_res.get("risk_band", "ROUTINE")
+            if scoring_res and scoring_res.get("final_risk_score") is not None:
+                risk_score = float(scoring_res["final_risk_score"])
+                risk_band = scoring_res.get("risk_band", "ROUTINE")
+                scoring_status = "CURRENT"
+                scored_count += 1
+            else:
+                risk_score = None
+                risk_band = "FAILED"
+                scoring_status = "UNAVAILABLE"
+                scoring_failures.append({
+                    "transaction_id": txn["id"],
+                    "dataset": dataset_name,
+                    "error": "Engine returned empty final_risk_score",
+                    "timestamp": datetime.now(timezone.utc).isoformat()
+                })
         except Exception as e:
-            logger.warning(f"Scoring fallback for {txn['id']}: {e}")
-            risk_score = 0.0
-            risk_band = "ROUTINE"
+            logger.warning(f"Scoring failure for {txn['id']} in {dataset_name}: {e}")
+            risk_score = None
+            risk_band = "FAILED"
+            scoring_status = "UNAVAILABLE"
+            scoring_failures.append({
+                "transaction_id": txn["id"],
+                "dataset": dataset_name,
+                "error": type(e).__name__,
+                "timestamp": datetime.now(timezone.utc).isoformat()
+            })
 
-        # 4. Insert transaction with evaluated risk score & band
+        # 4. Insert transaction with evaluated risk score & band (track current, stale, or unavailable)
         cursor.execute("""
             INSERT INTO transactions (
                 id, event_id, source_account_id, destination_account_id, customer_id,
                 amount, currency, transaction_type, payment_channel, status,
-                dataset_source, is_ground_truth_fraud, risk_score, risk_band, created_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?)
+                dataset_source, is_ground_truth_fraud, risk_score, risk_band, scoring_status, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?)
             ON CONFLICT (id) DO UPDATE SET
-                risk_score = EXCLUDED.risk_score,
-                risk_band = EXCLUDED.risk_band;
+                risk_score = COALESCE(EXCLUDED.risk_score, transactions.risk_score),
+                risk_band = CASE 
+                    WHEN EXCLUDED.risk_score IS NOT NULL THEN EXCLUDED.risk_band 
+                    WHEN transactions.risk_score IS NOT NULL THEN transactions.risk_band
+                    ELSE EXCLUDED.risk_band 
+                END,
+                scoring_status = CASE
+                    WHEN EXCLUDED.risk_score IS NOT NULL THEN 'CURRENT'
+                    WHEN transactions.risk_score IS NOT NULL THEN 'STALE'
+                    ELSE 'UNAVAILABLE'
+                END;
         """, (
             txn["id"], txn.get("event_id", f"EVT-{txn['id']}"), src, dest,
             cust_id,
             txn["amount"], curr, txn.get("transaction_type", "TRANSFER"),
             txn.get("payment_channel", "TRANSFER"), txn.get("status", "COMPLETED"),
-            dataset_name, risk_score, risk_band, created_at
+            dataset_name, risk_score, risk_band, scoring_status, created_at
         ))
 
-        # 5. Create alert if high risk and no duplicate alert exists
-        if scoring_res and (risk_score >= 50.0 or len(scoring_res.get("triggered_rules", [])) > 0):
+        # 5. Create alert ONLY if real risk score exists and meets investigation threshold
+        if scoring_res and risk_score is not None and (risk_score >= 50.0 or len(scoring_res.get("triggered_rules", [])) > 0):
             cursor.execute("SELECT id FROM alerts WHERE transaction_id = ? LIMIT 1;", (txn["id"],))
             if not cursor.fetchone():
                 alt_id = generate_alert_id()
@@ -218,9 +251,9 @@ def _persist_canonical_records(conn, txns: list, dataset_name: str):
                         "source": "RULE", "code": r["rule_code"], "description": r["description"],
                         "score_contribution": r["score_contribution"], "version": r.get("version", "v1.0")
                     })
-                title = f"Alert: {dataset_name} High Priority Suspicious Flow"
-                if scoring_res.get("triggered_rules"):
-                    title = f"Alert: {scoring_res['triggered_rules'][0]['name']}"
+                title = f"High Risk Activity Detected ({dataset_name})"
+                if risk_score >= 75.0:
+                    title = f"CRITICAL AML Risk Detected: {dataset_name}"
                 create_alert(conn, {
                     "id": alt_id,
                     "transaction_id": txn["id"],
@@ -235,6 +268,12 @@ def _persist_canonical_records(conn, txns: list, dataset_name: str):
                 })
 
     conn.commit()
+    return {
+        "total_records": len(txns),
+        "scored_count": scored_count,
+        "failed_count": len(scoring_failures),
+        "scoring_failures": scoring_failures
+    }
 
 @router.post("/ingest", summary="Stream and ingest dataset with strict label isolation")
 def ingest_dataset_batch(req: IngestionRequest, conn=Depends(get_db)):

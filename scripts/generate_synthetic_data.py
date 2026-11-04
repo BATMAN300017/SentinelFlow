@@ -11,8 +11,10 @@ from app.core.database import transaction_scope
 from app.services.transaction_ingestion import ingest_transaction_event
 from app.utils.ids import generate_id
 from app.utils.time import utc_now_iso
+from app.core.guards import check_demo_environment_guard
 
 def generate_transactions(count: int = 200, seed: int = 42):
+    check_demo_environment_guard("Synthetic transaction generation")
     rng = random.Random(seed)
     print(f"Generating {count} synthetic transactions with random seed {seed}...")
     

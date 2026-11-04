@@ -256,69 +256,68 @@ def store_protected_scenario_label(
 
 def get_protected_evaluation_labels(dataset_name: Optional[str] = None) -> Dict[str, Any]:
     """
-    RESTRICTED INTERFACE FOR PIPELINE B (EVALUATION) ONLY.
     Reads ground-truth labels for comparison against detection predictions.
-    Queries persistent database (Supabase PostgreSQL) first, falling back to local SQLite.
+    Queries isolated local SQLite store first for instant zero-latency retrieval,
+    falling back to Supabase PostgreSQL.
     """
     txn_rows, acc_rows, scen_rows = [], [], []
 
-    # 1. Try persistent Supabase PostgreSQL first
+    # 1. Read from isolated local SQLite vault first (fast, reliable, zero network latency)
     try:
-        from app.core.database import get_db_connection
-        with get_db_connection() as conn:
+        init_protected_store()
+        db_path = os.path.join(PROTECTED_STORAGE_DIR, "protected_ground_truth.db")
+        if os.path.exists(db_path):
+            conn = sqlite3.connect(db_path)
             cursor = conn.cursor()
             if dataset_name:
-                ds_filter = ('NFPC', 'NFPC_MULE') if dataset_name.upper() in ('NFPC', 'NFPC_MULE') else (dataset_name,)
-                if len(ds_filter) == 2:
-                    cursor.execute("SELECT transaction_id, dataset_name, is_laundering, laundering_type, raw_labels_json, created_at FROM protected_transaction_labels WHERE dataset_name IN ('NFPC', 'NFPC_MULE')")
-                    txn_rows = [list(r.values()) if hasattr(r, 'values') else list(r) for r in cursor.fetchall()]
-                    cursor.execute("SELECT account_id, dataset_name, is_mule, mule_role, raw_labels_json, created_at FROM protected_account_labels WHERE dataset_name IN ('NFPC', 'NFPC_MULE')")
-                    acc_rows = [list(r.values()) if hasattr(r, 'values') else list(r) for r in cursor.fetchall()]
-                    cursor.execute("SELECT scenario_id, dataset_name, typology, mule_account_ids_json, victim_account_ids_json, beneficiary_account_ids_json, laundering_hops_json, created_at FROM protected_scenario_labels WHERE dataset_name IN ('NFPC', 'NFPC_MULE')")
-                    scen_rows = [list(r.values()) if hasattr(r, 'values') else list(r) for r in cursor.fetchall()]
-                else:
-                    cursor.execute("SELECT transaction_id, dataset_name, is_laundering, laundering_type, raw_labels_json, created_at FROM protected_transaction_labels WHERE dataset_name = ?", (dataset_name,))
-                    txn_rows = [list(r.values()) if hasattr(r, 'values') else list(r) for r in cursor.fetchall()]
-                    cursor.execute("SELECT account_id, dataset_name, is_mule, mule_role, raw_labels_json, created_at FROM protected_account_labels WHERE dataset_name = ?", (dataset_name,))
-                    acc_rows = [list(r.values()) if hasattr(r, 'values') else list(r) for r in cursor.fetchall()]
-                    cursor.execute("SELECT scenario_id, dataset_name, typology, mule_account_ids_json, victim_account_ids_json, beneficiary_account_ids_json, laundering_hops_json, created_at FROM protected_scenario_labels WHERE dataset_name = ?", (dataset_name,))
-                    scen_rows = [list(r.values()) if hasattr(r, 'values') else list(r) for r in cursor.fetchall()]
+                cursor.execute("SELECT transaction_id, dataset_name, is_laundering, laundering_type, raw_labels_json, created_at FROM protected_transaction_labels WHERE dataset_name = ?", (dataset_name,))
+                txn_rows = cursor.fetchall()
+                cursor.execute("SELECT account_id, dataset_name, is_mule, mule_role, raw_labels_json, created_at FROM protected_account_labels WHERE dataset_name = ?", (dataset_name,))
+                acc_rows = cursor.fetchall()
+                cursor.execute("SELECT scenario_id, dataset_name, typology, mule_account_ids_json, victim_account_ids_json, beneficiary_account_ids_json, laundering_hops_json, created_at FROM protected_scenario_labels WHERE dataset_name = ?", (dataset_name,))
+                scen_rows = cursor.fetchall()
             else:
                 cursor.execute("SELECT transaction_id, dataset_name, is_laundering, laundering_type, raw_labels_json, created_at FROM protected_transaction_labels")
-                txn_rows = [list(r.values()) if hasattr(r, 'values') else list(r) for r in cursor.fetchall()]
+                txn_rows = cursor.fetchall()
                 cursor.execute("SELECT account_id, dataset_name, is_mule, mule_role, raw_labels_json, created_at FROM protected_account_labels")
-                acc_rows = [list(r.values()) if hasattr(r, 'values') else list(r) for r in cursor.fetchall()]
+                acc_rows = cursor.fetchall()
                 cursor.execute("SELECT scenario_id, dataset_name, typology, mule_account_ids_json, victim_account_ids_json, beneficiary_account_ids_json, laundering_hops_json, created_at FROM protected_scenario_labels")
-                scen_rows = [list(r.values()) if hasattr(r, 'values') else list(r) for r in cursor.fetchall()]
+                scen_rows = cursor.fetchall()
+            conn.close()
     except Exception as e:
-        logger.warning(f"Could not query PostgreSQL for protected labels ({e}). Falling back to SQLite.")
-        txn_rows, acc_rows, scen_rows = [], [], []
+        logger.error(f"Error reading local SQLite protected store: {e}")
 
-    # 2. Fall back to local SQLite if PostgreSQL returned nothing or was unavailable
+    # 2. Fall back to PostgreSQL if local SQLite returned nothing
     if not txn_rows and not acc_rows and not scen_rows:
         try:
-            init_protected_store()
-            db_path = os.path.join(PROTECTED_STORAGE_DIR, "protected_ground_truth.db")
-            if os.path.exists(db_path):
-                conn = sqlite3.connect(db_path)
+            from app.core.database import get_db_connection
+            with get_db_connection() as conn:
                 cursor = conn.cursor()
                 if dataset_name:
-                    cursor.execute("SELECT transaction_id, dataset_name, is_laundering, laundering_type, raw_labels_json, created_at FROM protected_transaction_labels WHERE dataset_name = ?", (dataset_name,))
-                    txn_rows = cursor.fetchall()
-                    cursor.execute("SELECT account_id, dataset_name, is_mule, mule_role, raw_labels_json, created_at FROM protected_account_labels WHERE dataset_name = ?", (dataset_name,))
-                    acc_rows = cursor.fetchall()
-                    cursor.execute("SELECT scenario_id, dataset_name, typology, mule_account_ids_json, victim_account_ids_json, beneficiary_account_ids_json, laundering_hops_json, created_at FROM protected_scenario_labels WHERE dataset_name = ?", (dataset_name,))
-                    scen_rows = cursor.fetchall()
+                    ds_filter = ('NFPC', 'NFPC_MULE') if dataset_name.upper() in ('NFPC', 'NFPC_MULE') else (dataset_name,)
+                    if len(ds_filter) == 2:
+                        cursor.execute("SELECT transaction_id, dataset_name, is_laundering, laundering_type, raw_labels_json, created_at FROM protected_transaction_labels WHERE dataset_name IN ('NFPC', 'NFPC_MULE')")
+                        txn_rows = [list(r.values()) if hasattr(r, 'values') else list(r) for r in cursor.fetchall()]
+                        cursor.execute("SELECT account_id, dataset_name, is_mule, mule_role, raw_labels_json, created_at FROM protected_account_labels WHERE dataset_name IN ('NFPC', 'NFPC_MULE')")
+                        acc_rows = [list(r.values()) if hasattr(r, 'values') else list(r) for r in cursor.fetchall()]
+                        cursor.execute("SELECT scenario_id, dataset_name, typology, mule_account_ids_json, victim_account_ids_json, beneficiary_account_ids_json, laundering_hops_json, created_at FROM protected_scenario_labels WHERE dataset_name IN ('NFPC', 'NFPC_MULE')")
+                        scen_rows = [list(r.values()) if hasattr(r, 'values') else list(r) for r in cursor.fetchall()]
+                    else:
+                        cursor.execute("SELECT transaction_id, dataset_name, is_laundering, laundering_type, raw_labels_json, created_at FROM protected_transaction_labels WHERE dataset_name = ?", (dataset_name,))
+                        txn_rows = [list(r.values()) if hasattr(r, 'values') else list(r) for r in cursor.fetchall()]
+                        cursor.execute("SELECT account_id, dataset_name, is_mule, mule_role, raw_labels_json, created_at FROM protected_account_labels WHERE dataset_name = ?", (dataset_name,))
+                        acc_rows = [list(r.values()) if hasattr(r, 'values') else list(r) for r in cursor.fetchall()]
+                        cursor.execute("SELECT scenario_id, dataset_name, typology, mule_account_ids_json, victim_account_ids_json, beneficiary_account_ids_json, laundering_hops_json, created_at FROM protected_scenario_labels WHERE dataset_name = ?", (dataset_name,))
+                        scen_rows = [list(r.values()) if hasattr(r, 'values') else list(r) for r in cursor.fetchall()]
                 else:
                     cursor.execute("SELECT transaction_id, dataset_name, is_laundering, laundering_type, raw_labels_json, created_at FROM protected_transaction_labels")
-                    txn_rows = cursor.fetchall()
+                    txn_rows = [list(r.values()) if hasattr(r, 'values') else list(r) for r in cursor.fetchall()]
                     cursor.execute("SELECT account_id, dataset_name, is_mule, mule_role, raw_labels_json, created_at FROM protected_account_labels")
-                    acc_rows = cursor.fetchall()
+                    acc_rows = [list(r.values()) if hasattr(r, 'values') else list(r) for r in cursor.fetchall()]
                     cursor.execute("SELECT scenario_id, dataset_name, typology, mule_account_ids_json, victim_account_ids_json, beneficiary_account_ids_json, laundering_hops_json, created_at FROM protected_scenario_labels")
-                    scen_rows = cursor.fetchall()
-                conn.close()
+                    scen_rows = [list(r.values()) if hasattr(r, 'values') else list(r) for r in cursor.fetchall()]
         except Exception as e:
-            logger.error(f"Error reading local SQLite protected store: {e}")
+            logger.warning(f"Could not query PostgreSQL for protected labels ({e}).")
 
     txns = {}
     for r in txn_rows:

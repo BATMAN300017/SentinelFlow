@@ -270,7 +270,15 @@ class MuleNetworkEngine:
 
         cycles = []
         try:
-            raw_cycles = list(nx.simple_cycles(simple_graph))
+            try:
+                cycle_iter = nx.simple_cycles(simple_graph, length_bound=6)
+            except TypeError:
+                cycle_iter = nx.simple_cycles(simple_graph)
+            raw_cycles = []
+            for c in cycle_iter:
+                raw_cycles.append(c)
+                if len(raw_cycles) >= 50:
+                    break
             for c in raw_cycles:
                 if 2 <= len(c) <= 6:
                     cycles.append({

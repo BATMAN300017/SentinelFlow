@@ -24,10 +24,17 @@ def evaluate_all():
                 results[ds] = {"status": "NO_MATCHING_LABELS", "total_evaluated": 0}
                 continue
 
-            y_true = [int(r["is_laundering"]) for r in rows]
-            scores = [float(r["risk_score"] or 0.0) for r in rows]
+            valid_rows = [r for r in rows if r["risk_score"] is not None]
+            missing_count = len(rows) - len(valid_rows)
 
-            # Try evaluation at operational threshold (default 25 or 50 or 70)
+            if not valid_rows:
+                results[ds] = {"status": "NOT_EVALUATED_NO_PREDICTIONS", "total_evaluated": 0, "missing_predictions": missing_count}
+                continue
+
+            y_true = [int(r["is_laundering"]) for r in valid_rows]
+            scores = [float(r["risk_score"]) for r in valid_rows]
+
+            # Try evaluation at operational threshold (default 20 or 70)
             threshold = 20.0 if ds in ["IBM_AML", "PAYSIM", "AML_SIM"] else 70.0
             y_pred = [1 if s >= threshold else 0 for s in scores]
 
@@ -41,21 +48,19 @@ def evaluate_all():
             f1 = f1_score(y_true, y_pred, zero_division=0)
             fpr = round(fp / max(1, (fp + tn)), 4)
 
-            # PR-AUC
-            pr_auc = 0.0
-            try:
-                p_curve, r_curve, _ = precision_recall_curve(y_true, scores)
-                pr_auc = round(auc(r_curve, p_curve), 4)
-            except Exception:
-                pass
-
-            # ROC-AUC
-            roc_auc = 0.5
-            try:
-                if len(set(y_true)) > 1:
+            # PR-AUC & ROC-AUC without fabricated fallbacks
+            pr_auc = None
+            roc_auc = None
+            if len(set(y_true)) > 1:
+                try:
+                    p_curve, r_curve, _ = precision_recall_curve(y_true, scores)
+                    pr_auc = round(auc(r_curve, p_curve), 4)
+                except Exception:
+                    pr_auc = None
+                try:
                     roc_auc = round(roc_auc_score(y_true, scores), 4)
-            except Exception:
-                pass
+                except Exception:
+                    roc_auc = None
 
             results[ds] = {
                 "dataset": ds,

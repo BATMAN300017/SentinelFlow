@@ -192,6 +192,10 @@ class TestRegressionFixes(unittest.TestCase):
         self.assertGreaterEqual(detection_res["final_risk_score"], 45.0)
 
         # 3. False Positive Control: Normal $50 routine transfer from established account
+        cursor.execute("INSERT INTO transactions (id, event_id, source_account_id, destination_account_id, customer_id, amount, currency, transaction_type, payment_channel, created_at) VALUES ('TXN-HIST-1', 'EVT-HIST-1', 'ACT-R1', 'ACT-R2', 'CUST-R1', 60.0, 'USD', 'TRANSFER', 'ONLINE', '2026-01-02T10:00:00Z')")
+        cursor.execute("INSERT INTO transactions (id, event_id, source_account_id, destination_account_id, customer_id, amount, currency, transaction_type, payment_channel, created_at) VALUES ('TXN-HIST-2', 'EVT-HIST-2', 'ACT-R1', 'ACT-R2', 'CUST-R1', 45.0, 'USD', 'TRANSFER', 'ONLINE', '2026-01-03T10:00:00Z')")
+        self.conn.commit()
+
         normal_evt = {
             "id": "TXN-NORM-REG",
             "event_id": "EVT-NORM-REG",
