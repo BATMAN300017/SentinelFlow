@@ -29,6 +29,8 @@ htmlcov/
 # Databases
 *.sqlite3
 *.db
+*.db-shm
+*.db-wal
 sentinelflow.db
 
 # Node / Frontend
