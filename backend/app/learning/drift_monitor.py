@@ -4,11 +4,12 @@ from typing import Dict, Any
 def check_label_and_prediction_drift(conn: sqlite3.Connection) -> Dict[str, Any]:
     cursor = conn.cursor()
     
-    # 1. Check positive feedback ratio over time
+    # 1. Check positive feedback ratio over time (Excluding demo fixtures)
     cursor.execute("""
         SELECT training_label, COUNT(*)
         FROM analyst_feedback
         WHERE is_eligible_for_training = 1
+          AND (exclusion_reason IS NULL OR exclusion_reason != 'DEMO_FIXTURE')
         GROUP BY training_label
     """)
     rows = cursor.fetchall()
@@ -20,10 +21,14 @@ def check_label_and_prediction_drift(conn: sqlite3.Connection) -> Dict[str, Any]
     
     pos_rate = round(pos / total, 3) if total > 0 else 0.0
     
-    # 2. Check risk score drift across last 200 transactions
+    # 2. Check risk score drift across last 200 transactions (Excluding demo fixtures)
     cursor.execute("""
         SELECT AVG(risk_score)
-        FROM (SELECT risk_score FROM transactions ORDER BY created_at DESC LIMIT 200)
+        FROM (
+            SELECT risk_score FROM transactions 
+            WHERE (dataset_source IS NULL OR dataset_source != 'DEMO_FIXTURE')
+            ORDER BY created_at DESC LIMIT 200
+        )
     """)
     avg_score_row = cursor.fetchone()
     recent_avg_score = round(float(avg_score_row[0] or 0.0), 2)

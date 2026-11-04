@@ -15,7 +15,17 @@ from app.utils.ids import (
 )
 from app.detection.rules import ensure_default_rules
 
+def check_demo_environment_guard():
+    env = os.environ.get("ENVIRONMENT", "development").strip().lower()
+    allow_demo = os.environ.get("ALLOW_DEMO_SEEDING", "").strip().lower() in ("true", "1", "yes")
+    if env in ("production", "prod") and not allow_demo:
+        raise PermissionError(
+            "Demo seeding is strictly prohibited in production environments (ENVIRONMENT=production). "
+            "To permit demo seeding in a dedicated, isolated demo sandbox, set ALLOW_DEMO_SEEDING=true."
+        )
+
 def seed_demo_database():
+    check_demo_environment_guard()
     print("Initializing SentinelFlow AI demo database...")
     init_db()
     
@@ -111,8 +121,8 @@ def seed_demo_database():
                 INSERT OR REPLACE INTO transactions (
                     id, event_id, source_account_id, destination_account_id, beneficiary_name,
                     customer_id, amount, currency, transaction_type, payment_channel,
-                    device_id, ip_address, status, risk_score, risk_band, created_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, 'USD', ?, ?, ?, ?, 'COMPLETED', ?, ?, ?)
+                    device_id, ip_address, status, risk_score, risk_band, dataset_source, scenario_id, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, 'USD', ?, ?, ?, ?, 'COMPLETED', ?, ?, 'DEMO_FIXTURE', 'DEMO_FIXTURE', ?)
             """, (
                 tid, eid, src, dst, f"Counterparty {dst}", cust, amt,
                 rng.choice(txn_types), rng.choice(channels), f"DEV-{100 + (i % 30)}",
@@ -138,8 +148,8 @@ def seed_demo_database():
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
                 aid, ref, t[0], t[1], t[2], sev, stat, t[4],
-                f"High-Risk Signal: Unusual Transfer of ${t[3]:,.2f}",
-                f"Account {t[1]} exhibited unusual transaction velocity and amount deviation exceeding baseline parameters.",
+                f"[DEMO FIXTURE] High-Risk Signal: Unusual Transfer of ${t[3]:,.2f}",
+                f"[DEMO FIXTURE] Simulated anomaly: Account {t[1]} exhibited unusual transaction velocity and amount deviation.",
                 t[6], t[6]
             ))
             alert_ids.append(aid)
@@ -147,7 +157,7 @@ def seed_demo_database():
             # Finding
             cursor.execute("""
                 INSERT OR REPLACE INTO alert_findings (id, alert_id, source, code, description, score_contribution, version, created_at)
-                VALUES (?, ?, 'RULE', 'HIGH_VELOCITY_TRANSFERS', 'Multiple consecutive transfers within short lookback window', 40.0, 'v1', ?)
+                VALUES (?, ?, 'DEMO_FIXTURE', 'DEMO_VELOCITY', '[DEMO FIXTURE] Multiple consecutive transfers within short lookback window', 40.0, 'v1', ?)
             """, (f"FND-{i}", aid, t[6]))
             
         # 7. Seed 10 Investigations across lifecycle stages
@@ -194,19 +204,19 @@ def seed_demo_database():
                     VALUES (?, ?, ?)
                 """, (inv_id, alert_ids[i], now.isoformat()))
                 
-            # Seed evidence
+            # Seed evidence (Marked as DEMO FIXTURE)
             cursor.execute("""
                 INSERT OR REPLACE INTO evidence_items (
                     id, investigation_id, evidence_type, description, observed_facts_json,
                     verification_status, collector, created_at
-                ) VALUES (?, ?, 'TRANSACTION', 'Triggering wire transaction of high monetary value', '{}', 'SUPPORTING', 'AGENT', ?)
+                ) VALUES (?, ?, 'TRANSACTION', '[DEMO FIXTURE] Triggering wire transaction of high monetary value', '{"is_demo_fixture": true}', 'SUPPORTING', 'AGENT', ?)
             """, (f"EVD-{inv_id}-1", inv_id, now.isoformat()))
             
             cursor.execute("""
                 INSERT OR REPLACE INTO evidence_items (
                     id, investigation_id, evidence_type, description, observed_facts_json,
                     verification_status, collector, created_at
-                ) VALUES (?, ?, 'BEHAVIORAL_ANOMALY', 'Rolling median deviation robust z-score > 3.5', '{}', 'SUPPORTING', 'AGENT', ?)
+                ) VALUES (?, ?, 'BEHAVIORAL_ANOMALY', '[DEMO FIXTURE] Rolling median deviation robust z-score > 3.5', '{"is_demo_fixture": true}', 'SUPPORTING', 'AGENT', ?)
             """, (f"EVD-{inv_id}-2", inv_id, now.isoformat()))
             
             # Tasks

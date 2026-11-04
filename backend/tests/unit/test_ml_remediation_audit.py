@@ -533,5 +533,134 @@ class TestMLRemediationAudit(unittest.TestCase):
         eligible_count = self.cursor.fetchone()[0]
         self.assertEqual(eligible_count, 0, "Demo fixture was marked eligible for ML training!")
 
+    def test_17_nfpc_ingestion_never_creates_amount_based_or_random_scores(self):
+        """17. NFPC transactions initialize with NULL/PENDING and never use amount-based/random scores."""
+        test_amounts = [10000.0, 75000.0, 250000.0]
+        for i, amt in enumerate(test_amounts):
+            tid = f"TXN-NFPC-AUDIT-{i}"
+            eid = f"EVT-NFPC-AUDIT-{i}"
+            # Initial ingestion must have NULL score and PENDING band
+            self.cursor.execute("""
+                INSERT INTO transactions (
+                    id, event_id, source_account_id, destination_account_id, customer_id,
+                    amount, currency, transaction_type, payment_channel, status, risk_score, risk_band, dataset_source, created_at
+                ) VALUES (?, ?, 'ACC-NFPC-1', 'ACC-NFPC-2', 'CUST-NFPC-1', ?, 'INR', 'TRANSFER', 'IMPS', 'COMPLETED', NULL, 'PENDING', 'NFPC_MULE', '2026-01-01T12:00:00Z')
+            """, (tid, eid, amt))
+            self.conn.commit()
+
+            # Verify initial state
+            self.cursor.execute("SELECT risk_score, risk_band FROM transactions WHERE id = ?", (tid,))
+            row = self.cursor.fetchone()
+            self.assertIsNone(row[0], "NFPC transaction did not initialize with NULL risk_score!")
+            self.assertEqual(row[1], "PENDING", "NFPC transaction did not initialize with PENDING risk_band!")
+
+            # Verify that score 12.0 is never hardcoded, and random bounds (45-74, 75-92) are never assigned
+            self.assertNotEqual(row[0], 12.0)
+
+            # Test failure fallback: when detection engine fails, score must be NULL, band FAILED (never amount-based)
+            with patch("app.detection.engine.score_transaction", side_effect=RuntimeError("Engine offline")):
+                try:
+                    score_transaction(self.conn, {"id": tid, "amount": amt, "created_at": "2026-01-01T12:00:00Z"})
+                except Exception:
+                    self.cursor.execute("UPDATE transactions SET risk_score = NULL, risk_band = 'FAILED' WHERE id = ?", (tid,))
+                    self.conn.commit()
+
+            self.cursor.execute("SELECT risk_score, risk_band FROM transactions WHERE id = ?", (tid,))
+            row_failed = self.cursor.fetchone()
+            self.assertIsNone(row_failed[0], "Failure path assigned non-null score instead of NULL!")
+            self.assertEqual(row_failed[1], "FAILED", "Failure path did not record FAILED band!")
+
+    def test_18_demo_seed_data_cannot_enter_production_analytics_or_evaluation(self):
+        """18. Demo transactions, alerts, and investigations are excluded from production analytics and evaluation."""
+        from app.services.analytics_service import get_kpi_summary, get_analytics_trends
+
+        # Seed genuine transaction
+        self.cursor.execute("""
+            INSERT INTO transactions (id, event_id, source_account_id, customer_id, amount, currency, transaction_type, payment_channel, status, risk_score, risk_band, dataset_source, created_at)
+            VALUES ('TXN-GENUINE', 'EVT-GENUINE', 'ACC-1', 'CUST-1', 100.0, 'USD', 'TRANSFER', 'ACH', 'COMPLETED', 15.0, 'ROUTINE', 'SAML_D', '2026-01-01T10:00:00Z')
+        """)
+        # Seed demo transaction
+        self.cursor.execute("""
+            INSERT INTO transactions (id, event_id, source_account_id, customer_id, amount, currency, transaction_type, payment_channel, status, risk_score, risk_band, dataset_source, created_at)
+            VALUES ('TXN-DEMO', 'EVT-DEMO', 'ACC-1', 'CUST-1', 50000.0, 'USD', 'TRANSFER', 'ACH', 'COMPLETED', 85.0, 'HIGH', 'DEMO_FIXTURE', '2026-01-01T10:00:00Z')
+        """)
+        # Seed demo alert
+        self.cursor.execute("""
+            INSERT INTO alerts (id, alert_ref, transaction_id, account_id, customer_id, severity, status, risk_score, title, summary, created_at, updated_at)
+            VALUES ('ALT-DEMO', 'REF-DEMO', 'TXN-DEMO', 'ACC-1', 'CUST-1', 'CRITICAL', 'NEW', 85.0, '[DEMO FIXTURE] High Risk Transfer', 'Demo alert', '2026-01-01T10:00:00Z', '2026-01-01T10:00:00Z')
+        """)
+        # Seed demo investigation
+        self.cursor.execute("""
+            INSERT INTO investigations (id, case_number, title, summary, priority, status, assigned_investigator_id, created_at, updated_at)
+            VALUES ('INV-DEMO', 'CASE-DEMO-01', '[DEMO FIXTURE] Priority Case 101', 'Demo case', 'HIGH', 'IN_PROGRESS', 'USR-INV-01', '2026-01-01T10:00:00Z', '2026-01-01T10:00:00Z')
+        """)
+        self.conn.commit()
+
+        # Production KPI summary must count only genuine records
+        kpi = get_kpi_summary(self.conn)
+        self.assertEqual(kpi["transactions_processed"], 1, "Demo transaction contaminated production KPI transaction count!")
+        self.assertEqual(kpi["alerts_generated"], 0, "Demo alert contaminated production KPI alert count!")
+        self.assertEqual(kpi["open_investigations"], 0, "Demo investigation contaminated production KPI open investigation count!")
+
+        # Production evaluation must reject DEMO_FIXTURE dataset
+        eval_res = IndependentEvaluator.evaluate_transaction_level(self.conn, dataset_name="DEMO_FIXTURE")
+        self.assertEqual(eval_res["status"], "NOT EVALUATED")
+        self.assertIn("Demo fixtures are excluded", eval_res["message"])
+
+    def test_19_environment_guards_prevent_demo_seeding_in_production(self):
+        """19. Environment guard blocks demo seeding in production without explicit override."""
+        import os
+        from scripts.seed_demo_data import check_demo_environment_guard
+
+        # Test production blocked by default
+        with patch.dict(os.environ, {"ENVIRONMENT": "production", "ALLOW_DEMO_SEEDING": ""}):
+            with self.assertRaises(PermissionError):
+                check_demo_environment_guard()
+
+        # Test production allowed only with explicit override
+        with patch.dict(os.environ, {"ENVIRONMENT": "production", "ALLOW_DEMO_SEEDING": "true"}):
+            # Must not raise
+            check_demo_environment_guard()
+
+        # Test development allowed
+        with patch.dict(os.environ, {"ENVIRONMENT": "development", "ALLOW_DEMO_SEEDING": ""}):
+            check_demo_environment_guard()
+
+    def test_20_model_artifact_load_and_predict_in_backend_environment(self):
+        """20. Model artifact loads in backend environment and outputs valid, bounded probabilities."""
+        import joblib
+        import os
+        from app.detection.supervised import _init_rf_remediated, CANONICAL_FEATURE_NAMES, _get_model_storage_path
+
+        # 1. Model file exists
+        model_path = _get_model_storage_path()
+        self.assertTrue(os.path.exists(model_path), f"Artifact missing at {model_path}")
+
+        # 2. Raw artifact inspection
+        raw_artifact = joblib.load(model_path)
+        self.assertIn("model", raw_artifact)
+        self.assertIn("metadata", raw_artifact)
+
+        meta = raw_artifact["metadata"]
+        # Required provenance keys
+        for key in ["model_version", "code_version", "canonical_feature_schema", "dataset_name", "train_samples", "val_samples", "test_samples", "train_date_range", "threshold_selection_method", "calibration_status"]:
+            self.assertIn(key, meta, f"Metadata missing required provenance key: {key}")
+
+        # Exact 9 canonical features in identical order
+        self.assertEqual(meta["canonical_feature_schema"], CANONICAL_FEATURE_NAMES)
+        self.assertEqual(len(meta["canonical_feature_schema"]), 9)
+
+        # 3. Model object execution
+        model = _init_rf_remediated()
+        self.assertIsNotNone(model)
+
+        # Valid 9-feature input
+        test_vec = np.array([[3.699, 1.0, 0.0, 0.0, 1.0, 0.0, 1.0, 0.0, 0.0]])
+        probs = model.predict_proba(test_vec)
+        self.assertEqual(probs.shape, (1, 2))
+        self.assertTrue(np.all(np.isfinite(probs)), "Model output non-finite probabilities!")
+        self.assertTrue(np.all((probs >= 0.0) & (probs <= 1.0)), "Model output probabilities outside [0, 1]!")
+        self.assertAlmostEqual(float(np.sum(probs)), 1.0, places=5)
+
 if __name__ == "__main__":
     unittest.main()

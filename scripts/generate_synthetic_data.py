@@ -12,7 +12,17 @@ from app.services.transaction_ingestion import ingest_transaction_event
 from app.utils.ids import generate_id
 from app.utils.time import utc_now_iso
 
+def check_demo_environment_guard():
+    env = os.environ.get("ENVIRONMENT", "development").strip().lower()
+    allow_demo = os.environ.get("ALLOW_DEMO_SEEDING", "").strip().lower() in ("true", "1", "yes")
+    if env in ("production", "prod") and not allow_demo:
+        raise PermissionError(
+            "Synthetic transaction generation is strictly prohibited in production environments (ENVIRONMENT=production). "
+            "To permit generation in a dedicated demo sandbox, set ALLOW_DEMO_SEEDING=true."
+        )
+
 def generate_transactions(count: int = 200, seed: int = 42):
+    check_demo_environment_guard()
     rng = random.Random(seed)
     print(f"Generating {count} synthetic transactions with random seed {seed}...")
     

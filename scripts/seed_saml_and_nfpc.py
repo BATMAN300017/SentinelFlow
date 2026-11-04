@@ -35,11 +35,17 @@ from app.data_ingestion.label_isolation import (
 )
 from app.detection.engine import score_transaction
 
+def check_demo_environment_guard():
+    env = os.environ.get("ENVIRONMENT", "development").strip().lower()
+    allow_demo = os.environ.get("ALLOW_DEMO_SEEDING", "").strip().lower() in ("true", "1", "yes")
+    if env in ("production", "prod") and not allow_demo:
+        raise PermissionError(
+            "Demo/fixture seeding is strictly prohibited in production environments (ENVIRONMENT=production). "
+            "To permit seeding in a dedicated, isolated demo sandbox, set ALLOW_DEMO_SEEDING=true."
+        )
+
 def seed_saml_and_nfpc_database(saml_limit: int = 5000, nfpc_limit: int = 5000):
-    env = os.environ.get("ENVIRONMENT", "development").lower()
-    if env == "production" and not os.environ.get("ALLOW_PRODUCTION_SEED"):
-        print("Safety guard: Production environment detected. Automatic seeding aborted to protect existing data.")
-        return
+    check_demo_environment_guard()
 
     print("=" * 60)
     print("Initializing SentinelFlow AI database with REAL SAML-D & NFPC datasets...")
@@ -199,14 +205,9 @@ def seed_saml_and_nfpc_database(saml_limit: int = 5000, nfpc_limit: int = 5000):
                         VALUES (?, ?, ?, ?, ?, ?)
                     """, (dest, dest, f"CUST-{dest}", curr, 25000.0, ts))
 
-                score = 12.0
-                band = "ROUTINE"
-                if amt > 200000.0:
-                    score = round(rng.uniform(75.0, 92.0), 1)
-                    band = "HIGH"
-                elif amt > 50000.0:
-                    score = round(rng.uniform(45.0, 74.0), 1)
-                    band = "ELEVATED"
+                # All ingested NFPC transactions initially receive NULL score and PENDING band
+                initial_score = None
+                initial_band = "PENDING"
 
                 cursor.execute("""
                     INSERT OR REPLACE INTO transactions (
@@ -216,9 +217,33 @@ def seed_saml_and_nfpc_database(saml_limit: int = 5000, nfpc_limit: int = 5000):
                 """, (
                     txn["id"], txn["event_id"], src, dest, f"CUST-{src}",
                     amt, curr, txn.get("payment_type", "TRANSFER"),
-                    txn.get("payment_channel", "IMPS"), "COMPLETED", score, band, ts
+                    txn.get("payment_channel", "IMPS"), "COMPLETED", initial_score, initial_band, ts
                 ))
                 total_nfpc_ingested += 1
+
+                # Produce prediction strictly from genuine operational detection engine
+                try:
+                    scoring_res = score_transaction(conn, {
+                        "id": txn["id"],
+                        "event_id": txn["event_id"],
+                        "source_account_id": src,
+                        "destination_account_id": dest,
+                        "customer_id": f"CUST-{src}",
+                        "amount": amt,
+                        "currency": curr,
+                        "transaction_type": txn.get("payment_type", "TRANSFER"),
+                        "payment_channel": txn.get("payment_channel", "IMPS"),
+                        "status": "COMPLETED",
+                        "created_at": ts
+                    })
+                    final_score = scoring_res.get("final_risk_score")
+                    if final_score is not None:
+                        final_band = scoring_res.get("risk_band", "ROUTINE")
+                        cursor.execute("UPDATE transactions SET risk_score = ?, risk_band = ? WHERE id = ?", (float(final_score), final_band, txn["id"]))
+                    else:
+                        cursor.execute("UPDATE transactions SET risk_score = NULL, risk_band = 'FAILED' WHERE id = ?", (txn["id"],))
+                except Exception:
+                    cursor.execute("UPDATE transactions SET risk_score = NULL, risk_band = 'FAILED' WHERE id = ?", (txn["id"],))
 
         print(f"Verified NFPC Records Ingested: {total_nfpc_ingested:,}")
         print(f"Verified NFPC Account Labels Isolated: {total_nfpc_labels_isolated:,}")
@@ -239,20 +264,20 @@ def seed_saml_and_nfpc_database(saml_limit: int = 5000, nfpc_limit: int = 5000):
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
                 aid, ref, t[0], t[1], t[2], sev, status, t[5],
-                f"SAML-D Suspicious Pattern: {t[4]} {t[3]:,.2f} Anomalous Velocity",
-                f"SAML-D Account {t[1]} exhibited high volume funds movement in {t[4]} exceeding rolling baseline.",
+                f"[DEMO FIXTURE] SAML-D Suspicious Pattern: {t[4]} {t[3]:,.2f} Anomalous Velocity",
+                f"[DEMO FIXTURE] Simulated pattern on SAML-D Account {t[1]} for demonstration purposes.",
                 t[7], t[7]
             ))
             created_alerts.append((aid, ref, t))
 
             cursor.execute("""
                 INSERT OR REPLACE INTO alert_findings (id, alert_id, source, code, description, score_contribution, version, created_at)
-                VALUES (?, ?, 'GRAPH', 'SAML_D_MULE_TOPOLOGY', 'Identified as node in SAML-D flow network', 35.0, 'v1.0', ?)
+                VALUES (?, ?, 'DEMO_FIXTURE', 'DEMO_SAML_MULE_TOPOLOGY', '[DEMO FIXTURE] Identified as simulated node in SAML-D flow network', 35.0, 'v1.0', ?)
             """, (f"FND-{aid}-1", aid, t[7]))
 
             cursor.execute("""
                 INSERT OR REPLACE INTO alert_findings (id, alert_id, source, code, description, score_contribution, version, created_at)
-                VALUES (?, ?, 'ANOMALY', 'MAD_AMOUNT_DEVIATION', 'Significant deviation exceeding historical rolling median', 30.0, 'v1.0', ?)
+                VALUES (?, ?, 'DEMO_FIXTURE', 'DEMO_AMOUNT_DEVIATION', '[DEMO FIXTURE] Simulated deviation exceeding historical rolling median', 30.0, 'v1.0', ?)
             """, (f"FND-{aid}-2", aid, t[7]))
 
         print(f"Created {len(created_alerts)} active alerts across CRITICAL, HIGH, and MEDIUM severities.")
@@ -295,20 +320,20 @@ def seed_saml_and_nfpc_database(saml_limit: int = 5000, nfpc_limit: int = 5000):
                 VALUES (?, ?, ?)
             """, (inv_id, a_id, a_txn[7]))
 
-            # Evidence Items
+            # Evidence Items (Marked as DEMO FIXTURE)
             cursor.execute("""
                 INSERT OR REPLACE INTO evidence_items (
                     id, investigation_id, evidence_type, source_record_id, description,
                     observed_facts_json, verification_status, collector, created_at
-                ) VALUES (?, ?, 'TRANSACTION', ?, ?, '{"dataset": "SAML_D"}', 'SUPPORTING', 'AGENT', ?)
-            """, (f"EVD-{inv_id}-1", inv_id, a_txn[0], f"Triggering transfer of {a_txn[4]} {a_txn[3]:,.2f} on Account {a_txn[1]}", a_txn[7]))
+                ) VALUES (?, ?, 'TRANSACTION', ?, ?, '{"dataset": "SAML_D", "is_demo_fixture": true}', 'SUPPORTING', 'AGENT', ?)
+            """, (f"EVD-{inv_id}-1", inv_id, a_txn[0], f"[DEMO FIXTURE] Triggering transfer of {a_txn[4]} {a_txn[3]:,.2f} on Account {a_txn[1]}", a_txn[7]))
 
             cursor.execute("""
                 INSERT OR REPLACE INTO evidence_items (
                     id, investigation_id, evidence_type, source_record_id, description,
                     observed_facts_json, verification_status, collector, created_at
-                ) VALUES (?, ?, 'BEHAVIORAL_ANOMALY', ?, ?, '{"deviation": "3.8x baseline"}', 'SUPPORTING', 'AGENT', ?)
-            """, (f"EVD-{inv_id}-2", inv_id, a_txn[0], "Statistical deviation observed against historical rolling median", a_txn[7]))
+                ) VALUES (?, ?, 'BEHAVIORAL_ANOMALY', ?, ?, '{"deviation": "3.8x baseline", "is_demo_fixture": true}', 'SUPPORTING', 'AGENT', ?)
+            """, (f"EVD-{inv_id}-2", inv_id, a_txn[0], "[DEMO FIXTURE] Statistical deviation observed against simulated rolling median", a_txn[7]))
 
             # Tasks
             cursor.execute("""

@@ -36,6 +36,15 @@ SUPABASE_URL = os.environ.get("SUPABASE_URL", settings.SUPABASE_URL)
 SUPABASE_KEY = os.environ.get("SUPABASE_SECRET_KEY", settings.SUPABASE_SECRET_KEY)
 DATABASE_URL = os.environ.get("DATABASE_URL", settings.DATABASE_URL)
 
+def check_demo_environment_guard():
+    env = os.environ.get("ENVIRONMENT", "development").strip().lower()
+    allow_demo = os.environ.get("ALLOW_DEMO_SEEDING", "").strip().lower() in ("true", "1", "yes")
+    if env in ("production", "prod") and not allow_demo:
+        raise PermissionError(
+            "Bulk data ingestion and demo fixture seeding is strictly prohibited in production environments (ENVIRONMENT=production). "
+            "To permit ingestion in a dedicated staging or demo sandbox, set ALLOW_DEMO_SEEDING=true."
+        )
+
 def get_supabase_client():
     return create_client(SUPABASE_URL, SUPABASE_KEY)
 
@@ -67,6 +76,7 @@ def upload_file_to_storage(client, bucket_name: str, local_path: str, remote_pat
         return False
 
 def sync_storage_assets(client):
+    check_demo_environment_guard()
     print("\n" + "=" * 60)
     print("STAGE 1: Synchronizing Supabase Storage Buckets")
     print("=" * 60)
@@ -121,6 +131,7 @@ def sync_storage_assets(client):
 # 2. Database Ingestion
 # -------------------------------------------------------------
 def ingest_real_data():
+    check_demo_environment_guard()
     print("\n" + "=" * 60)
     print("STAGE 2: Supabase PostgreSQL Real Data Ingestion")
     print("=" * 60)
