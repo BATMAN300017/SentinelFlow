@@ -13,7 +13,27 @@ It NEVER communicates ground truth back to Pipeline A.
 import sqlite3
 import numpy as np
 from typing import Dict, Any, List, Optional
-from sklearn.metrics import precision_score, recall_score, f1_score, roc_auc_score, average_precision_score
+def _compute_auc_roc_and_pr(y_true: List[int], y_scores: List[float]):
+    y_t = np.array(y_true, dtype=int)
+    y_s = np.array(y_scores, dtype=float)
+    n_pos = int(np.sum(y_t == 1))
+    n_neg = int(np.sum(y_t == 0))
+    if n_pos == 0 or n_neg == 0:
+        return 0.5000, 0.0000
+    desc_idx = np.argsort(-y_s)
+    y_t_sorted = y_t[desc_idx]
+    y_s_sorted = y_s[desc_idx]
+    distinct_mask = np.diff(y_s_sorted, append=np.nan) != 0
+    tps = np.cumsum(y_t_sorted)[distinct_mask]
+    fps = np.cumsum(1 - y_t_sorted)[distinct_mask]
+    tpr = np.r_[0, tps / n_pos, 1]
+    fpr = np.r_[0, fps / n_neg, 1]
+    roc_auc = float(np.sum((fpr[1:] - fpr[:-1]) * (tpr[1:] + tpr[:-1]) / 2.0))
+    prec_curve = tps / (tps + fps)
+    rec_curve = tps / n_pos
+    rec_diff = np.diff(np.r_[0, rec_curve])
+    pr_auc = float(np.sum(prec_curve * rec_diff))
+    return round(roc_auc, 4), round(pr_auc, 4)
 
 from app.data_ingestion.label_isolation import get_protected_evaluation_labels
 from app.core.logging import logger
@@ -82,23 +102,21 @@ class IndependentEvaluator:
                 "positive_samples": sum(y_true)
             }
 
-        # Calculate metrics
-        prec = precision_score(y_true, y_pred, zero_division=0)
-        rec = recall_score(y_true, y_pred, zero_division=0)
-        f1 = f1_score(y_true, y_pred, zero_division=0)
-
         # Confusion Matrix
         tp = sum(1 for yt, yp in zip(y_true, y_pred) if yt == 1 and yp == 1)
         fp = sum(1 for yt, yp in zip(y_true, y_pred) if yt == 0 and yp == 1)
         tn = sum(1 for yt, yp in zip(y_true, y_pred) if yt == 0 and yp == 0)
         fn = sum(1 for yt, yp in zip(y_true, y_pred) if yt == 1 and yp == 0)
 
+        # Calculate metrics
+        prec = round(tp / max(1, (tp + fp)), 4)
+        rec = round(tp / max(1, (tp + fn)), 4)
+        f1 = round((2 * prec * rec) / max(0.001, (prec + rec)), 4)
         fpr = round(fp / max(1, (fp + tn)), 4)
         fnr = round(fn / max(1, (fn + tp)), 4)
 
         try:
-            auc_roc = round(roc_auc_score(y_true, y_scores), 4)
-            pr_auc = round(average_precision_score(y_true, y_scores), 4)
+            auc_roc, pr_auc = _compute_auc_roc_and_pr(y_true, y_scores)
         except Exception:
             auc_roc = 0.50
             pr_auc = 0.50
