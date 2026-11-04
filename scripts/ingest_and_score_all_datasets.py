@@ -80,11 +80,15 @@ def ingest_and_score_all():
                     "status": r_dict.get("status", "COMPLETED"),
                     "created_at": str(r_dict.get("created_at", ""))
                 })
-                score = float(res.get("final_risk_score", 15.0))
-                band = res.get("risk_band", "ROUTINE")
-                cur.execute("UPDATE transactions SET risk_score = ?, risk_band = ? WHERE id = ?;", (score, band, r_dict["id"]))
+                score = res.get("final_risk_score")
+                if score is not None:
+                    score = float(score)
+                    band = res.get("risk_band", "ROUTINE")
+                    cur.execute("UPDATE transactions SET risk_score = ?, risk_band = ? WHERE id = ?;", (score, band, r_dict["id"]))
+                else:
+                    cur.execute("UPDATE transactions SET risk_score = NULL, risk_band = 'FAILED' WHERE id = ?;", (r_dict["id"],))
             except Exception as e:
-                pass
+                cur.execute("UPDATE transactions SET risk_score = NULL, risk_band = 'FAILED' WHERE id = ?;", (r_dict["id"],))
         conn.commit()
 
         # 6. Update counts in datasets table

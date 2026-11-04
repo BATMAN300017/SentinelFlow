@@ -187,13 +187,14 @@ def run_controlled_ingestion():
             channel = str(row.channel)
 
             is_mule = (src in mule_accounts)
+            scenario = "NFPC_MULE_CASE" if is_mule else "NFPC_PARTITION"
+            # Genuine score initialized as None/PENDING (Pipeline A - No label leakage)
+            risk_score = None
+            risk_band = "PENDING"
+
             if is_mule:
                 mule_tx_count += 1
                 mule_tx_volume += abs(amt)
-                risk_score = 94.0
-                risk_band = "CRITICAL"
-                scenario = "NFPC_MULE_CASE"
-
                 if src not in mule_account_summary:
                     mule_account_summary[src] = {"tx_count": 0, "volume": 0.0, "top_tx": None, "max_amt": -1.0}
                 mule_account_summary[src]["tx_count"] += 1
@@ -203,20 +204,6 @@ def run_controlled_ingestion():
                     mule_account_summary[src]["top_tx"] = {
                         "id": t_id, "amount": amt, "channel": channel, "timestamp": ts, "dest": dest
                     }
-            else:
-                scenario = "NFPC_PARTITION"
-                if amt > 200000:
-                    risk_score = 70.0
-                    risk_band = "HIGH"
-                elif amt > 50000:
-                    risk_score = 40.0
-                    risk_band = "ELEVATED"
-                elif amt > 10000:
-                    risk_score = 20.0
-                    risk_band = "LOW"
-                else:
-                    risk_score = 8.0
-                    risk_band = "ROUTINE"
 
             cust_src = f"CUST-IND-{src}"
             beneficiary = f"Counterparty {dest[-4:]}" if dest else "Cash Terminal"
@@ -263,40 +250,10 @@ def run_controlled_ingestion():
 
     # 7. Generate Mule Alerts & Update Datasets Registry
     print("\n[Step 6/7] Generating syndicate-level alerts for confirmed mule accounts...")
+    # Note: Alerts are generated strictly by genuine unsupervised detection,
+    # NEVER seeded directly from ground-truth mule lists.
     alerts_to_insert = []
     findings_to_insert = []
-
-    for mule_acc, s in mule_account_summary.items():
-        top = s["top_tx"]
-        if not top:
-            continue
-        alt_id = f"ALT-NFPC-{mule_acc}"
-        alt_ref = f"REF-ALT-NFPC-{mule_acc[-4:]}"
-        t_id = top["id"]
-        amt = top["amount"]
-        ts = top["timestamp"]
-        
-        title = f"Confirmed Mule Account Syndicate Pattern ({mule_acc})"
-        summary = (
-            f"High-frequency mule activity detected on account {mule_acc} across "
-            f"{s['tx_count']:,} transactions totaling INR {s['volume']:,.2f}. "
-            f"Peak transaction: INR {amt:,.2f} via {top['channel']}."
-        )
-
-        alerts_to_insert.append((
-            alt_id, alt_ref, t_id, mule_acc, f"CUST-IND-{mule_acc}",
-            "CRITICAL", "NEW", 94.0, title, summary, None, None,
-            ts, now_iso, "MULE_SYNDICATE",
-            "Confirmed Indian Banking Mule Account from National Fraud Prevention Council ground truth",
-            None
-        ))
-
-        findings_to_insert.append((
-            f"FND-{alt_id}", alt_id, "MULE_DETECTION_ENGINE", "RULE-NFPC-MULE-SYNDICATE",
-            f"Account {mule_acc} confirmed as mule in NFPC ground truth with {s['tx_count']} transactions.",
-            94.0, json.dumps({"transaction_count": s["tx_count"], "total_volume": round(s["volume"], 2)}),
-            "v1.0.0", now_iso
-        ))
 
     if alerts_to_insert:
         execute_values(cur, """

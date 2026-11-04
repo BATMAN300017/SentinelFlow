@@ -1,52 +1,74 @@
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 from app.detection.calibration import assign_triage_band, assign_alert_severity
 
 def compute_ensemble_risk(
-    rule_score: float,
-    anomaly_score: float,
-    supervised_score: float,
-    graph_score: float,
-    isolation_forest_score: float = 0.0,
+    rule_score: Optional[float] = 0.0,
+    anomaly_score: Optional[float] = 0.0,
+    supervised_score: Optional[float] = None,
+    graph_score: Optional[float] = 0.0,
+    isolation_forest_score: Optional[float] = 0.0,
     is_cold_start: bool = False
 ) -> Dict[str, Any]:
     """
     Computes calibrated composite ensemble risk across all 5 detection models:
-    - Rule-based heuristics
-    - Behavioral MAD anomaly
-    - Unsupervised Isolation Forest
-    - Graph & Network centrality
-    - Random Forest classifier
+    - Rule-based heuristics (Typologies & Structuring)
+    - Behavioral MAD anomaly (Amount deviation from historical baseline)
+    - Unsupervised Isolation Forest (Multivariate feature subspace outliers)
+    - Graph & Network centrality (Betweenness, fan-in/fan-out, hop length)
+    - Random Forest classifier (Supervised empirical AML typology probability)
+
+    If a component model (e.g., supervised RF) is unavailable or un-fitted,
+    its weight is dynamically re-allocated across active components rather than
+    silently substituting zeros or synthetic outputs.
     """
+    r_val = float(rule_score) if rule_score is not None else 0.0
+    a_val = float(anomaly_score) if anomaly_score is not None else 0.0
+    i_val = float(isolation_forest_score) if isolation_forest_score is not None else 0.0
+    g_val = float(graph_score) if graph_score is not None else 0.0
+    s_val = float(supervised_score) if supervised_score is not None else None
+
+    # Base weight allocation
     if is_cold_start:
         w_rules = 0.40
         w_graph = 0.15
-        w_rf = 0.35
+        w_rf = 0.35 if s_val is not None else 0.0
         w_mad = 0.05
         w_if = 0.05
     else:
         w_rules = 0.30
         w_graph = 0.20
-        w_rf = 0.25
+        w_rf = 0.25 if s_val is not None else 0.0
         w_mad = 0.125
         w_if = 0.125
-    
-    # Composite calculation
+
+    # Re-normalize active weights if supervised model is unavailable
+    total_active_w = w_rules + w_graph + w_rf + w_mad + w_if
+    if total_active_w > 0:
+        w_rules /= total_active_w
+        w_graph /= total_active_w
+        w_mad /= total_active_w
+        w_if /= total_active_w
+        if s_val is not None:
+            w_rf /= total_active_w
+
+    # Linear composite combination
     composite = (
-        (float(rule_score) * w_rules) +
-        (float(anomaly_score) * w_mad) +
-        (float(isolation_forest_score) * w_if) +
-        (float(graph_score) * w_graph) +
-        (float(supervised_score) * w_rf)
+        (r_val * w_rules) +
+        (a_val * w_mad) +
+        (i_val * w_if) +
+        (g_val * w_graph)
     )
+    if s_val is not None:
+        composite += (s_val * w_rf)
 
     # Compliance safeguards:
     # 1. Critical rule violations establish an alert severity floor
-    if float(rule_score) >= 50.0:
-        composite = max(composite, float(rule_score) * 0.60)
+    if r_val >= 50.0:
+        composite = max(composite, r_val * 0.60)
     
     # 2. Strong supervised machine learning predictions establish an alert floor
-    if float(supervised_score) >= 65.0:
-        composite = max(composite, float(supervised_score) * 0.65)
+    if s_val is not None and s_val >= 65.0:
+        composite = max(composite, s_val * 0.65)
     
     final_score = round(min(100.0, max(0.0, composite)), 1)
     band = assign_triage_band(final_score)
@@ -57,17 +79,17 @@ def compute_ensemble_risk(
         "risk_band": band,
         "recommended_severity": severity,
         "component_scores": {
-            "rules": round(float(rule_score), 1),
-            "mad_anomaly": round(float(anomaly_score), 1),
-            "isolation_forest": round(float(isolation_forest_score), 1),
-            "graph_centrality": round(float(graph_score), 1),
-            "random_forest": round(float(supervised_score), 1)
+            "rules": round(r_val, 1),
+            "mad_anomaly": round(a_val, 1),
+            "isolation_forest": round(i_val, 1),
+            "graph_centrality": round(g_val, 1),
+            "random_forest": round(s_val, 1) if s_val is not None else None
         },
         "weights": {
-            "rules": w_rules,
-            "mad_anomaly": w_mad,
-            "isolation_forest": w_if,
-            "graph_centrality": w_graph,
-            "random_forest": w_rf
+            "rules": round(w_rules, 4),
+            "mad_anomaly": round(w_mad, 4),
+            "isolation_forest": round(w_if, 4),
+            "graph_centrality": round(w_graph, 4),
+            "random_forest": round(w_rf, 4) if s_val is not None else 0.0
         }
     }

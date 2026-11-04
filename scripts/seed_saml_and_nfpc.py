@@ -139,18 +139,9 @@ def seed_saml_and_nfpc_database(saml_limit: int = 5000, nfpc_limit: int = 5000):
                         VALUES (?, ?, ?, ?, ?, ?)
                     """, (dest, dest, f"CUST-{dest}", curr, round(amt * 0.8, 2), ts))
 
-                # Calculate initial risk band for transaction
-                risk_score = 15.0
-                risk_band = "ROUTINE"
-                if amt > 50000.0:
-                    risk_score = round(rng.uniform(80.0, 96.0), 1)
-                    risk_band = "HIGH"
-                elif amt > 15000.0:
-                    risk_score = round(rng.uniform(55.0, 79.0), 1)
-                    risk_band = "ELEVATED"
-                elif amt > 5000.0:
-                    risk_score = round(rng.uniform(25.0, 54.0), 1)
-                    risk_band = "LOW"
+                # Initial state prior to genuine model prediction
+                risk_score = None
+                risk_band = "PENDING"
 
                 cursor.execute("""
                     INSERT OR REPLACE INTO transactions (
@@ -164,7 +155,7 @@ def seed_saml_and_nfpc_database(saml_limit: int = 5000, nfpc_limit: int = 5000):
                 ))
 
                 total_saml_ingested += 1
-                if risk_score >= 65.0:
+                if risk_score is not None and risk_score >= 65.0:
                     saml_txns_for_alerts.append((txn["id"], src, f"CUST-{src}", amt, curr, risk_score, risk_band, ts))
 
         print(f"Verified SAML-D Records Ingested: {total_saml_ingested:,}")

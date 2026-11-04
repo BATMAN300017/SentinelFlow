@@ -227,33 +227,22 @@ def ingest_real_data():
                 customers_batch[cust_id] = (cust_id, f"REF-{receiver}", f"Counterparty {receiver[-4:]}", f"cp_{receiver[-4:]}@aml-network.com", "STANDARD", "VERIFIED", ts)
                 accounts_batch[receiver] = (receiver, receiver, cust_id, "CHECKING", curr, round(amount * 0.8, 2), "ACTIVE", False, ts)
 
-            # Isolated Ground Truth storage
+            # Isolated Ground Truth storage (Pipeline B - Never leaked into detection)
             if is_laundering == 1:
                 protected_txns.append((txn_id, "SAML_D", 1, laundering_type, json.dumps({"is_laundering": 1, "type": laundering_type}), ts))
                 protected_accs.append((sender, "SAML_D", 1, f"SAML_LAUNDERING_SENDER_{laundering_type}", json.dumps({"source": "SAML_D"}), ts))
                 protected_accs.append((receiver, "SAML_D", 1, f"SAML_LAUNDERING_RECEIVER_{laundering_type}", json.dumps({"source": "SAML_D"}), ts))
-                risk_score = 92.5
-                risk_band = "CRITICAL"
-                laundering_alerts_seed.append((txn_id, sender, receiver, f"CUST-{sender}", amount, curr, risk_score, risk_band, laundering_type, ts))
             else:
                 protected_txns.append((txn_id, "SAML_D", 0, "NORMAL", json.dumps({"is_laundering": 0}), ts))
-                if amount > 50000:
-                    risk_score = 75.0
-                    risk_band = "HIGH"
-                elif amount > 15000:
-                    risk_score = 45.0
-                    risk_band = "ELEVATED"
-                elif amount > 5000:
-                    risk_score = 25.0
-                    risk_band = "LOW"
-                else:
-                    risk_score = 10.0
-                    risk_band = "ROUTINE"
+
+            # Genuine score initialized as None/PENDING (Pipeline A - No label leakage)
+            risk_score = None
+            risk_band = "PENDING"
 
             txns_to_insert.append((
                 txn_id, event_id, sender, receiver, f"Entity {receiver[-4:]}", f"CUST-{sender}",
                 amount, curr, row.get("Payment_type", "TRANSFER"), "WIRE",
-                "COMPLETED", laundering_type, "SAML_D", 0, "ISOLATED_DEMO_PROTECTED",
+                "COMPLETED", "SAML_D_PARTITION", "SAML_D", 0, "ISOLATED_DEMO_PROTECTED",
                 risk_score, risk_band, ts
             ))
 
@@ -285,8 +274,8 @@ def ingest_real_data():
                 risk_score, risk_band, created_at
             ) VALUES %s
             ON CONFLICT (id) DO UPDATE SET
-                risk_score = EXCLUDED.risk_score,
-                risk_band = EXCLUDED.risk_band;
+                risk_score = COALESCE(transactions.risk_score, EXCLUDED.risk_score),
+                risk_band = COALESCE(transactions.risk_band, EXCLUDED.risk_band);
         """, txns_to_insert, page_size=2000)
         print("  [SUCCESS] 25,000 SAML-D transactions ingested.")
 
@@ -321,23 +310,12 @@ def ingest_real_data():
             if is_mule == 1:
                 protected_txns.append((t_id, "NFPC", 1, "MULE_ACCOUNT_TRANSFER", json.dumps({"is_mule": 1}), ts))
                 protected_accs.append((src, "NFPC", 1, "NFPC_CONFIRMED_MULE", json.dumps({"is_mule": 1}), ts))
-                risk_score = 94.0
-                risk_band = "CRITICAL"
-                laundering_alerts_seed.append((t_id, src, dest, f"CUST-{src}", amt, "INR", risk_score, risk_band, "Mule_Chain", ts))
             else:
                 protected_txns.append((t_id, "NFPC", 0, "NORMAL", json.dumps({"is_mule": 0}), ts))
-                if amt > 200000:
-                    risk_score = 70.0
-                    risk_band = "HIGH"
-                elif amt > 50000:
-                    risk_score = 40.0
-                    risk_band = "ELEVATED"
-                elif amt > 10000:
-                    risk_score = 20.0
-                    risk_band = "LOW"
-                else:
-                    risk_score = 8.0
-                    risk_band = "ROUTINE"
+
+            # Genuine score initialized as None/PENDING (Pipeline A - No label leakage)
+            risk_score = None
+            risk_band = "PENDING"
 
             cust_src = f"CUST-IND-{src}"
             if cust_src not in nfpc_cust_batch:
@@ -381,8 +359,8 @@ def ingest_real_data():
                 risk_score, risk_band, created_at
             ) VALUES %s
             ON CONFLICT (id) DO UPDATE SET
-                risk_score = EXCLUDED.risk_score,
-                risk_band = EXCLUDED.risk_band;
+                risk_score = COALESCE(transactions.risk_score, EXCLUDED.risk_score),
+                risk_band = COALESCE(transactions.risk_band, EXCLUDED.risk_band);
         """, nfpc_txns, page_size=2000)
         print("  [SUCCESS] 25,000 NFPC transactions ingested.")
 
