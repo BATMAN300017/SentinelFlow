@@ -289,7 +289,7 @@ def extract_transaction_features(conn: sqlite3.Connection, txn: Dict[str, Any]) 
     payment_channel = str(txn.get("payment_channel") or txn.get("payment_type") or "TRANSFER").lower()
     is_cash_channel = 1 if "cash" in payment_channel else 0
 
-    return {
+    res = {
         "amount": txn_amount,
         "log_amount": log_amount,
         "currency": curr,
@@ -319,6 +319,14 @@ def extract_transaction_features(conn: sqlite3.Connection, txn: Dict[str, Any]) 
         "is_cash_channel": float(is_cash_channel),
         "historical_amounts": amounts
     }
+
+    try:
+        from app.detection.point_in_time_features import extract_online_transaction_features
+        res["point_in_time_features"] = extract_online_transaction_features(conn, txn)
+    except Exception:
+        res["point_in_time_features"] = None
+
+    return res
 
 
 def compute_samld_stream_features(
