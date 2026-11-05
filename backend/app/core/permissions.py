@@ -51,6 +51,7 @@ ROLE_PERMISSIONS = {
         Permission.VIEW_RULES,
         Permission.SIMULATE_RULES,
         Permission.VIEW_LEARNING,
+        Permission.VIEW_AUDIT,
         Permission.EXPORT_REPORT,
     },
     Role.SENIOR_INVESTIGATOR: {

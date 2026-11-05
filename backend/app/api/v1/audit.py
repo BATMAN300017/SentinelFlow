@@ -42,8 +42,8 @@ def get_audit_trail(
         count_query += " AND resource_type = ?"
         params.append(resource_type.upper())
     if resource_id:
-        query += " AND (resource_id = ? OR metadata_json LIKE ?)"
-        count_query += " AND (resource_id = ? OR metadata_json LIKE ?)"
+        query += " AND (resource_id = ? OR CAST(metadata_json AS TEXT) LIKE ?)"
+        count_query += " AND (resource_id = ? OR CAST(metadata_json AS TEXT) LIKE ?)"
         params.extend([resource_id, f"%{resource_id}%"])
         
     cursor.execute(count_query, params)
@@ -57,12 +57,15 @@ def get_audit_trail(
     for r in cursor.fetchall():
         d = dict(r)
         d["metadata"] = safe_json_loads(d.get("metadata_json"), {})
+        for k, v in d.items():
+            if hasattr(v, "isoformat"):
+                d[k] = v.isoformat()
         events.append(d)
         
     return {
         "items": events,
         "total": total,
-        "page": page,
-        "page_size": page_size,
-        "total_pages": (total + page_size - 1) // page_size if page_size > 0 else 1
+        "page": page_int,
+        "page_size": page_size_int,
+        "total_pages": (total + page_size_int - 1) // page_size_int if page_size_int > 0 else 1
     }

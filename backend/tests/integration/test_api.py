@@ -73,5 +73,13 @@ class TestAPIEndpoints(unittest.TestCase):
         self.assertIsInstance(res, list)
         self.assertGreater(len(res), 0)
 
+    def test_audit_endpoint(self):
+        from app.api.v1.audit import get_audit_trail
+        res = get_audit_trail(page=1, page_size=10, current_user={"role": "investigator", "username": "sarah_investigator"}, db=self.conn)
+        self.assertIn("items", res)
+        self.assertIn("total", res)
+        self.assertEqual(res["page"], 1)
+        self.assertEqual(res["page_size"], 10)
+
 if __name__ == "__main__":
     unittest.main()

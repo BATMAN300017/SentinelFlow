@@ -211,5 +211,46 @@ class TestRegressionFixes(unittest.TestCase):
         normal_res = score_transaction(self.conn, normal_evt)
         self.assertLess(normal_res["final_risk_score"], 25.0)
 
+    def test_audit_trail_and_dashboard_kpi_resilience(self):
+        """Verifies Investigator can access audit trail and KPI summary is resilient."""
+        from app.core.permissions import Role, Permission, has_permission
+        from app.api.v1.audit import get_audit_trail
+        from app.services.analytics_service import get_kpi_summary
+        from app.services.audit_service import record_audit_event
+
+        # 1. Investigator has VIEW_AUDIT permission
+        self.assertTrue(has_permission(Role.INVESTIGATOR.value, Permission.VIEW_AUDIT))
+
+        # 2. Audit record creation and retrieval
+        record_audit_event(
+            conn=self.conn,
+            actor_id="usr-sarah",
+            actor_name="Sarah Investigator",
+            action="VIEW_DASHBOARD",
+            resource_type="TELEMETRY",
+            resource_id="TEL-001",
+            metadata={"source": "CommandCenter"}
+        )
+        self.conn.commit()
+
+        audit_res = get_audit_trail(
+            page=1,
+            page_size=20,
+            resource_id="TEL-001",
+            current_user={"role": "investigator", "username": "sarah_investigator"},
+            db=self.conn
+        )
+        self.assertEqual(audit_res["total"], 1)
+        self.assertEqual(audit_res["page"], 1)
+        self.assertEqual(audit_res["page_size"], 20)
+        self.assertEqual(audit_res["items"][0]["resource_id"], "TEL-001")
+
+        # 3. KPI summary resilient with and without data
+        kpi = get_kpi_summary(self.conn)
+        self.assertIn("transactions_processed", kpi)
+        self.assertIn("alerts_generated", kpi)
+        self.assertIn("open_investigations", kpi)
+        self.assertIn("high_priority_cases", kpi)
+
 if __name__ == "__main__":
     unittest.main()

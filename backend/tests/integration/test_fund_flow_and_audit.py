@@ -1,5 +1,11 @@
 import unittest
+import os
+import sys
 import sqlite3
+
+BACKEND_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, BACKEND_DIR)
+
 from app.core.database import SCHEMA_SQL
 from app.repositories.transaction_repository import create_transaction
 from app.api.v1.fund_flow import get_fund_flow
@@ -83,6 +89,32 @@ class TestFundFlowAndAudit(unittest.TestCase):
         self.assertGreaterEqual(res["total"], 1)
         found = any(item.get("resource_id") == self.txn1["id"] for item in res["items"])
         self.assertTrue(found)
+
+    def test_audit_trail_filtering_by_metadata(self):
+        # Test searching for token embedded inside metadata_json via CAST(metadata_json AS TEXT)
+        res = get_audit_trail(
+            page=1,
+            page_size=10,
+            resource_id="Mule chain detected",
+            current_user={"id": "test_user"},
+            db=self.conn
+        )
+        self.assertIn("items", res)
+        self.assertGreaterEqual(res["total"], 1)
+        found = any(item.get("resource_id") == self.txn1["id"] for item in res["items"])
+        self.assertTrue(found)
+
+    def test_audit_trail_pagination_fields(self):
+        res = get_audit_trail(
+            page=1,
+            page_size=10,
+            current_user={"id": "test_user"},
+            db=self.conn
+        )
+        self.assertEqual(res["page"], 1)
+        self.assertEqual(res["page_size"], 10)
+        self.assertIn("total_pages", res)
+        self.assertIsInstance(res["total_pages"], int)
 
 if __name__ == "__main__":
     unittest.main()

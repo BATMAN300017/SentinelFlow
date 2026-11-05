@@ -600,5 +600,15 @@ def init_db():
 
             conn.commit()
         else:
-            logger.info("Connected to Supabase PostgreSQL database. Schema managed via migrations.")
+            logger.info("Connected to Supabase PostgreSQL database. Running compatibility migrations...")
+            cursor = conn.cursor()
+            try:
+                cursor.execute("ALTER TABLE alerts ADD COLUMN IF NOT EXISTS is_demo INTEGER DEFAULT 0;")
+                cursor.execute("ALTER TABLE investigations ADD COLUMN IF NOT EXISTS is_demo INTEGER DEFAULT 0;")
+                cursor.execute("ALTER TABLE transactions ADD COLUMN IF NOT EXISTS dataset_source TEXT DEFAULT 'INDIA_SIMULATOR';")
+                cursor.execute("ALTER TABLE transactions ADD COLUMN IF NOT EXISTS scoring_status TEXT DEFAULT 'CURRENT';")
+                cursor.execute("ALTER TABLE analyst_feedback ADD COLUMN IF NOT EXISTS analyst_decision TEXT;")
+                conn.commit()
+            except Exception as pg_mig_err:
+                logger.warning(f"PostgreSQL migration check non-fatal notice: {pg_mig_err}")
     logger.info("Database schema initialized successfully.")

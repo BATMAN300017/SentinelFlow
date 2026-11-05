@@ -4,80 +4,150 @@ from datetime import datetime, timezone, timedelta
 
 def get_kpi_summary(conn: sqlite3.Connection) -> Dict[str, Any]:
     cursor = conn.cursor()
-    cursor.execute("""
-        SELECT COUNT(*) FROM transactions 
-        WHERE (dataset_source IS NULL OR dataset_source != 'DEMO_FIXTURE')
-          AND (scenario_id IS NULL OR scenario_id != 'DEMO_FIXTURE')
-    """)
-    txns_count = cursor.fetchone()[0]
+    try:
+        cursor.execute("""
+            SELECT COUNT(*) FROM transactions 
+            WHERE (dataset_source IS NULL OR dataset_source != 'DEMO_FIXTURE')
+              AND (scenario_id IS NULL OR scenario_id != 'DEMO_FIXTURE')
+        """)
+        txns_count = cursor.fetchone()[0]
+    except Exception:
+        cursor.execute("SELECT COUNT(*) FROM transactions")
+        txns_count = cursor.fetchone()[0]
     
-    cursor.execute("""
-        SELECT COUNT(*) FROM alerts 
-        WHERE (is_demo IS NULL OR is_demo = 0)
-          AND id NOT LIKE 'ALT-DEMO%'
-          AND title NOT LIKE '[DEMO FIXTURE]%'
-          AND (transaction_id IS NULL OR transaction_id NOT IN (SELECT id FROM transactions WHERE dataset_source = 'DEMO_FIXTURE'))
-    """)
-    alerts_count = cursor.fetchone()[0]
+    try:
+        cursor.execute("""
+            SELECT COUNT(*) FROM alerts 
+            WHERE (is_demo IS NULL OR is_demo = 0)
+              AND id NOT LIKE 'ALT-DEMO%'
+              AND title NOT LIKE '[DEMO FIXTURE]%'
+              AND (transaction_id IS NULL OR transaction_id NOT IN (SELECT id FROM transactions WHERE dataset_source = 'DEMO_FIXTURE'))
+        """)
+        alerts_count = cursor.fetchone()[0]
+    except Exception:
+        cursor.execute("""
+            SELECT COUNT(*) FROM alerts 
+            WHERE id NOT LIKE 'ALT-DEMO%'
+              AND title NOT LIKE '[DEMO FIXTURE]%'
+        """)
+        alerts_count = cursor.fetchone()[0]
     
-    cursor.execute("""
-        SELECT COUNT(*) FROM investigations 
-        WHERE status != 'RESOLVED' 
-          AND (is_demo IS NULL OR is_demo = 0)
-          AND id NOT LIKE 'INV-DEMO%'
-          AND case_number NOT LIKE 'CASE-DEMO%'
-          AND title NOT LIKE '[DEMO FIXTURE]%'
-    """)
-    open_invs = cursor.fetchone()[0]
+    try:
+        cursor.execute("""
+            SELECT COUNT(*) FROM investigations 
+            WHERE status != 'RESOLVED' 
+              AND (is_demo IS NULL OR is_demo = 0)
+              AND id NOT LIKE 'INV-DEMO%'
+              AND case_number NOT LIKE 'CASE-DEMO%'
+              AND title NOT LIKE '[DEMO FIXTURE]%'
+        """)
+        open_invs = cursor.fetchone()[0]
+    except Exception:
+        cursor.execute("""
+            SELECT COUNT(*) FROM investigations 
+            WHERE status != 'RESOLVED' 
+              AND id NOT LIKE 'INV-DEMO%'
+              AND case_number NOT LIKE 'CASE-DEMO%'
+              AND title NOT LIKE '[DEMO FIXTURE]%'
+        """)
+        open_invs = cursor.fetchone()[0]
     
-    cursor.execute("""
-        SELECT COUNT(*) FROM investigations 
-        WHERE priority = 'HIGH' 
-          AND status != 'RESOLVED' 
-          AND (is_demo IS NULL OR is_demo = 0)
-          AND id NOT LIKE 'INV-DEMO%'
-          AND case_number NOT LIKE 'CASE-DEMO%'
-          AND title NOT LIKE '[DEMO FIXTURE]%'
-    """)
-    high_priority = cursor.fetchone()[0]
+    try:
+        cursor.execute("""
+            SELECT COUNT(*) FROM investigations 
+            WHERE priority = 'HIGH' 
+              AND status != 'RESOLVED' 
+              AND (is_demo IS NULL OR is_demo = 0)
+              AND id NOT LIKE 'INV-DEMO%'
+              AND case_number NOT LIKE 'CASE-DEMO%'
+              AND title NOT LIKE '[DEMO FIXTURE]%'
+        """)
+        high_priority = cursor.fetchone()[0]
+    except Exception:
+        cursor.execute("""
+            SELECT COUNT(*) FROM investigations 
+            WHERE priority = 'HIGH' 
+              AND status != 'RESOLVED' 
+              AND id NOT LIKE 'INV-DEMO%'
+              AND case_number NOT LIKE 'CASE-DEMO%'
+              AND title NOT LIKE '[DEMO FIXTURE]%'
+        """)
+        high_priority = cursor.fetchone()[0]
     
-    cursor.execute("""
-        SELECT COUNT(*) FROM investigations 
-        WHERE disposition = 'CONFIRMED_FRAUD' 
-          AND (is_demo IS NULL OR is_demo = 0)
-          AND id NOT LIKE 'INV-DEMO%'
-          AND case_number NOT LIKE 'CASE-DEMO%'
-          AND title NOT LIKE '[DEMO FIXTURE]%'
-    """)
-    confirmed_fraud = cursor.fetchone()[0]
+    try:
+        cursor.execute("""
+            SELECT COUNT(*) FROM investigations 
+            WHERE disposition = 'CONFIRMED_FRAUD' 
+              AND (is_demo IS NULL OR is_demo = 0)
+              AND id NOT LIKE 'INV-DEMO%'
+              AND case_number NOT LIKE 'CASE-DEMO%'
+              AND title NOT LIKE '[DEMO FIXTURE]%'
+        """)
+        confirmed_fraud = cursor.fetchone()[0]
+    except Exception:
+        cursor.execute("""
+            SELECT COUNT(*) FROM investigations 
+            WHERE disposition = 'CONFIRMED_FRAUD' 
+              AND id NOT LIKE 'INV-DEMO%'
+              AND case_number NOT LIKE 'CASE-DEMO%'
+              AND title NOT LIKE '[DEMO FIXTURE]%'
+        """)
+        confirmed_fraud = cursor.fetchone()[0]
     
-    cursor.execute("""
-        SELECT COUNT(*) FROM investigations 
-        WHERE disposition IN ('LEGITIMATE_ACTIVITY', 'FALSE_POSITIVE') 
-          AND (is_demo IS NULL OR is_demo = 0)
-          AND id NOT LIKE 'INV-DEMO%'
-          AND case_number NOT LIKE 'CASE-DEMO%'
-          AND title NOT LIKE '[DEMO FIXTURE]%'
-    """)
-    fps = cursor.fetchone()[0]
+    try:
+        cursor.execute("""
+            SELECT COUNT(*) FROM investigations 
+            WHERE disposition IN ('LEGITIMATE_ACTIVITY', 'FALSE_POSITIVE') 
+              AND (is_demo IS NULL OR is_demo = 0)
+              AND id NOT LIKE 'INV-DEMO%'
+              AND case_number NOT LIKE 'CASE-DEMO%'
+              AND title NOT LIKE '[DEMO FIXTURE]%'
+        """)
+        fps = cursor.fetchone()[0]
+    except Exception:
+        cursor.execute("""
+            SELECT COUNT(*) FROM investigations 
+            WHERE disposition IN ('LEGITIMATE_ACTIVITY', 'FALSE_POSITIVE') 
+              AND id NOT LIKE 'INV-DEMO%'
+              AND case_number NOT LIKE 'CASE-DEMO%'
+              AND title NOT LIKE '[DEMO FIXTURE]%'
+        """)
+        fps = cursor.fetchone()[0]
     
-    cursor.execute("""
-        SELECT COUNT(*) FROM investigations 
-        WHERE status = 'RESOLVED' 
-          AND (is_demo IS NULL OR is_demo = 0)
-          AND id NOT LIKE 'INV-DEMO%'
-          AND case_number NOT LIKE 'CASE-DEMO%'
-          AND title NOT LIKE '[DEMO FIXTURE]%'
-    """)
-    resolved = cursor.fetchone()[0]
-    cursor.execute("""
-        SELECT COUNT(*) FROM investigations 
-        WHERE (is_demo IS NULL OR is_demo = 0)
-          AND id NOT LIKE 'INV-DEMO%'
-          AND case_number NOT LIKE 'CASE-DEMO%'
-          AND title NOT LIKE '[DEMO FIXTURE]%'
-    """)
-    total_invs = cursor.fetchone()[0]
+    try:
+        cursor.execute("""
+            SELECT COUNT(*) FROM investigations 
+            WHERE status = 'RESOLVED' 
+              AND (is_demo IS NULL OR is_demo = 0)
+              AND id NOT LIKE 'INV-DEMO%'
+              AND case_number NOT LIKE 'CASE-DEMO%'
+              AND title NOT LIKE '[DEMO FIXTURE]%'
+        """)
+        resolved = cursor.fetchone()[0]
+        cursor.execute("""
+            SELECT COUNT(*) FROM investigations 
+            WHERE (is_demo IS NULL OR is_demo = 0)
+              AND id NOT LIKE 'INV-DEMO%'
+              AND case_number NOT LIKE 'CASE-DEMO%'
+              AND title NOT LIKE '[DEMO FIXTURE]%'
+        """)
+        total_invs = cursor.fetchone()[0]
+    except Exception:
+        cursor.execute("""
+            SELECT COUNT(*) FROM investigations 
+            WHERE status = 'RESOLVED' 
+              AND id NOT LIKE 'INV-DEMO%'
+              AND case_number NOT LIKE 'CASE-DEMO%'
+              AND title NOT LIKE '[DEMO FIXTURE]%'
+        """)
+        resolved = cursor.fetchone()[0]
+        cursor.execute("""
+            SELECT COUNT(*) FROM investigations 
+            WHERE id NOT LIKE 'INV-DEMO%'
+              AND case_number NOT LIKE 'CASE-DEMO%'
+              AND title NOT LIKE '[DEMO FIXTURE]%'
+        """)
+        total_invs = cursor.fetchone()[0]
     
     completion_rate = round((resolved / total_invs) * 100.0, 1) if total_invs > 0 else 0.0
     total_reviewed = confirmed_fraud + fps

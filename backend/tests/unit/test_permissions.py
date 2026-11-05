@@ -17,6 +17,9 @@ class TestPermissions(unittest.TestCase):
     def test_investigator_can_submit_disposition(self):
         self.assertTrue(has_permission(Role.INVESTIGATOR.value, Permission.SUBMIT_DISPOSITION))
 
+    def test_investigator_can_view_audit(self):
+        self.assertTrue(has_permission(Role.INVESTIGATOR.value, Permission.VIEW_AUDIT))
+
     def test_senior_investigator_can_approve_disposition(self):
         self.assertTrue(has_permission(Role.SENIOR_INVESTIGATOR.value, Permission.APPROVE_DISPOSITION))
 
