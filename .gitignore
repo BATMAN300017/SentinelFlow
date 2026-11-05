@@ -61,3 +61,8 @@ Thumbs.db
 # Local Scratch and Evaluation
 scratch/
 eval_summary_metrics.json
+
+# Large raw datasets
+*.zip
+data/saml_d/SAML-D.csv
+data/saml_d/*.zip
