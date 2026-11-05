@@ -57,3 +57,7 @@ pnpm-debug.log*
 # OS
 .DS_Store
 Thumbs.db
+
+# Local Scratch and Evaluation
+scratch/
+eval_summary_metrics.json

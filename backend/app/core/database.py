@@ -63,6 +63,9 @@ class PostgresCursorWrapper:
                 query = query.rstrip("; \n\t") + " ON CONFLICT DO NOTHING"
         if "?" in query:
             query = query.replace("?", "%s")
+        if "unixepoch(" in query.lower():
+            import re
+            query = re.sub(r'unixepoch\(([^)]+)\)', lambda m: 'EXTRACT(EPOCH FROM ' + m.group(1) + ')', query, flags=re.IGNORECASE)
         return query
 
     def execute(self, query, params=None):

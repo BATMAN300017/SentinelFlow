@@ -716,6 +716,7 @@ class IndependentEvaluator:
 
         return {
             "dataset_name": "SAML_D",
+            "status": "EVALUATED",
             "evaluation_type": "UNTOUCHED_CHRONOLOGICAL_TEST_SET",
             "evaluation_split": "FINAL_30_PERCENT_HOLD_OUT",
             "is_untouched_test": True,

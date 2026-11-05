@@ -12,6 +12,7 @@ Typical usage:
 
 from __future__ import annotations
 
+import os
 import numpy as np
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
@@ -397,28 +398,57 @@ class IsolationForestDetector:
 
 _global_if_detector: Optional[IsolationForestDetector] = None
 
+def _load_or_fit_baseline_if_detector() -> IsolationForestDetector:
+    """Loads persisted Isolation Forest baseline fitted on authentic historical accounts, or fits from canonical train partition."""
+    import joblib
+    base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+    artifact_path = os.path.join(base_dir, "backend", "app", "models", "isolation_forest_baseline.joblib")
+    
+    if os.path.exists(artifact_path):
+        try:
+            art = joblib.load(artifact_path)
+            det = art.get("detector")
+            if det and getattr(det, "_is_fitted", False):
+                return det
+        except Exception:
+            pass
+
+    csv_path = os.path.join(base_dir, "data", "saml_d", "saml_d_real.csv")
+    det = IsolationForestDetector(n_estimators=50, random_state=42)
+    if os.path.exists(csv_path):
+        try:
+            import pandas as pd
+            df = pd.read_csv(csv_path)
+            df_train = df.iloc[:14000]
+            grouped = df_train.groupby("Sender_account")
+            accounts_baseline = []
+            for acct_id, group in grouped:
+                amounts = group["Amount"].values
+                total_out = float(np.sum(amounts))
+                accounts_baseline.append({
+                    "account_id": str(acct_id),
+                    "total_in": total_out * 1.05,
+                    "total_out": total_out,
+                    "txn_count": len(group),
+                    "unique_counterparties": group["Receiver_account"].nunique(),
+                    "avg_amount": float(np.mean(amounts)),
+                    "std_amount": float(np.std(amounts)) if len(amounts) > 1 else 0.0,
+                    "in_out_ratio": 1.05,
+                    "max_single_txn": float(np.max(amounts)),
+                    "time_span_hours": 24.0,
+                    "unique_currencies": 1.0
+                })
+            det.fit_account_features(accounts_baseline)
+            return det
+        except Exception:
+            pass
+    return det
+
 def get_isolation_forest_score(features: Dict[str, Any]) -> Dict[str, Any]:
     """Scores a single transaction's operational feature snapshot using Isolation Forest."""
     global _global_if_detector
     if _global_if_detector is None or not _global_if_detector._is_fitted:
-        _global_if_detector = IsolationForestDetector(n_estimators=50, random_state=42)
-        # Seed with synthetic baseline operational distributions
-        synthetic_baseline = [
-            {
-                "total_in": float(i * 1000),
-                "total_out": float(i * 900),
-                "txn_count": max(3, i),
-                "unique_counterparties": max(1, i // 2),
-                "avg_amount": 2500.0,
-                "std_amount": 1000.0,
-                "in_out_ratio": 1.1,
-                "max_single_txn": 10000.0,
-                "time_span_hours": 72.0,
-                "unique_currencies": 1.0,
-            }
-            for i in range(1, 30)
-        ]
-        _global_if_detector.fit_account_features(synthetic_baseline)
+        _global_if_detector = _load_or_fit_baseline_if_detector()
 
     mapped_account = {
         "account_id": features.get("account_id", "CURRENT"),

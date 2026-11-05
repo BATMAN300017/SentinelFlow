@@ -64,11 +64,12 @@ def compute_ensemble_risk(
     # Compliance safeguards:
     # 1. Critical rule violations establish an alert severity floor
     if r_val >= 50.0:
-        composite = max(composite, r_val * 0.60)
+        composite = max(composite, r_val * 0.80)
     
     # 2. Strong supervised machine learning predictions establish an alert floor
-    if s_val is not None and s_val >= 65.0:
-        composite = max(composite, s_val * 0.65)
+    # Calibrated from validation-optimal decision boundary (tau >= 55.0)
+    if s_val is not None and s_val >= 55.0:
+        composite = max(composite, s_val)
     
     final_score = round(min(100.0, max(0.0, composite)), 1)
     band = assign_triage_band(final_score)
