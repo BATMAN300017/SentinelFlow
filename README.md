@@ -42,7 +42,7 @@ SentinelFlow AI transforms the investigative process through four foundational p
 - Python 3.11+ (installed)
 - Virtual environment (optional but recommended)
 
-### 1-Minute Launch
+### on your local PC
 ```bash
 # 1. Clone or navigate to the repository
 cd sentinelflow-ai
