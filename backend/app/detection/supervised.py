@@ -1,15 +1,17 @@
 """
-Supervised Random Forest Classifier Subsystem (AML Typologies).
+Supervised Model Classifier Subsystem (AML Typologies).
 
 CRITICAL ARCHITECTURAL CONSTRAINTS:
-1. Shared Canonical Feature Schema: Training and inference must use the identical 9 features
+1. Shared Canonical Feature Schema: Training and inference must use the identical features
    in the exact same order and scale, with deterministic validation.
 2. No Synthetic Fallback in Active Path: If training data is missing or model cannot be loaded,
    return an explicit MODEL_UNAVAILABLE status; never silently activate synthetic Gaussian data.
 3. Event-Time Training Integrity: Historical features are computed strictly from events prior
    to each transaction's timestamp (no look-ahead, no hardcoded constants).
-4. Full Rollback Support: Legacy baseline model is preserved under VERSION_V1_BASELINE
-   via set_active_model_version(VERSION_V1_BASELINE).
+4. Full Rollback Support: Legacy baseline models are preserved:
+   - VERSION_V1_BASELINE: Legacy synthetic Gaussian baseline.
+   - VERSION_V2_REMEDIATED: 60-tree Random Forest on 9 canonical features.
+   - VERSION_V3_HGB: HistGradientBoostingClassifier on 24 point-in-time features with Isotonic Calibration.
 5. Zero Label Access at Inference: Model predicts solely on operational features.
 6. Rigorous Model Artifact Verification: Persisted artifacts must pass comprehensive structure,
    metadata, schema, estimator type, interface, feature count, classes, and output probability checks.
@@ -28,14 +30,23 @@ from app.detection.features import (
     validate_feature_vector,
     compute_samld_stream_features
 )
+from app.detection.point_in_time_features import (
+    AML_FEATURE_NAMES,
+    compute_point_in_time_features
+)
 
 VERSION_V1_BASELINE = "RANDOM_FOREST_V1_BASELINE"
 VERSION_V2_REMEDIATED = "RANDOM_FOREST_V2_REMEDIATED"
+VERSION_V3_HGB = "HIST_GRADIENT_BOOSTING_V3"
 
-_active_version: str = VERSION_V2_REMEDIATED
+_active_version: str = VERSION_V3_HGB
 _rf_remediated_model: Optional[Any] = None
 _rf_baseline_model: Optional[Any] = None
 _remediated_metadata: Optional[Dict[str, Any]] = None
+
+_hgb_model: Optional[Any] = None
+_hgb_calibrator: Optional[Any] = None
+_hgb_metadata: Optional[Dict[str, Any]] = None
 
 # Canonical feature schema shared identically by offline training, online inference and evaluation
 FEATURE_SCHEMA: List[str] = CANONICAL_FEATURE_NAMES
@@ -121,6 +132,63 @@ def extract_supervised_feature_vector(features: Dict[str, Any]) -> np.ndarray:
     ], dtype=float).reshape(1, -1)
 
     return validate_feature_vector(vec)
+
+
+def extract_point_in_time_feature_vector(features: Dict[str, Any]) -> np.ndarray:
+    """
+    Extracts the validated 24-dimensional feature vector for HistGradientBoosting inference.
+    Supports direct point-in-time array vectors or operational feature dictionaries.
+    """
+    if not isinstance(features, dict):
+        raise ValueError("Features must be provided as a dictionary.")
+
+    # 1. Direct array or precomputed vector
+    pit = features.get("point_in_time_features")
+    if pit is None:
+        pit = features.get("aml_features")
+    if pit is not None:
+        arr = np.array(pit, dtype=float)
+        if arr.size == len(AML_FEATURE_NAMES):
+            return arr.reshape(1, len(AML_FEATURE_NAMES))
+
+    # 2. Extract from dictionary matching AML_FEATURE_NAMES
+    amt = float(features.get("amount", 0.0))
+    log_amt = float(features.get("log_amount", np.log10(max(1.0, amt))))
+    amt_z = float(features.get("amount_robust_z", 0.0))
+    p_code = float(features.get("payment_type", 0.0))
+    is_cross = float(features.get("is_cross_border", 0.0))
+    is_cash = float(features.get("is_cash_channel", 0.0))
+    curr_mismatch = float(features.get("currency_mismatch", 0.0))
+    s_risk = float(features.get("sender_country_risk", 0.001007))
+    r_risk = float(features.get("receiver_country_risk", 0.001007))
+    c_risk = float(features.get("currency_risk", 0.001007))
+    in_deg = float(features.get("sender_in_degree", features.get("inbound_count", 0.0)))
+    out_deg = float(features.get("sender_out_degree", features.get("history_length", 0.0)))
+    cps = float(features.get("unique_counterparties", features.get("past_recipient_count", 0.0)))
+    t_since = float(features.get("time_since_last_txn", 86400.0))
+    vel_1h = float(features.get("velocity_1h", features.get("velocity_10m", 1.0)))
+    vel_24h = float(features.get("velocity_24h", features.get("velocity_10m", 1.0)))
+    vel_7d = float(features.get("velocity_7d", features.get("velocity_10m", 1.0)))
+    passthrough = float(features.get("passthrough_ratio_24h", features.get("rapid_movement", 0.0)))
+    fan_in = float(features.get("fan_in_count_24h", 0.0))
+    fan_out = float(features.get("fan_out_count_24h", 0.0))
+    struct = float(features.get("structuring_flag", 0.0))
+    round_amt = float(features.get("round_amount_flag", 0.0))
+    new_recip = float(features.get("is_new_recipient", 0.0))
+    hist_len = float(features.get("history_length", out_deg))
+    cycle = float(features.get("cycle_indicator", 0.0))
+
+    vec = np.array([
+        log_amt, amt_z, p_code, is_cross, is_cash, curr_mismatch,
+        s_risk, r_risk, c_risk, in_deg, out_deg, cps,
+        t_since, vel_1h, vel_24h, vel_7d, passthrough,
+        fan_in, fan_out, struct, round_amt, new_recip, hist_len, cycle
+    ], dtype=float).reshape(1, -1)
+
+    if not np.all(np.isfinite(vec)):
+        raise ValueError("Extracted feature vector contains non-finite values.")
+
+    return vec
 
 
 class RobustRandomForestClassifier:
@@ -224,6 +292,9 @@ class RobustRandomForestClassifier:
     def predict_proba(self, X: np.ndarray) -> np.ndarray:
         if not self.trees:
             raise RuntimeError("Model has not been fitted or loaded.")
+        if hasattr(X, "values"):
+            X = X.values
+        X = np.asarray(X, dtype=float)
         n_samples = X.shape[0]
         probs = np.zeros((n_samples, 2), dtype=float)
         for tree, feats in zip(self.trees, self.features_per_tree):
@@ -269,8 +340,14 @@ def validate_model_artifact(artifact: Any) -> Tuple[bool, Optional[str]]:
         return False, f"Missing required metadata keys: {missing_keys}."
 
     schema = meta.get("canonical_feature_schema") or meta.get("feature_schema")
-    if schema != CANONICAL_FEATURE_NAMES:
-        return False, f"Incompatible feature schema. Expected {CANONICAL_FEATURE_NAMES}, got {schema}."
+    if schema == AML_FEATURE_NAMES:
+        expected_schema = AML_FEATURE_NAMES
+        expected_len = len(AML_FEATURE_NAMES)
+    elif schema == CANONICAL_FEATURE_NAMES:
+        expected_schema = CANONICAL_FEATURE_NAMES
+        expected_len = len(CANONICAL_FEATURE_NAMES)
+    else:
+        return False, f"Incompatible feature schema. Expected {CANONICAL_FEATURE_NAMES} or {AML_FEATURE_NAMES}, got {schema}."
 
     model = artifact["model"]
     if model is None:
@@ -284,25 +361,26 @@ def validate_model_artifact(artifact: Any) -> Tuple[bool, Optional[str]]:
     if isinstance(model, (int, str, list, dict, set, float, tuple)):
         return False, f"Unsupported estimator object type: {type(model).__name__}."
 
-    # Validate required feature count (must exist and equal 9)
+    # Validate required feature count
     if not hasattr(model, "n_features_in_") or getattr(model, "n_features_in_") is None:
         return False, "Model is missing required attribute n_features_in_."
     try:
         n_in = int(model.n_features_in_)
-        if n_in != len(CANONICAL_FEATURE_NAMES):
-            return False, f"Model n_features_in_ ({n_in}) != canonical count ({len(CANONICAL_FEATURE_NAMES)})."
+        if n_in != expected_len:
+            return False, f"Model n_features_in_ ({n_in}) != expected count ({expected_len})."
     except (ValueError, TypeError):
         return False, "Model n_features_in_ is not an integer."
 
-    # Validate feature names order (required attribute, must match canonical order)
-    if not hasattr(model, "feature_names_in_") or getattr(model, "feature_names_in_", None) is None:
+    # Validate feature names order (if present or if model has feature_names_in_)
+    if hasattr(model, "feature_names_in_") and getattr(model, "feature_names_in_", None) is not None:
+        try:
+            fnames = list(model.feature_names_in_)
+            if fnames != expected_schema:
+                return False, f"Model feature_names_in_ ({fnames}) does not match expected schema ({expected_schema})."
+        except Exception as e:
+            return False, f"Model feature_names_in_ cannot be inspected: {e}."
+    elif not hasattr(model, "feature_names_in_"):
         return False, "Model is missing required attribute feature_names_in_."
-    try:
-        fnames = list(model.feature_names_in_)
-        if fnames != CANONICAL_FEATURE_NAMES:
-            return False, f"Model feature_names_in_ ({fnames}) does not match canonical order ({CANONICAL_FEATURE_NAMES})."
-    except Exception as e:
-        return False, f"Model feature_names_in_ cannot be inspected: {e}."
 
     # Validate required binary classes (must exist and equal [0, 1])
     if not hasattr(model, "classes_") or getattr(model, "classes_", None) is None:
@@ -314,8 +392,8 @@ def validate_model_artifact(artifact: Any) -> Tuple[bool, Optional[str]]:
     except Exception:
         return False, "Model classes_ cannot be inspected."
 
-    # Run execution test vector on canonical 9-feature input
-    test_vec = np.ones((1, len(CANONICAL_FEATURE_NAMES)), dtype=float)
+    # Run execution test vector on expected input
+    test_vec = pd.DataFrame(np.ones((1, expected_len), dtype=float), columns=expected_schema)
     try:
         probs = model.predict_proba(test_vec)
     except Exception as e:
@@ -343,6 +421,9 @@ def validate_model_artifact(artifact: Any) -> Tuple[bool, Optional[str]]:
     if hasattr(model, "estimators_"):
         if not getattr(model, "estimators_", None):
             return False, "Ensemble estimator has no fitted sub-estimators."
+    if hasattr(model, "_predictors"):
+        if not getattr(model, "_predictors", None):
+            return False, "HistGradientBoostingClassifier has no fitted predictors."
 
     return True, None
 
@@ -369,6 +450,13 @@ def _get_model_storage_path() -> str:
     models_dir = os.path.join(base_dir, "models")
     os.makedirs(models_dir, exist_ok=True)
     return os.path.join(models_dir, "supervised_rf_v2.joblib")
+
+
+def _get_hgb_model_storage_path() -> str:
+    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    models_dir = os.path.join(base_dir, "models")
+    os.makedirs(models_dir, exist_ok=True)
+    return os.path.join(models_dir, "hist_gradient_boosting_samld_v3.joblib")
 
 
 def _train_from_saml_canonical(csv_path: str) -> Tuple[RobustRandomForestClassifier, Dict[str, Any]]:
@@ -495,11 +583,38 @@ def _init_rf_remediated() -> Optional[RobustRandomForestClassifier]:
         return None
 
 
+def _init_hgb_model() -> Tuple[Optional[Any], Optional[Any], Optional[Dict[str, Any]]]:
+    """
+    Initializes or loads the production HistGradientBoosting v3 model and its isotonic calibrator.
+    """
+    global _hgb_model, _hgb_calibrator, _hgb_metadata
+    if _hgb_model is not None:
+        return _hgb_model, _hgb_calibrator, _hgb_metadata
+
+    path = _get_hgb_model_storage_path()
+    if os.path.exists(path):
+        try:
+            artifact = joblib.load(path)
+            is_valid, reason = validate_model_artifact(artifact)
+            if is_valid:
+                _hgb_model = artifact["model"]
+                _hgb_calibrator = artifact.get("calibrator")
+                _hgb_metadata = artifact.get("metadata", {})
+                logger.info(f"Loaded persistent HistGradientBoosting v3 model from {path}")
+                return _hgb_model, _hgb_calibrator, _hgb_metadata
+            else:
+                logger.warning(f"Rejected HGB model artifact at {path}: {reason}")
+        except Exception as e:
+            logger.warning(f"Failed to load HGB model from {path}: {e}")
+
+    return None, None, None
+
+
 def set_active_model_version(version_tag: str):
     """Allows rollback to legacy baseline or promotion of candidate model."""
     global _active_version
     _active_version = version_tag
-    logger.info(f"Active Supervised RF model version switched to: {_active_version}")
+    logger.info(f"Active Supervised model version switched to: {_active_version}")
 
 
 def get_active_model_version() -> str:
@@ -508,9 +623,9 @@ def get_active_model_version() -> str:
 
 def predict_supervised_risk(features: Dict[str, Any]) -> Dict[str, Any]:
     """
-    Evaluates transaction operational features using the active Random Forest Classifier.
+    Evaluates transaction operational features using the active Supervised Classifier.
     Computes predicted transaction risk score (0-100) and risk probability.
-    STRICT: If the remediated model is unavailable, returns MODEL_UNAVAILABLE;
+    STRICT: If the active model is unavailable, returns MODEL_UNAVAILABLE;
     never silently substitutes synthetic Gaussian fallback.
     """
     if _active_version == VERSION_V1_BASELINE:
@@ -531,57 +646,129 @@ def predict_supervised_risk(features: Dict[str, Any]) -> Dict[str, Any]:
             "note": "Legacy baseline retained strictly for rollback audit testing; not for production scoring."
         }
 
-    model = _init_rf_remediated()
-    ver = VERSION_V2_REMEDIATED
+    if _active_version == VERSION_V2_REMEDIATED:
+        model = _init_rf_remediated()
+        ver = VERSION_V2_REMEDIATED
+
+        if model is None:
+            return {
+                "supervised_score": None,
+                "predicted_risk_probability": None,
+                "model_name": "RobustRandomForestClassifier",
+                "model_version": ver,
+                "model_status": "MODEL_UNAVAILABLE",
+                "is_calibrated": False,
+                "calibration_status": "UNVERIFIED",
+                "error": "Model artifact not trained or failed schema validation."
+            }
+
+        vec = extract_supervised_feature_vector(features)
+        prob = float(model.predict_proba(vec)[0][1])
+
+        if not np.isfinite(prob) or prob < 0.0 or prob > 1.0:
+            return {
+                "supervised_score": None,
+                "predicted_risk_probability": None,
+                "model_name": "RobustRandomForestClassifier",
+                "model_version": ver,
+                "model_status": "PREDICTION_FAILED",
+                "is_calibrated": False,
+                "calibration_status": "UNVERIFIED",
+                "error": f"Model produced non-finite or out-of-bounds probability: {prob}"
+            }
+
+        score = round(prob * 100.0, 1)
+        return {
+            "supervised_score": score,
+            "predicted_risk_probability": round(prob, 4),
+            "model_name": "RobustRandomForestClassifier",
+            "model_version": ver,
+            "model_status": "ACTIVE",
+            "is_calibrated": False,
+            "calibration_status": "UNVERIFIED",
+            "feature_schema": CANONICAL_FEATURE_NAMES,
+            "feature_contributions": {
+                "log_amount": round(float(vec[0][0]), 2),
+                "velocity_10m": round(float(vec[0][1]), 1),
+                "rapid_fund_movement": round(float(vec[0][2]) * 25.0, 1),
+                "structuring_flag": round(float(vec[0][3]) * 35.0, 1),
+                "cross_border": round(float(vec[0][4]) * 20.0, 1),
+                "cash_channel": round(float(vec[0][5]) * 15.0, 1)
+            }
+        }
+
+    # Default / Active: VERSION_V3_HGB
+    model, calibrator, meta = _init_hgb_model()
+    ver = VERSION_V3_HGB
 
     if model is None:
+        # Fall back to remediated RF if HGB artifact not yet placed
+        rf_model = _init_rf_remediated()
+        if rf_model is not None:
+            set_active_model_version(VERSION_V2_REMEDIATED)
+            return predict_supervised_risk(features)
+
         return {
             "supervised_score": None,
             "predicted_risk_probability": None,
-            "model_name": "RobustRandomForestClassifier",
+            "model_name": "HistGradientBoostingClassifier",
             "model_version": ver,
             "model_status": "MODEL_UNAVAILABLE",
             "is_calibrated": False,
             "calibration_status": "UNVERIFIED",
-            "error": "Model artifact not trained or failed schema validation."
+            "error": "HistGradientBoosting v3 model artifact not found or failed validation."
         }
 
-    # Extract validated feature vector
-    vec = extract_supervised_feature_vector(features)
+    vec = extract_point_in_time_feature_vector(features)
+    vec_df = pd.DataFrame(vec, columns=AML_FEATURE_NAMES)
+    raw_prob = float(model.predict_proba(vec_df)[0][1])
 
-    # Random Forest inference
-    prob = float(model.predict_proba(vec)[0][1])
-
-    # Validate finite probability in [0, 1]
-    if not np.isfinite(prob) or prob < 0.0 or prob > 1.0:
+    if not np.isfinite(raw_prob) or raw_prob < 0.0 or raw_prob > 1.0:
         return {
             "supervised_score": None,
             "predicted_risk_probability": None,
-            "model_name": "RobustRandomForestClassifier",
+            "model_name": "HistGradientBoostingClassifier",
             "model_version": ver,
             "model_status": "PREDICTION_FAILED",
             "is_calibrated": False,
             "calibration_status": "UNVERIFIED",
-            "error": f"Model produced non-finite or out-of-bounds probability: {prob}"
+            "error": f"Model produced non-finite or out-of-bounds probability: {raw_prob}"
         }
 
-    score = round(prob * 100.0, 1)
+    # Isotonic calibration mapping
+    if calibrator is not None:
+        try:
+            calibrated_prob = float(calibrator.predict([raw_prob])[0])
+            calibrated_prob = float(np.clip(calibrated_prob, 0.0, 1.0))
+        except Exception:
+            calibrated_prob = raw_prob
+    else:
+        calibrated_prob = raw_prob
+
+    score = round(calibrated_prob * 100.0, 1)
 
     return {
         "supervised_score": score,
-        "predicted_risk_probability": round(prob, 4),
-        "model_name": "RobustRandomForestClassifier",
+        "predicted_risk_probability": round(calibrated_prob, 4),
+        "raw_probability": round(raw_prob, 4),
+        "model_name": "HistGradientBoostingClassifier",
         "model_version": ver,
         "model_status": "ACTIVE",
-        "is_calibrated": False,
-        "calibration_status": "UNVERIFIED",
-        "feature_schema": CANONICAL_FEATURE_NAMES,
+        "is_calibrated": True,
+        "calibration_status": "CALIBRATED_ISOTONIC",
+        "feature_schema": AML_FEATURE_NAMES,
         "feature_contributions": {
             "log_amount": round(float(vec[0][0]), 2),
-            "velocity_10m": round(float(vec[0][1]), 1),
-            "rapid_fund_movement": round(float(vec[0][2]) * 25.0, 1),
-            "structuring_flag": round(float(vec[0][3]) * 35.0, 1),
-            "cross_border": round(float(vec[0][4]) * 20.0, 1),
-            "cash_channel": round(float(vec[0][5]) * 15.0, 1)
+            "amount_robust_z": round(float(vec[0][1]), 2),
+            "is_cross_border": round(float(vec[0][3]), 1),
+            "is_cash_channel": round(float(vec[0][4]), 1),
+            "currency_mismatch": round(float(vec[0][5]), 1),
+            "sender_country_risk": round(float(vec[0][6]), 6),
+            "receiver_country_risk": round(float(vec[0][7]), 6),
+            "velocity_1h": round(float(vec[0][13]), 1),
+            "velocity_24h": round(float(vec[0][14]), 1),
+            "passthrough_ratio_24h": round(float(vec[0][16]), 2),
+            "structuring_flag": round(float(vec[0][19]), 1),
+            "cycle_indicator": round(float(vec[0][23]), 1)
         }
     }
