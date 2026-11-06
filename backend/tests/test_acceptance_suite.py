@@ -27,8 +27,17 @@ Proves all 20 required acceptance criteria:
 import unittest
 import sqlite3
 import os
+import sys
 import shutil
 from datetime import datetime, timezone
+
+os.environ["SENTINELFLOW_USE_SQLITE"] = "1"
+os.environ["TESTING"] = "1"
+
+TEST_DIR = os.path.dirname(os.path.abspath(__file__))
+BACKEND_DIR = os.path.dirname(TEST_DIR)
+if BACKEND_DIR not in sys.path:
+    sys.path.insert(0, BACKEND_DIR)
 
 from app.core.database import init_db, get_db_connection
 from app.data_ingestion.saml_d_adapter import SamlDAdapter

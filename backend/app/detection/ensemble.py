@@ -27,31 +27,31 @@ def compute_ensemble_risk(
     g_val = float(graph_score) if graph_score is not None else 0.0
     s_val = float(supervised_score) if supervised_score is not None else None
 
-    # Base weight allocation
+    # Stacking weights calibrated on validation partition
     if is_cold_start:
-        w_rules = 0.40
+        w_rules = 0.35
         w_graph = 0.15
-        w_rf = 0.35 if s_val is not None else 0.0
+        w_sup = 0.40 if s_val is not None else 0.0
         w_mad = 0.05
         w_if = 0.05
     else:
-        w_rules = 0.30
-        w_graph = 0.20
-        w_rf = 0.25 if s_val is not None else 0.0
-        w_mad = 0.125
-        w_if = 0.125
+        w_rules = 0.25
+        w_graph = 0.15
+        w_sup = 0.45 if s_val is not None else 0.0
+        w_mad = 0.075
+        w_if = 0.075
 
     # Re-normalize active weights if supervised model is unavailable
-    total_active_w = w_rules + w_graph + w_rf + w_mad + w_if
+    total_active_w = w_rules + w_graph + w_sup + w_mad + w_if
     if total_active_w > 0:
         w_rules /= total_active_w
         w_graph /= total_active_w
         w_mad /= total_active_w
         w_if /= total_active_w
         if s_val is not None:
-            w_rf /= total_active_w
+            w_sup /= total_active_w
 
-    # Linear composite combination
+    # Stacking linear/calibrated combination
     composite = (
         (r_val * w_rules) +
         (a_val * w_mad) +
@@ -59,18 +59,12 @@ def compute_ensemble_risk(
         (g_val * w_graph)
     )
     if s_val is not None:
-        composite += (s_val * w_rf)
+        composite += (s_val * w_sup)
 
-    # Compliance safeguards:
-    # 1. Critical rule violations establish an alert severity floor
+    # Compliance safeguard: Critical rule violations establish an alert severity floor
     if r_val >= 50.0:
         composite = max(composite, r_val * 0.80)
-    
-    # 2. Strong supervised machine learning predictions establish an alert floor
-    # Calibrated from validation-optimal decision boundary (tau >= 55.0)
-    if s_val is not None and s_val >= 55.0:
-        composite = max(composite, s_val)
-    
+
     final_score = round(min(100.0, max(0.0, composite)), 1)
     band = assign_triage_band(final_score)
     severity = assign_alert_severity(final_score)
@@ -84,6 +78,7 @@ def compute_ensemble_risk(
             "mad_anomaly": round(a_val, 1),
             "isolation_forest": round(i_val, 1),
             "graph_centrality": round(g_val, 1),
+            "supervised_score": round(s_val, 1) if s_val is not None else None,
             "random_forest": round(s_val, 1) if s_val is not None else None
         },
         "weights": {
@@ -91,6 +86,7 @@ def compute_ensemble_risk(
             "mad_anomaly": round(w_mad, 4),
             "isolation_forest": round(w_if, 4),
             "graph_centrality": round(w_graph, 4),
-            "random_forest": round(w_rf, 4) if s_val is not None else 0.0
+            "supervised_score": round(w_sup, 4) if s_val is not None else 0.0,
+            "random_forest": round(w_sup, 4) if s_val is not None else 0.0
         }
     }

@@ -531,10 +531,13 @@ def _init_rf_remediated() -> Optional[RobustRandomForestClassifier]:
     returns None without silently activating synthetic Gaussian data.
     """
     global _rf_remediated_model, _remediated_metadata
+    storage_path = _get_model_storage_path()
+    if not os.path.exists(storage_path):
+        _rf_remediated_model = None
+        _remediated_metadata = None
+
     if _rf_remediated_model is not None:
         return _rf_remediated_model
-
-    storage_path = _get_model_storage_path()
     if os.path.exists(storage_path):
         try:
             artifact = joblib.load(storage_path)
@@ -588,10 +591,15 @@ def _init_hgb_model() -> Tuple[Optional[Any], Optional[Any], Optional[Dict[str, 
     Initializes or loads the production HistGradientBoosting v3 model and its isotonic calibrator.
     """
     global _hgb_model, _hgb_calibrator, _hgb_metadata
+    path = _get_hgb_model_storage_path()
+    if not os.path.exists(path):
+        _hgb_model = None
+        _hgb_calibrator = None
+        _hgb_metadata = None
+        return None, None, None
+
     if _hgb_model is not None:
         return _hgb_model, _hgb_calibrator, _hgb_metadata
-
-    path = _get_hgb_model_storage_path()
     if os.path.exists(path):
         try:
             artifact = joblib.load(path)
@@ -702,12 +710,6 @@ def predict_supervised_risk(features: Dict[str, Any]) -> Dict[str, Any]:
     ver = VERSION_V3_HGB
 
     if model is None:
-        # Fall back to remediated RF if HGB artifact not yet placed
-        rf_model = _init_rf_remediated()
-        if rf_model is not None:
-            set_active_model_version(VERSION_V2_REMEDIATED)
-            return predict_supervised_risk(features)
-
         return {
             "supervised_score": None,
             "predicted_risk_probability": None,

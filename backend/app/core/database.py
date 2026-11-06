@@ -122,8 +122,9 @@ def get_db_path() -> str:
 @contextmanager
 def get_db_connection() -> Generator[Any, None, None]:
     url = settings.DATABASE_URL
+    use_sqlite = os.environ.get("SENTINELFLOW_USE_SQLITE") == "1" or os.environ.get("TESTING") == "1"
     # Supabase PostgreSQL Direct Connection Support
-    if url.startswith("postgresql://") or url.startswith("postgres://"):
+    if not use_sqlite and (url.startswith("postgresql://") or url.startswith("postgres://")):
         try:
             import psycopg2
             from psycopg2.extras import RealDictCursor

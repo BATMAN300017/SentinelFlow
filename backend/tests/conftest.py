@@ -1,4 +1,6 @@
 import os
+os.environ["SENTINELFLOW_USE_SQLITE"] = "1"
+os.environ["TESTING"] = "1"
 import sys
 
 # Add backend directory to sys.path

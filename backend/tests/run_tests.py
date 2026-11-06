@@ -1,6 +1,8 @@
+import os
+os.environ["SENTINELFLOW_USE_SQLITE"] = "1"
+os.environ["TESTING"] = "1"
 import unittest
 import sys
-import os
 
 TESTS_DIR = os.path.dirname(os.path.abspath(__file__))
 BACKEND_DIR = os.path.dirname(TESTS_DIR)
