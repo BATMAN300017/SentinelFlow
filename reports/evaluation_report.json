@@ -1,0 +1,247 @@
+{
+  "evaluation_timestamp": "2026-11-06T17:31:43Z",
+  "dataset": "SAML-D",
+  "partition": "Final Sealed Test (Latest 20%)",
+  "rows_scored": 1900971,
+  "positives": 2143,
+  "negatives": 1898828,
+  "model_artifact": "backend\\app\\models\\hist_gradient_boosting_samld_v3.joblib",
+  "transaction_metrics": {
+    "roc_auc": 0.9973699819380494,
+    "pr_auc": 0.5318110247195853,
+    "validation_threshold": {
+      "threshold": 0.0261,
+      "tp": 1807,
+      "fp": 5914,
+      "fn": 336,
+      "tn": 1892914,
+      "recall": 0.8432104526364909,
+      "precision": 0.23403704183395932,
+      "fpr": 0.0031145527662326446,
+      "f1": 0.36638280616382807
+    },
+    "fixed_fpr_operating_points": {
+      "fpr_1_pct": {
+        "threshold": 0.005266981474754813,
+        "actual_fpr": 0.009042946491204048,
+        "recall": 0.9346710219318712,
+        "precision": 0.10446437884635444
+      },
+      "fpr_5_pct": {
+        "threshold": 8.793527963418924e-05,
+        "actual_fpr": 0.048338238113194036,
+        "recall": 0.9976668222118525,
+        "precision": 0.022763085047485202
+      },
+      "fpr_10_pct": {
+        "threshold": 1.8246520497774815e-06,
+        "actual_fpr": 0.08933721221722031,
+        "recall": 1.0,
+        "precision": 0.012475331676165305
+      }
+    },
+    "bootstrap_95_ci": {
+      "roc_auc": {
+        "mean": 0.9973665403616426,
+        "std": 0.00016136069379370658,
+        "ci_lower": 0.9970449556112926,
+        "ci_upper": 0.9976668029048064
+      },
+      "pr_auc": {
+        "mean": 0.9087451186107688,
+        "std": 0.004937269501055462,
+        "ci_lower": 0.8992695177510679,
+        "ci_upper": 0.9177025968575623
+      },
+      "recall": {
+        "mean": 0.843003733084461,
+        "std": 0.007880820464042804,
+        "ci_lower": 0.8278114792347177,
+        "ci_upper": 0.8581427904806346
+      },
+      "precision": {
+        "mean": 0.8530503629609894,
+        "std": 0.007085165267374374,
+        "ci_lower": 0.8395311484994153,
+        "ci_upper": 0.8661574988982279
+      },
+      "fpr": {
+        "mean": 0.0031132900000000003,
+        "std": 0.00017441810657153688,
+        "ci_lower": 0.00278975,
+        "ci_upper": 0.00345
+      },
+      "f1": {
+        "mean": 0.847968406561803,
+        "std": 0.00563361401690103,
+        "ci_lower": 0.8366266813438687,
+        "ci_upper": 0.8591453063158206
+      }
+    }
+  },
+  "per_typology_breakdown": {
+    "Behavioural_Change_1": {
+      "total": 90,
+      "detected": 90,
+      "recall": 1.0
+    },
+    "Behavioural_Change_2": {
+      "total": 94,
+      "detected": 94,
+      "recall": 1.0
+    },
+    "Bipartite": {
+      "total": 43,
+      "detected": 39,
+      "recall": 0.9069767441860465
+    },
+    "Cash_Withdrawal": {
+      "total": 274,
+      "detected": 204,
+      "recall": 0.7445255474452555
+    },
+    "Cycle": {
+      "total": 50,
+      "detected": 42,
+      "recall": 0.84
+    },
+    "Deposit-Send": {
+      "total": 209,
+      "detected": 167,
+      "recall": 0.7990430622009569
+    },
+    "Fan_In": {
+      "total": 64,
+      "detected": 57,
+      "recall": 0.890625
+    },
+    "Fan_Out": {
+      "total": 76,
+      "detected": 52,
+      "recall": 0.6842105263157895
+    },
+    "Gather-Scatter": {
+      "total": 100,
+      "detected": 77,
+      "recall": 0.77
+    },
+    "Layered_Fan_In": {
+      "total": 156,
+      "detected": 135,
+      "recall": 0.8653846153846154
+    },
+    "Layered_Fan_Out": {
+      "total": 107,
+      "detected": 96,
+      "recall": 0.897196261682243
+    },
+    "Over-Invoicing": {
+      "total": 10,
+      "detected": 6,
+      "recall": 0.6
+    },
+    "Scatter-Gather": {
+      "total": 75,
+      "detected": 61,
+      "recall": 0.8133333333333334
+    },
+    "Single_large": {
+      "total": 45,
+      "detected": 33,
+      "recall": 0.7333333333333333
+    },
+    "Smurfing": {
+      "total": 176,
+      "detected": 173,
+      "recall": 0.9829545454545454
+    },
+    "Stacked Bipartite": {
+      "total": 166,
+      "detected": 124,
+      "recall": 0.7469879518072289
+    },
+    "Structuring": {
+      "total": 408,
+      "detected": 357,
+      "recall": 0.875
+    }
+  },
+  "account_level_metrics": {
+    "sender_accounts": {
+      "total_accounts": 116109,
+      "positive_accounts": 1175,
+      "max_score": {
+        "roc_auc": 0.9814785766040011,
+        "pr_auc": 0.5208097765272692,
+        "recall_at_5_fpr": 0.9123404255319149,
+        "precision_at_5_fpr": 0.22342642767819926
+      },
+      "top3_mean_score": {
+        "roc_auc": 0.9817672751318146,
+        "pr_auc": 0.5116207316609095,
+        "recall_at_5_fpr": 0.92,
+        "precision_at_5_fpr": 0.15871384525033036
+      }
+    },
+    "all_participating_accounts": {
+      "total_accounts": 443189,
+      "positive_accounts": 1950,
+      "max_score": {
+        "roc_auc": 0.9920693744613434,
+        "pr_auc": 0.5449574290971029,
+        "recall_at_5_fpr": 0.9564102564102565,
+        "precision_at_5_fpr": 0.09801860514006412
+      },
+      "top3_mean_score": {
+        "roc_auc": 0.9922214875001459,
+        "pr_auc": 0.5498613723805259,
+        "recall_at_5_fpr": 0.9702564102564103,
+        "precision_at_5_fpr": 0.07899461400359066
+      }
+    }
+  },
+  "baseline_comparison": [
+    {
+      "metric": "ROC-AUC",
+      "baseline": 0.789,
+      "new_model": 0.9973699819380494,
+      "delta": 0.20836998193804934
+    },
+    {
+      "metric": "PR-AUC",
+      "baseline": 0.0283,
+      "new_model": 0.5318110247195853,
+      "delta": 0.5035110247195853
+    },
+    {
+      "metric": "Recall @ Prod Threshold 70",
+      "baseline": 0.0,
+      "new_model": 0.1460569295380308,
+      "delta": 0.1460569295380308
+    },
+    {
+      "metric": "Precision @ Prod Threshold 70",
+      "baseline": 0.0,
+      "new_model": 0.9427710843373494,
+      "delta": 0.9427710843373494
+    },
+    {
+      "metric": "Recall @ Val Threshold 0.0261",
+      "baseline": 0.0,
+      "new_model": 0.8432104526364909,
+      "delta": 0.8432104526364909
+    },
+    {
+      "metric": "Recall @ 5% FPR",
+      "baseline": 0.3333,
+      "new_model": 0.9976668222118525,
+      "delta": 0.6643668222118526
+    },
+    {
+      "metric": "Recall @ 1% FPR",
+      "baseline": 0.0,
+      "new_model": 0.9346710219318712,
+      "delta": 0.9346710219318712
+    }
+  ]
+}
