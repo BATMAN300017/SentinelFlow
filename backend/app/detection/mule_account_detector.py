@@ -124,27 +124,33 @@ def analyze_suspicious_account_network(conn: sqlite3.Connection, account_id: str
         pass_through_ratio = 0.0
 
     # Structural Signals (Staging, Collection Funnel, Disbursal Hub, Offshore Node)
-    # Collection Funnel
+    # Collection Funnel: multi-source fan-in or high single-source entry inflow
     if len(in_counterparties) >= 4:
         s_collection = 0.85 if total_in >= 50000.0 else 0.50
     elif len(in_counterparties) >= 2 and total_in >= 50000.0:
         s_collection = 0.70
+    elif len(in_counterparties) >= 1 and (total_in >= 50000.0 or max_amount >= 50000.0):
+        s_collection = 0.65 if len(out_counterparties) <= 1 else 0.50
     else:
         s_collection = 0.0
 
-    # Disbursal Hub
+    # Disbursal Hub: fan-out to multiple off-ramps
     if len(out_counterparties) >= 4 and total_out >= 50000.0:
         s_disbursal = 0.85
     elif len(out_counterparties) >= 2 and total_out >= 50000.0:
         s_disbursal = 0.65
+    elif len(out_counterparties) >= 1 and (total_out >= 50000.0 or max_amount >= 50000.0):
+        s_disbursal = 0.50
     else:
         s_disbursal = 0.0
 
-    # Staging signal: high pass-through with non-trivial volume
-    if pass_through_ratio >= 0.60 and total_volume >= 50000.0:
+    # Staging signal: high pass-through with rapid forwarding
+    if pass_through_ratio >= 0.50 and total_volume >= 25000.0:
         s_staging = min(1.0, pass_through_ratio * 1.1)
+    elif pass_through_ratio >= 0.30 and total_volume >= 20000.0:
+        s_staging = min(1.0, pass_through_ratio * 0.9)
     else:
-        s_staging = pass_through_ratio * 0.40
+        s_staging = pass_through_ratio * 0.50
 
     # Offshore hub / high-value cross-border single hop
     s_offshore = 0.85 if (curr in ["AED", "USD", "GBP", "EUR"] or "UAE" in account_id or "UK" in account_id) and max_amount >= 50000.0 else 0.0
@@ -174,7 +180,7 @@ def analyze_suspicious_account_network(conn: sqlite3.Connection, account_id: str
     is_payroll = (salary_cnt >= 5 and salary_vol >= 0.50 * max(1.0, total_out))
 
     # Low-value domestic retail merchant or standard consumer micro-transactions
-    is_micro_retail = (max_amount < 15000.0 and total_volume < 100000.0 and avg_amount < 5000.0)
+    is_micro_retail = (max_amount < 15000.0 and total_volume < 100000.0 and avg_amount < 5000.0 and pass_through_ratio < 0.25)
 
     # 5. Composite Probability Calculation
     raw_mule_score = (

@@ -93,15 +93,15 @@ class IndiaBankingSimulator:
 
     def generate_synthetic_ecosystem(
         self,
-        num_customers: int = 60,
-        num_accounts: int = 80,
-        num_normal_txns: int = 300,
+        num_customers: int = 250,
+        num_accounts: int = 300,
+        num_normal_txns: int = 1500,
         include_scenarios: bool = True,
         start_date: Optional[datetime] = None
     ) -> Dict[str, Any]:
         """
         Generates a complete banking ecosystem:
-        - Normal transactions reflecting daily Indian economic life.
+        - Normal transactions reflecting daily Indian economic life with >=200 legitimate accounts.
         - Five distinct complex crime scenarios and legitimate lookalikes.
         - Strictly isolates all ground truth into protected store.
         """
@@ -130,7 +130,7 @@ class IndiaBankingSimulator:
             cust = customers[j % len(customers)]
             bank = self.rng.choice(INDIAN_BANKS)
             acc_type = self.rng.choice(["SAVINGS", "CURRENT", "SALARY", "BUSINESS"])
-            accounts.append({
+            acc_obj = {
                 "id": acc_id,
                 "account_number": f"IN{self.rng.randint(1000000000, 9999999999)}",
                 "customer_id": cust["id"],
@@ -141,7 +141,18 @@ class IndiaBankingSimulator:
                 "balance": round(self.rng.uniform(10000.0, 500000.0), 2),
                 "is_dormant": 1 if self.rng.random() < 0.05 else 0,
                 "created_at": base_time.isoformat()
-            })
+            }
+            accounts.append(acc_obj)
+
+            # Store baseline legitimate ground-truth label in protected store (overridden if selected in scenarios)
+            store_protected_account_label(
+                account_id=acc_id,
+                dataset_name="INDIA_SIMULATOR",
+                is_mule=0,
+                mule_role="NORMAL_RETAIL_ACCOUNT",
+                raw_labels={"category": "NORMAL_BANKING"},
+                timestamp=base_time.isoformat()
+            )
 
         detection_txns: List[Dict[str, Any]] = []
 
