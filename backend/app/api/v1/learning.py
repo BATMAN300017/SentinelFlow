@@ -113,7 +113,7 @@ def get_model_comparison(db=Depends(get_db)):
     for m in models:
         m_copy = dict(m)
         m_copy["evaluation_split"] = "SAML_D_TEST_VAULT_PIPELINE_B"
-        m_copy["sample_size"] = perf.get("overall", {}).get("sample_size", 36650)
+        m_copy["sample_size"] = perf.get("overall", {}).get("sample_size")
         m_copy["fpr"] = m_copy.get("false_positive_rate", 0.005)
         m_copy["latency_ms"] = m_copy.get("inference_latency_ms", 0.5)
         enriched_models.append(m_copy)
@@ -121,7 +121,7 @@ def get_model_comparison(db=Depends(get_db)):
     return {
         "evaluation_dataset": "SAML_D_TEST_VAULT_PIPELINE_B",
         "evaluation_split": "Held-Out Protected Ground Truth (SAML_D)",
-        "sample_size": perf.get("overall", {}).get("sample_size", 36650),
+        "sample_size": perf.get("overall", {}).get("sample_size"),
         "granularity": "TRANSACTION_LEVEL",
         "models": enriched_models,
         "model_comparison": enriched_models

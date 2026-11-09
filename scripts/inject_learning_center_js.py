@@ -41,7 +41,7 @@ SCRIPT_TO_INJECT = '''
                     document.getElementById('kpi-active-models').innerText = `${data.active_models || 6} Engines`;
                 }
                 if (document.getElementById('kpi-scored-txns')) {
-                    document.getElementById('kpi-scored-txns').innerText = (data.scored_transactions || 482330).toLocaleString();
+                    document.getElementById('kpi-scored-txns').innerText = (data.scored_transactions != null ? data.scored_transactions.toLocaleString() : "--");
                 }
                 if (document.getElementById('kpi-active-version')) {
                     document.getElementById('kpi-active-version').innerText = data.active_model_version || 'v1.0.0';
@@ -91,10 +91,10 @@ SCRIPT_TO_INJECT = '''
 
                 // Confusion Matrix
                 const cm = overall.confusion_matrix || {};
-                if (document.getElementById('cm-tp')) document.getElementById('cm-tp').innerText = (cm.true_positives || 34).toLocaleString();
-                if (document.getElementById('cm-fp')) document.getElementById('cm-fp').innerText = (cm.false_positives || 172).toLocaleString();
-                if (document.getElementById('cm-fn')) document.getElementById('cm-fn').innerText = (cm.false_negatives || 271).toLocaleString();
-                if (document.getElementById('cm-tn')) document.getElementById('cm-tn').innerText = (cm.true_negatives || 36173).toLocaleString();
+                if (document.getElementById('cm-tp')) document.getElementById('cm-tp').innerText = (cm.true_positives != null ? cm.true_positives.toLocaleString() : "--");
+                if (document.getElementById('cm-fp')) document.getElementById('cm-fp').innerText = (cm.false_positives != null ? cm.false_positives.toLocaleString() : "--");
+                if (document.getElementById('cm-fn')) document.getElementById('cm-fn').innerText = (cm.false_negatives != null ? cm.false_negatives.toLocaleString() : "--");
+                if (document.getElementById('cm-tn')) document.getElementById('cm-tn').innerText = (cm.true_negatives != null ? cm.true_negatives.toLocaleString() : "--");
 
                 // Dataset-wise table
                 const dsTbody = document.getElementById('dataset-wise-tbody');
@@ -431,7 +431,7 @@ SCRIPT_TO_INJECT = '''
                 const data = await res.json();
 
                 if (document.getElementById('mon-scored-total')) {
-                    document.getElementById('mon-scored-total').innerText = (data.throughput?.total_scored || 482330).toLocaleString();
+                    document.getElementById('mon-scored-total').innerText = (data.throughput?.total_scored != null ? data.throughput.total_scored.toLocaleString() : "--");
                 }
                 if (document.getElementById('mon-latency')) {
                     document.getElementById('mon-latency').innerText = (data.latency?.p50_ms || 1.2).toFixed(1) + ' ms';
@@ -455,10 +455,10 @@ SCRIPT_TO_INJECT = '''
                 if (document.getElementById('bar-high')) document.getElementById('bar-high').style.width = hPct + '%';
                 if (document.getElementById('bar-critical')) document.getElementById('bar-critical').style.width = cPct + '%';
 
-                if (document.getElementById('dist-cnt-routine')) document.getElementById('dist-cnt-routine').innerText = (dist.routine_count || 434997).toLocaleString();
-                if (document.getElementById('dist-cnt-elevated')) document.getElementById('dist-cnt-elevated').innerText = (dist.elevated_count || 23765).toLocaleString();
-                if (document.getElementById('dist-cnt-high')) document.getElementById('dist-cnt-high').innerText = (dist.high_count || 9410).toLocaleString();
-                if (document.getElementById('dist-cnt-critical')) document.getElementById('dist-cnt-critical').innerText = (dist.critical_count || 14158).toLocaleString();
+                if (document.getElementById('dist-cnt-routine')) document.getElementById('dist-cnt-routine').innerText = (dist.routine_count != null ? dist.routine_count.toLocaleString() : "--");
+                if (document.getElementById('dist-cnt-elevated')) document.getElementById('dist-cnt-elevated').innerText = (dist.elevated_count != null ? dist.elevated_count.toLocaleString() : "--");
+                if (document.getElementById('dist-cnt-high')) document.getElementById('dist-cnt-high').innerText = (dist.high_count != null ? dist.high_count.toLocaleString() : "--");
+                if (document.getElementById('dist-cnt-critical')) document.getElementById('dist-cnt-critical').innerText = (dist.critical_count != null ? dist.critical_count.toLocaleString() : "--");
 
             } catch (e) {
                 console.error("Error loading model monitoring:", e);

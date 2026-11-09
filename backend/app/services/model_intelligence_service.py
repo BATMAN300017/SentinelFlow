@@ -1063,7 +1063,7 @@ class ModelIntelligenceService:
     def get_model_monitoring(cls, conn: Any) -> Dict[str, Any]:
         """
         Returns genuine production monitoring metrics.
-        Calculates score distribution across 482k records and reports latency, failures, and drift.
+        Calculates score distribution across imported transactions and reports latency, failures, and drift.
         """
         cursor = conn.cursor()
 
@@ -1398,7 +1398,7 @@ class ModelIntelligenceService:
                 "f1": m.get("f1_score", 0.72),
                 "pr_auc": m.get("pr_auc", 0.78),
                 "fpr": m.get("false_positive_rate", 0.03),
-                "samples_count": eval_result.get("total_evaluated_samples", 36650)
+                "samples_count": eval_result.get("total_evaluated_samples")
             },
             is_independent_validation=True
         )
@@ -1428,9 +1428,9 @@ class ModelIntelligenceService:
             )
         """, (
             eval_id, model_version,
-            eval_result.get("total_evaluated_samples", 36650),
-            eval_result.get("positive_laundering_count", 305),
-            eval_result.get("negative_legitimate_count", 36345),
+            eval_result.get("total_evaluated_samples"),
+            eval_result.get("positive_laundering_count"),
+            eval_result.get("negative_legitimate_count"),
             m.get("precision", 0.165), m.get("recall", 0.1115), m.get("f1_score", 0.1331),
             m.get("pr_auc", 0.1189), m.get("roc_auc", 0.2506),
             m.get("false_positive_rate", 0.0047), m.get("false_negative_rate", 0.8885),
