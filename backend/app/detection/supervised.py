@@ -18,11 +18,25 @@ CRITICAL ARCHITECTURAL CONSTRAINTS:
 """
 
 import os
+import sys
+import types
 import joblib
 import numpy as np
 import pandas as pd
 from typing import Dict, Any, Optional, List, Tuple
 from datetime import datetime, timezone
+
+# Windows Application Control (WDAC) resilience:
+# sklearn.tree transitively imports sklearn.svm._liblinear via neighbors and linear_model.
+# If WDAC blocks the native _liblinear.pyd, register a lightweight stub so tree algorithms load cleanly.
+if "sklearn.svm._liblinear" not in sys.modules:
+    try:
+        import sklearn.svm._liblinear  # test native load
+    except (ImportError, OSError):
+        dummy_liblinear = types.ModuleType("sklearn.svm._liblinear")
+        dummy_liblinear.set_verbosity_wrap = lambda *args, **kwargs: None
+        sys.modules["sklearn.svm._liblinear"] = dummy_liblinear
+
 from sklearn.tree import DecisionTreeClassifier
 from app.core.logging import logger
 from app.detection.features import (
@@ -47,6 +61,7 @@ _remediated_metadata: Optional[Dict[str, Any]] = None
 _hgb_model: Optional[Any] = None
 _hgb_calibrator: Optional[Any] = None
 _hgb_metadata: Optional[Dict[str, Any]] = None
+_hgb_load_attempted: bool = False
 
 # Canonical feature schema shared identically by offline training, online inference and evaluation
 FEATURE_SCHEMA: List[str] = CANONICAL_FEATURE_NAMES
@@ -590,7 +605,7 @@ def _init_hgb_model() -> Tuple[Optional[Any], Optional[Any], Optional[Dict[str, 
     """
     Initializes or loads the production HistGradientBoosting v3 model and its isotonic calibrator.
     """
-    global _hgb_model, _hgb_calibrator, _hgb_metadata
+    global _hgb_model, _hgb_calibrator, _hgb_metadata, _hgb_load_attempted
     path = _get_hgb_model_storage_path()
     if not os.path.exists(path):
         _hgb_model = None
@@ -600,6 +615,10 @@ def _init_hgb_model() -> Tuple[Optional[Any], Optional[Any], Optional[Dict[str, 
 
     if _hgb_model is not None:
         return _hgb_model, _hgb_calibrator, _hgb_metadata
+    if _hgb_load_attempted:
+        return None, None, None
+
+    _hgb_load_attempted = True
     if os.path.exists(path):
         try:
             artifact = joblib.load(path)

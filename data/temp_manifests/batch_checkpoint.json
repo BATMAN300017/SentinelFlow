@@ -1,0 +1,13 @@
+{
+  "datasets": {
+    "NFPC": {
+      "last_offset": 0,
+      "total_ingested": 0
+    },
+    "SAML_D": {
+      "last_offset": 0,
+      "total_ingested": 0
+    }
+  },
+  "batches": []
+}

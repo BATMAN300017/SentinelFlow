@@ -505,7 +505,7 @@
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-2 border-b border-surface-border gap-2">
                     <div>
                         <h1 class="text-2xl font-bold text-text-primary tracking-tight">Alerts Queue & Triage</h1>
-                        <p class="text-xs text-text-secondary mt-0.5">Explainable detections generated from production 5-model consensus scoring over 482k+ database transactions.</p>
+                        <p class="text-xs text-text-secondary mt-0.5">Explainable detections generated from production consensus scoring over live database transactions.</p>
                     </div>
                     <div class="flex items-center space-x-2">
                         <span id="alerts-header-count" class="text-xs font-mono text-text-secondary px-2.5 py-1 bg-surface-elevated rounded border border-surface-border">Total: -- alerts</span>
@@ -865,7 +865,7 @@
                     </div>
                     <div class="bg-surface-card p-4 rounded-xl border border-surface-border">
                         <div class="text-[10px] font-mono uppercase text-text-muted">Total Scored Records</div>
-                        <div class="text-xl font-bold font-mono text-text-primary mt-1" id="kpi-scored-txns">482,330</div>
+                        <div class="text-xl font-bold font-mono text-text-primary mt-1" id="kpi-scored-txns">—</div>
                         <div class="text-[10px] text-text-muted mt-0.5">Genuine DB Records</div>
                     </div>
                     <div class="bg-surface-card p-4 rounded-xl border border-surface-border">
@@ -919,7 +919,7 @@
                         <span class="material-symbols-outlined text-primary text-[20px] mt-0.5">verified_user</span>
                         <div>
                             <h3 class="text-xs font-bold text-text-primary font-mono">STRICT GROUND-TRUTH VAULT ISOLATION (PIPELINE B)</h3>
-                            <p class="text-xs text-text-secondary mt-0.5">All metrics originate exclusively from independent evaluation against 36,650 SAML-D transactions and 168 NFPC accounts in the protected vault. Ground-truth labels are strictly isolated and never accessible as model input features. Unlabeled datasets are marked <span class="font-mono text-status-warning font-bold">NOT EVALUATED</span>.</p>
+                            <p class="text-xs text-text-secondary mt-0.5">All metrics originate exclusively from independent evaluation against sealed ground-truth vaults (Pipeline B). Ground-truth labels are strictly isolated and never accessible as model input features. Unlabeled datasets are marked <span class="font-mono text-status-warning font-bold">NOT EVALUATED</span>.</p>
                         </div>
                     </div>
 
@@ -927,37 +927,37 @@
                     <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-3">
                         <div class="bg-surface-base p-3.5 rounded-xl border border-surface-border">
                             <div class="text-[10px] font-mono text-text-muted">PRECISION</div>
-                            <div class="text-lg font-bold font-mono text-primary mt-1" id="perf-precision">16.5%</div>
-                            <div class="text-[10px] text-text-muted mt-0.5">34 / 206 Positives</div>
+                            <div class="text-lg font-bold font-mono text-primary mt-1" id="perf-precision">--</div>
+                            <div class="text-[10px] text-text-muted mt-0.5" id="perf-precision-sub">--</div>
                         </div>
                         <div class="bg-surface-base p-3.5 rounded-xl border border-surface-border">
                             <div class="text-[10px] font-mono text-text-muted">RECALL</div>
-                            <div class="text-lg font-bold font-mono text-primary mt-1" id="perf-recall">11.15%</div>
-                            <div class="text-[10px] text-text-muted mt-0.5">34 / 305 Actual Fraud</div>
+                            <div class="text-lg font-bold font-mono text-primary mt-1" id="perf-recall">--</div>
+                            <div class="text-[10px] text-text-muted mt-0.5" id="perf-recall-sub">--</div>
                         </div>
                         <div class="bg-surface-base p-3.5 rounded-xl border border-surface-border">
                             <div class="text-[10px] font-mono text-text-muted">F1-SCORE</div>
-                            <div class="text-lg font-bold font-mono text-primary mt-1" id="perf-f1">0.1331</div>
+                            <div class="text-lg font-bold font-mono text-primary mt-1" id="perf-f1">--</div>
                             <div class="text-[10px] text-text-muted mt-0.5">Harmonic Mean</div>
                         </div>
                         <div class="bg-surface-base p-3.5 rounded-xl border border-surface-border">
                             <div class="text-[10px] font-mono text-text-muted">PR-AUC</div>
-                            <div class="text-lg font-bold font-mono text-primary mt-1" id="perf-prauc">0.1189</div>
+                            <div class="text-lg font-bold font-mono text-primary mt-1" id="perf-prauc">--</div>
                             <div class="text-[10px] text-text-muted mt-0.5">Precision-Recall Curve</div>
                         </div>
                         <div class="bg-surface-base p-3.5 rounded-xl border border-surface-border">
                             <div class="text-[10px] font-mono text-text-muted">ROC-AUC</div>
-                            <div class="text-lg font-bold font-mono text-primary mt-1" id="perf-rocauc">0.2506</div>
+                            <div class="text-lg font-bold font-mono text-primary mt-1" id="perf-rocauc">--</div>
                             <div class="text-[10px] text-text-muted mt-0.5">Receiver Operating Curve</div>
                         </div>
                         <div class="bg-surface-base p-3.5 rounded-xl border border-surface-border">
                             <div class="text-[10px] font-mono text-text-muted">FALSE POSITIVE RATE</div>
-                            <div class="text-lg font-bold font-mono text-status-success mt-1" id="perf-fpr">0.47%</div>
-                            <div class="text-[10px] text-text-muted mt-0.5">172 FP / 36,173 TN</div>
+                            <div class="text-lg font-bold font-mono text-status-success mt-1" id="perf-fpr">--</div>
+                            <div class="text-[10px] text-text-muted mt-0.5" id="perf-fpr-sub">--</div>
                         </div>
                         <div class="bg-surface-base p-3.5 rounded-xl border border-surface-border">
                             <div class="text-[10px] font-mono text-text-muted">EVAL SAMPLE SIZE</div>
-                            <div class="text-lg font-bold font-mono text-text-primary mt-1" id="perf-samples">36,650</div>
+                            <div class="text-lg font-bold font-mono text-text-primary mt-1" id="perf-samples">--</div>
                             <div class="text-[10px] text-text-muted mt-0.5">Pipeline B Txns</div>
                         </div>
                     </div>
@@ -973,22 +973,22 @@
                             <div class="grid grid-cols-2 gap-3 text-center font-mono">
                                 <div class="bg-surface-base p-4 rounded-lg border border-status-success/30">
                                     <div class="text-[10px] text-text-muted uppercase">True Positives (TP)</div>
-                                    <div class="text-2xl font-bold text-status-success mt-1" id="cm-tp">34</div>
+                                    <div class="text-2xl font-bold text-status-success mt-1" id="cm-tp">--</div>
                                     <div class="text-[10px] text-text-muted mt-0.5">Laundering Correctly Flagged</div>
                                 </div>
                                 <div class="bg-surface-base p-4 rounded-lg border border-status-warning/30">
                                     <div class="text-[10px] text-text-muted uppercase">False Positives (FP)</div>
-                                    <div class="text-2xl font-bold text-status-warning mt-1" id="cm-fp">172</div>
+                                    <div class="text-2xl font-bold text-status-warning mt-1" id="cm-fp">--</div>
                                     <div class="text-[10px] text-text-muted mt-0.5">Legitimate Flagged High-Risk</div>
                                 </div>
                                 <div class="bg-surface-base p-4 rounded-lg border border-status-critical/30">
                                     <div class="text-[10px] text-text-muted uppercase">False Negatives (FN)</div>
-                                    <div class="text-2xl font-bold text-status-critical mt-1" id="cm-fn">271</div>
+                                    <div class="text-2xl font-bold text-status-critical mt-1" id="cm-fn">--</div>
                                     <div class="text-[10px] text-text-muted mt-0.5">Laundering Not Triggered</div>
                                 </div>
                                 <div class="bg-surface-base p-4 rounded-lg border border-surface-border">
                                     <div class="text-[10px] text-text-muted uppercase">True Negatives (TN)</div>
-                                    <div class="text-2xl font-bold text-text-primary mt-1" id="cm-tn">36,173</div>
+                                    <div class="text-2xl font-bold text-text-primary mt-1" id="cm-tn">--</div>
                                     <div class="text-[10px] text-text-muted mt-0.5">Routine Cleared Accurately</div>
                                 </div>
                             </div>
@@ -1007,7 +1007,7 @@
                                         <div class="text-[10px] text-text-muted">Mandatory Investigation Queue</div>
                                     </div>
                                     <div class="text-right">
-                                        <span class="font-bold text-text-primary">Prec: 42.8%</span> &bull; <span class="text-text-muted">157 Alerts</span>
+                                        <span id="triage-stat-critical"><span class="font-bold text-text-primary">Prec: 42.8%</span> &bull; <span class="text-text-muted">Critical</span></span>
                                     </div>
                                 </div>
                                 <div class="p-2.5 bg-surface-base rounded-lg border border-status-warning/30 flex items-center justify-between">
@@ -1016,7 +1016,7 @@
                                         <div class="text-[10px] text-text-muted">Priority Analyst Review</div>
                                     </div>
                                     <div class="text-right">
-                                        <span class="font-bold text-text-primary">Prec: 16.5%</span> &bull; <span class="text-text-muted">9,410 Txns</span>
+                                        <span id="triage-stat-high"><span class="font-bold text-text-primary">Prec: 16.5%</span> &bull; <span class="text-text-muted">High</span></span>
                                     </div>
                                 </div>
                                 <div class="p-2.5 bg-surface-base rounded-lg border border-status-info/30 flex items-center justify-between">
@@ -1025,7 +1025,7 @@
                                         <div class="text-[10px] text-text-muted">Automated Surveillance</div>
                                     </div>
                                     <div class="text-right">
-                                        <span class="font-bold text-text-primary">Prec: 4.2%</span> &bull; <span class="text-text-muted">23,765 Txns</span>
+                                        <span id="triage-stat-medium"><span class="font-bold text-text-primary">Prec: 4.2%</span> &bull; <span class="text-text-muted">Medium</span></span>
                                     </div>
                                 </div>
                                 <div class="p-2.5 bg-surface-base rounded-lg border border-surface-border flex items-center justify-between">
@@ -1034,7 +1034,7 @@
                                         <div class="text-[10px] text-text-muted">Routine Transaction Stream</div>
                                     </div>
                                     <div class="text-right">
-                                        <span class="font-bold text-text-primary">Prec: 0.1%</span> &bull; <span class="text-text-muted">434,997 Txns</span>
+                                        <span id="triage-stat-low"><span class="font-bold text-text-primary">Prec: 0.1%</span> &bull; <span class="text-text-muted">Low</span></span>
                                     </div>
                                 </div>
                             </div>
@@ -1395,7 +1395,7 @@
                     <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
                         <div class="bg-surface-card p-5 rounded-xl border border-surface-border">
                             <div class="text-[11px] font-mono text-text-muted uppercase">Scored Transactions</div>
-                            <div class="text-2xl font-bold font-mono text-primary mt-1" id="mon-scored-total">482,330</div>
+                            <div class="text-2xl font-bold font-mono text-primary mt-1" id="mon-scored-total">—</div>
                             <div class="text-[11px] text-text-muted mt-1">Live Production Records</div>
                         </div>
                         <div class="bg-surface-card p-5 rounded-xl border border-surface-border">
@@ -1419,7 +1419,7 @@
                     <div class="bg-surface-card rounded-xl border border-surface-border p-5 space-y-4">
                         <div class="flex items-center justify-between border-b border-surface-border pb-3">
                             <div>
-                                <h3 class="text-sm font-bold text-text-primary font-mono">Production Risk Score Distribution (482,330 Records)</h3>
+                                <h3 class="text-sm font-bold text-text-primary font-mono">Production Risk Score Distribution</h3>
                                 <p class="text-xs text-text-secondary mt-0.5">Empirical distribution of calibrated composite risk scores across all production transactions.</p>
                             </div>
                             <span class="text-xs font-mono text-text-muted">Mean: 15.06 &bull; Max: 94.00</span>
@@ -1437,22 +1437,22 @@
                         <div class="grid grid-cols-2 md:grid-cols-4 gap-3 font-mono text-xs">
                             <div class="bg-surface-base p-3 rounded-lg border border-surface-border">
                                 <div class="text-text-muted text-[10px]">ROUTINE (&lt; 40.0)</div>
-                                <div class="text-lg font-bold text-text-primary mt-0.5" id="dist-cnt-routine">434,997</div>
+                                <div class="text-lg font-bold text-text-primary mt-0.5" id="dist-cnt-routine">--</div>
                                 <div class="text-[10px] text-text-muted">90.19% of volume</div>
                             </div>
                             <div class="bg-surface-base p-3 rounded-lg border border-status-info/30">
                                 <div class="text-status-info text-[10px]">ELEVATED (40.0 - 69.9)</div>
-                                <div class="text-lg font-bold text-status-info mt-0.5" id="dist-cnt-elevated">23,765</div>
+                                <div class="text-lg font-bold text-status-info mt-0.5" id="dist-cnt-elevated">--</div>
                                 <div class="text-[10px] text-text-muted">4.93% of volume</div>
                             </div>
                             <div class="bg-surface-base p-3 rounded-lg border border-status-warning/30">
                                 <div class="text-status-warning text-[10px]">HIGH (70.0 - 84.9)</div>
-                                <div class="text-lg font-bold text-status-warning mt-0.5" id="dist-cnt-high">9,410</div>
+                                <div class="text-lg font-bold text-status-warning mt-0.5" id="dist-cnt-high">--</div>
                                 <div class="text-[10px] text-text-muted">1.95% of volume</div>
                             </div>
                             <div class="bg-surface-base p-3 rounded-lg border border-status-critical/30">
                                 <div class="text-status-critical text-[10px]">CRITICAL (&ge; 85.0)</div>
-                                <div class="text-lg font-bold text-status-critical mt-0.5" id="dist-cnt-critical">14,158</div>
+                                <div class="text-lg font-bold text-status-critical mt-0.5" id="dist-cnt-critical">--</div>
                                 <div class="text-[10px] text-text-muted">2.94% of volume</div>
                             </div>
                         </div>
@@ -3820,7 +3820,10 @@
                     document.getElementById('kpi-active-models').innerText = `${data.active_models || 6} Engines`;
                 }
                 if (document.getElementById('kpi-scored-txns')) {
-                    document.getElementById('kpi-scored-txns').innerText = (data.scored_transactions || 482330).toLocaleString();
+                    const scoredVal = data.scored_transactions || data.total_transactions_scored || data.transactions_processed;
+                if (document.getElementById('kpi-scored-txns') && scoredVal != null) {
+                    document.getElementById('kpi-scored-txns').innerText = Number(scoredVal).toLocaleString();
+                }
                 }
                 if (document.getElementById('kpi-active-version')) {
                     document.getElementById('kpi-active-version').innerText = data.active_model_version || 'v1.0.0';
@@ -3870,10 +3873,20 @@
 
                 // Confusion Matrix
                 const cm = overall.confusion_matrix || {};
-                if (document.getElementById('cm-tp')) document.getElementById('cm-tp').innerText = (cm.true_positives || 34).toLocaleString();
-                if (document.getElementById('cm-fp')) document.getElementById('cm-fp').innerText = (cm.false_positives || 172).toLocaleString();
-                if (document.getElementById('cm-fn')) document.getElementById('cm-fn').innerText = (cm.false_negatives || 271).toLocaleString();
-                if (document.getElementById('cm-tn')) document.getElementById('cm-tn').innerText = (cm.true_negatives || 36173).toLocaleString();
+                if (document.getElementById('cm-tp')) document.getElementById('cm-tp').innerText = cm.true_positives != null ? cm.true_positives.toLocaleString() : '--';
+                if (document.getElementById('cm-fp')) document.getElementById('cm-fp').innerText = cm.false_positives != null ? cm.false_positives.toLocaleString() : '--';
+                if (document.getElementById('cm-fn')) document.getElementById('cm-fn').innerText = cm.false_negatives != null ? cm.false_negatives.toLocaleString() : '--';
+                if (document.getElementById('cm-tn')) document.getElementById('cm-tn').innerText = cm.true_negatives != null ? cm.true_negatives.toLocaleString() : '--';
+
+                if (document.getElementById('perf-precision-sub') && cm.true_positives != null && cm.false_positives != null) {
+                    document.getElementById('perf-precision-sub').innerText = `${cm.true_positives.toLocaleString()} / ${(cm.true_positives + cm.false_positives).toLocaleString()} Positives`;
+                }
+                if (document.getElementById('perf-recall-sub') && cm.true_positives != null && cm.false_negatives != null) {
+                    document.getElementById('perf-recall-sub').innerText = `${cm.true_positives.toLocaleString()} / ${(cm.true_positives + cm.false_negatives).toLocaleString()} Actual Fraud`;
+                }
+                if (document.getElementById('perf-fpr-sub') && cm.false_positives != null && cm.true_negatives != null) {
+                    document.getElementById('perf-fpr-sub').innerText = `${cm.false_positives.toLocaleString()} FP / ${cm.true_negatives.toLocaleString()} TN`;
+                }
 
                 // Dataset-wise table
                 const dsTbody = document.getElementById('dataset-wise-tbody');
@@ -4211,7 +4224,13 @@ Status: PENDING_VALIDATION (Governance Gate: Not applied to production scoring u
                 const data = await res.json();
 
                 if (document.getElementById('mon-scored-total')) {
-                    document.getElementById('mon-scored-total').innerText = (data.throughput?.total_scored || 482330).toLocaleString();
+                    const totalScored = data.throughput?.total_scored || data.total_transactions_scored || data.scored_transactions;
+                if (document.getElementById('mon-scored-total') && totalScored != null) {
+                    document.getElementById('mon-scored-total').innerText = Number(totalScored).toLocaleString();
+                }
+                if (document.getElementById('score-dist-heading') && totalScored != null) {
+                    document.getElementById('score-dist-heading').innerText = `Production Risk Score Distribution (${Number(totalScored).toLocaleString()} Transacted Events)`;
+                }
                 }
                 if (document.getElementById('mon-latency')) {
                     document.getElementById('mon-latency').innerText = (data.latency?.p50_ms || 1.2).toFixed(1) + ' ms';
@@ -4235,10 +4254,23 @@ Status: PENDING_VALIDATION (Governance Gate: Not applied to production scoring u
                 if (document.getElementById('bar-high')) document.getElementById('bar-high').style.width = hPct + '%';
                 if (document.getElementById('bar-critical')) document.getElementById('bar-critical').style.width = cPct + '%';
 
-                if (document.getElementById('dist-cnt-routine')) document.getElementById('dist-cnt-routine').innerText = (dist.routine_count || 434997).toLocaleString();
-                if (document.getElementById('dist-cnt-elevated')) document.getElementById('dist-cnt-elevated').innerText = (dist.elevated_count || 23765).toLocaleString();
-                if (document.getElementById('dist-cnt-high')) document.getElementById('dist-cnt-high').innerText = (dist.high_count || 9410).toLocaleString();
-                if (document.getElementById('dist-cnt-critical')) document.getElementById('dist-cnt-critical').innerText = (dist.critical_count || 14158).toLocaleString();
+                if (document.getElementById('dist-cnt-routine')) document.getElementById('dist-cnt-routine').innerText = dist.routine_count != null ? Number(dist.routine_count).toLocaleString() : '--';
+                if (document.getElementById('dist-cnt-elevated')) document.getElementById('dist-cnt-elevated').innerText = dist.elevated_count != null ? Number(dist.elevated_count).toLocaleString() : '--';
+                if (document.getElementById('dist-cnt-high')) document.getElementById('dist-cnt-high').innerText = dist.high_count != null ? Number(dist.high_count).toLocaleString() : '--';
+                if (document.getElementById('dist-cnt-critical')) document.getElementById('dist-cnt-critical').innerText = dist.critical_count != null ? Number(dist.critical_count).toLocaleString() : '--';
+
+                if (document.getElementById('triage-stat-critical') && dist.critical_count != null) {
+                    document.getElementById('triage-stat-critical').innerHTML = `<span class="font-bold text-text-primary">${dist.critical_pct}%</span> &bull; <span class="text-text-muted">${Number(dist.critical_count).toLocaleString()} Txns</span>`;
+                }
+                if (document.getElementById('triage-stat-high') && dist.high_count != null) {
+                    document.getElementById('triage-stat-high').innerHTML = `<span class="font-bold text-text-primary">${dist.high_pct}%</span> &bull; <span class="text-text-muted">${Number(dist.high_count).toLocaleString()} Txns</span>`;
+                }
+                if (document.getElementById('triage-stat-medium') && dist.elevated_count != null) {
+                    document.getElementById('triage-stat-medium').innerHTML = `<span class="font-bold text-text-primary">${dist.elevated_pct}%</span> &bull; <span class="text-text-muted">${Number(dist.elevated_count).toLocaleString()} Txns</span>`;
+                }
+                if (document.getElementById('triage-stat-low') && dist.routine_count != null) {
+                    document.getElementById('triage-stat-low').innerHTML = `<span class="font-bold text-text-primary">${dist.routine_pct}%</span> &bull; <span class="text-text-muted">${Number(dist.routine_count).toLocaleString()} Txns</span>`;
+                }
 
             } catch (e) {
                 console.error("Error loading model monitoring:", e);

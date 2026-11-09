@@ -107,11 +107,12 @@ def bootstrap_ci(y_true, y_prob, threshold, n_bootstraps=1000, seed=42):
         except Exception:
             pass
 
-        # Classification metrics
-        tp = np.sum((yb_pred == 1) & (yb_true == 1))
-        fp = np.sum((yb_pred == 1) & (yb_true == 0))
-        fn = np.sum((yb_pred == 0) & (yb_true == 1))
-        tn = np.sum((yb_pred == 0) & (yb_true == 0))
+        # Classification metrics with prevalence-preserving negative weighting
+        tp = float(np.sum((yb_pred == 1) & (yb_true == 1)))
+        w_neg = n_neg / max(1, len(b_neg_sample))
+        fp = float(np.sum((yb_pred == 1) & (yb_true == 0))) * w_neg
+        fn = float(np.sum((yb_pred == 0) & (yb_true == 1)))
+        tn = float(np.sum((yb_pred == 0) & (yb_true == 0))) * w_neg
 
         rec = tp / (tp + fn) if (tp + fn) > 0 else 0.0
         prec = tp / (tp + fp) if (tp + fp) > 0 else 0.0

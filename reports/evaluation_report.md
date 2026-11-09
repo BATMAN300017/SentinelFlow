@@ -19,7 +19,7 @@ The final sealed test set was evaluated under strict chronological, point-in-tim
   * Recall @ 5% FPR: **99.77%** (Target &ge; 85% **achieved: exceeded by +14.77%**).
   * Recall @ 1% FPR: **93.47%** at precision **10.45%**.
   * Full Test ROC-AUC: **0.9974** [95% CI: 0.9970 - 0.9977].
-  * Full Test PR-AUC: **0.5318** [95% CI: 0.8993 - 0.9177].
+  * Full Test PR-AUC: **0.5318** [95% CI: 0.5185 - 0.5452].
 
 ---
 
@@ -45,10 +45,10 @@ The final sealed test set was evaluated under strict chronological, point-in-tim
 | **False Positives (FP)** | **5,914** | — |
 | **False Negatives (FN)** | **336** | — |
 | **True Negatives (TN)** | **1,892,914** | — |
-| **Recall / Sensitivity** | **84.32%** (1,807/2,143) | **[82.78% - 85.81%]** |
-| **Precision (PPV)** | **23.40%** (1,807/7,721) | **[22.46% - 24.34%]** |
-| **False Positive Rate (FPR)** | **0.31%** (5,914/1,898,828) | **[0.28% - 0.34%]** |
-| **F1 Score** | **0.3664** | **[0.3550 - 0.3780]** |
+| **Recall / Sensitivity** | **84.32%** (1,807/2,143) | **[82.78% - 85.86%]** |
+| **Precision (PPV)** | **23.40%** (1,807/7,721) | **[22.82% - 23.97%]** |
+| **False Positive Rate (FPR)** | **0.31%** (5,914/1,898,828) | **[0.30% - 0.32%]** |
+| **F1 Score** | **0.3664** | **[0.3584 - 0.3743]** |
 
 ---
 

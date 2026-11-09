@@ -15,7 +15,6 @@ import uuid
 import hashlib
 from datetime import datetime, timezone, timedelta
 import pandas as pd
-import polars as pl
 import psycopg2
 from psycopg2.extras import execute_values, RealDictCursor
 from supabase import create_client
@@ -374,7 +373,7 @@ def ingest_real_data():
         # 2.5 Ingest NFPC Indian Banking Transactions (25,000 records from partition)
         nfpc_parquet_path = os.path.join(BASE_DIR, "data", "nfpc", "part_0001.parquet")
         print(f"\n--- 2.5 Ingesting NFPC Indian Banking Records from {nfpc_parquet_path} ---")
-        df_nfpc = pl.read_parquet(nfpc_parquet_path).head(25000)
+        df_nfpc = pd.read_parquet(nfpc_parquet_path).head(25000)
 
         nfpc_cust_batch = {}
         nfpc_acc_batch = {}
@@ -384,11 +383,11 @@ def ingest_real_data():
         labels_path = os.path.join(BASE_DIR, "data", "nfpc", "train_labels.parquet")
         mule_accs = set()
         if os.path.exists(labels_path):
-            df_labels = pl.read_parquet(labels_path)
-            mule_accs = set(df_labels.filter(pl.col("is_mule") == 1)["account_id"].to_list())
+            df_labels = pd.read_parquet(labels_path)
+            mule_accs = set(df_labels[df_labels["is_mule"] == 1]["account_id"].tolist())
             print(f"  Loaded {len(mule_accs):,} known mule accounts from NFPC ground truth.")
 
-        for row in df_nfpc.iter_rows(named=True):
+        for row in df_nfpc.to_dict(orient="records"):
             t_id = str(row["transaction_id"])
             src = str(row["account_id"])
             dest = str(row["counterparty_id"]) if row["counterparty_id"] else None
