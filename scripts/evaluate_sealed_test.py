@@ -94,22 +94,24 @@ def bootstrap_ci(y_true, y_prob, threshold, n_bootstraps=1000, seed=42):
         yb_prob = y_prob[b_idx]
         yb_pred = (yb_prob >= threshold).astype(int)
 
-        # ROC-AUC
+        w_neg = n_neg / max(1, len(b_neg_sample))
+        sample_weights = np.concatenate([np.ones(n_pos), np.full(len(b_neg_sample), w_neg)])
+
+        # ROC-AUC with prevalence weighting
         try:
-            boot_roc.append(roc_auc_score(yb_true, yb_prob))
+            boot_roc.append(roc_auc_score(yb_true, yb_prob, sample_weight=sample_weights))
         except Exception:
             pass
 
-        # PR-AUC
+        # PR-AUC with prevalence weighting
         try:
-            p_arr, r_arr, _ = precision_recall_curve(yb_true, yb_prob)
+            p_arr, r_arr, _ = precision_recall_curve(yb_true, yb_prob, sample_weight=sample_weights)
             boot_pr.append(auc(r_arr, p_arr))
         except Exception:
             pass
 
         # Classification metrics with prevalence-preserving negative weighting
         tp = float(np.sum((yb_pred == 1) & (yb_true == 1)))
-        w_neg = n_neg / max(1, len(b_neg_sample))
         fp = float(np.sum((yb_pred == 1) & (yb_true == 0))) * w_neg
         fn = float(np.sum((yb_pred == 0) & (yb_true == 1)))
         tn = float(np.sum((yb_pred == 0) & (yb_true == 0))) * w_neg
