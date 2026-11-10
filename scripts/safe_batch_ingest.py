@@ -67,8 +67,8 @@ DEFAULT_SAFETY_RESERVE_MB = float(os.getenv("SUPABASE_SAFETY_RESERVE_MB", "50.0"
 ESTIMATED_KB_PER_TXN = 0.650  # Measured PostgreSQL table + 5 B-tree indexes + system catalog rate
 
 
-def get_current_storage_mb(conn) -> Tuple[float, str]:
-    """Queries current database physical storage in MB."""
+def get_current_storage_mb(conn) -> Tuple[Optional[float], str]:
+    """Queries current database physical storage in MB. Fails closed if unverifiable."""
     cursor = conn.cursor()
     # Check if PostgreSQL
     try:
@@ -76,7 +76,8 @@ def get_current_storage_mb(conn) -> Tuple[float, str]:
         row = cursor.fetchone()
         if row:
             bytes_val = row[0] if not hasattr(row, "keys") else row["pg_database_size"]
-            return float(bytes_val) / (1024.0 * 1024.0), "PostgreSQL"
+            if bytes_val is not None:
+                return float(bytes_val) / (1024.0 * 1024.0), "PostgreSQL"
     except Exception:
         pass
 
@@ -86,9 +87,12 @@ def get_current_storage_mb(conn) -> Tuple[float, str]:
         p_count = cursor.fetchone()[0]
         cursor.execute("PRAGMA page_size;")
         p_size = cursor.fetchone()[0]
-        return (float(p_count * p_size) / (1024.0 * 1024.0)), "SQLite"
+        if p_count is not None and p_size is not None and p_count > 0:
+            return (float(p_count * p_size) / (1024.0 * 1024.0)), "SQLite"
     except Exception:
-        return 0.0, "Unknown"
+        pass
+
+    return None, "UNVERIFIABLE"
 
 
 def load_checkpoint() -> Dict[str, Any]:
@@ -126,8 +130,16 @@ def check_storage_projection(
     quota_mb: float = DEFAULT_QUOTA_MB,
     safety_reserve_mb: float = DEFAULT_SAFETY_RESERVE_MB
 ) -> bool:
-    """Verifies that the projected ingestion will not breach storage quotas."""
+    """
+    Verifies that the projected ingestion will not breach storage quotas.
+    STRICT: Fails closed (returns False) if storage usage cannot be reliably measured.
+    """
     current_mb, engine = get_current_storage_mb(conn)
+    if current_mb is None or engine == "UNVERIFIABLE":
+        print(f"\n[CRITICAL ERROR] Storage capacity guard: Database storage could not be verified ({engine}).")
+        print("FAIL-CLOSED policy engaged: Refusing ingestion to prevent quota breach or read-only lockout.")
+        return False
+
     projected_add_mb = (records_to_ingest * ESTIMATED_KB_PER_TXN) / 1024.0
     projected_total_mb = current_mb + projected_add_mb
     effective_ceiling_mb = quota_mb - safety_reserve_mb
@@ -608,7 +620,9 @@ def rollback_batch(batch_id: str) -> bool:
                     vconn.commit()
                 print(f"[ROLLBACK] Cleanly removed protected labels for {len(txn_ids):,} transactions from Pipeline B vault.")
             except Exception as e:
-                logger.warning(f"Could not purge protected labels from vault during rollback: {e}")
+                logger.error(f"Could not purge protected labels from vault during rollback: {e}")
+                print(f"[ERROR] Rollback failed: Could not purge protected labels from vault ({e}).")
+                return False
 
         # 5. Cleanly prune batch-owned accounts and customers if unreferenced
         if batch_meta:
@@ -672,14 +686,20 @@ def show_status(quota_mb: float = DEFAULT_QUOTA_MB, safety_reserve_mb: float = D
         total_txns = cursor.fetchone()[0]
 
     ceiling_mb = quota_mb - safety_reserve_mb
-    available_headroom_mb = max(0.0, ceiling_mb - current_mb)
-    max_safe_txns = int((available_headroom_mb * 1024.0) / ESTIMATED_KB_PER_TXN)
+    if current_mb is not None:
+        available_headroom_mb = max(0.0, ceiling_mb - current_mb)
+        max_safe_txns = int((available_headroom_mb * 1024.0) / ESTIMATED_KB_PER_TXN)
+        storage_str = f"{current_mb:.2f} MB"
+        headroom_str = f"{available_headroom_mb:.2f} MB (~{max_safe_txns:,} transactions)"
+    else:
+        storage_str = "UNVERIFIABLE (Measurement query failed)"
+        headroom_str = "BLOCKED (Storage measurement unavailable - fail closed)"
 
     print(f"\n================ SENTINELFLOW INGESTION STATUS ================")
     print(f"Database Engine:           {engine}")
-    print(f"Database Physical Size:    {current_mb:.2f} MB")
+    print(f"Database Physical Size:    {storage_str}")
     print(f"Quota Safety Ceiling:      {ceiling_mb:.2f} MB (Total Quota: {quota_mb:.2f} MB, Reserve: {safety_reserve_mb:.2f} MB)")
-    print(f"Available Safe Headroom:   {available_headroom_mb:.2f} MB (~{max_safe_txns:,} transactions)")
+    print(f"Available Safe Headroom:   {headroom_str}")
     print(f"Live Transactions in DB:   {total_txns:,}")
     print(f"Dataset Offsets in Checkpoint:")
     for ds, st in checkpoint.get("datasets", {}).items():

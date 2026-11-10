@@ -271,5 +271,51 @@ class TestSafeBatchIngest(unittest.TestCase):
             self.assertEqual(cursor.fetchone()[0], 1)
 
 
+    def test_09_storage_guard_fails_closed_when_unverifiable(self):
+        """Verifies check_storage_projection fails closed when physical storage cannot be measured."""
+        # Storage measurement returns None or UNVERIFIABLE
+        with patch("safe_batch_ingest.get_current_storage_mb", return_value=(None, "UNVERIFIABLE")):
+            allowed = check_storage_projection(self.conn, records_to_ingest=100)
+            self.assertFalse(allowed)
+
+        # Storage measurement returns None with error
+        with patch("safe_batch_ingest.get_current_storage_mb", return_value=(None, "Unknown")):
+            allowed = check_storage_projection(self.conn, records_to_ingest=100)
+            self.assertFalse(allowed)
+
+    def test_10_rollback_returns_false_if_vault_cleanup_fails(self):
+        """Verifies rollback_batch returns False and does not report success if protected labels fail to purge."""
+        cursor = self.conn.cursor()
+        batch_id = f"BATCH-TEST-FAIL-{uuid.uuid4().hex[:6]}"
+        ensure_account_exists(self.conn, "ACC-F1")
+        ensure_account_exists(self.conn, "ACC-F2")
+
+        cursor.execute("""
+            INSERT INTO transactions (
+                id, event_id, source_account_id, destination_account_id,
+                customer_id, amount, currency, transaction_type, payment_channel,
+                status, scenario_id, dataset_source, risk_score, risk_band, scoring_status, created_at
+            ) VALUES ('T-FAIL-1', 'EVT-FAIL-1', 'ACC-F1', 'ACC-F2', 'CUST-F1', 100.0, 'USD',
+                      'TRANSFER', 'ONLINE', 'COMPLETED', ?, 'DS-1', 10.0, 'ROUTINE', 'CURRENT', '2023-01-01T00:00:00Z')
+        """, (batch_id,))
+        self.conn.commit()
+
+        class MockConnContext:
+            def __init__(self, conn):
+                self.conn = conn
+            def __enter__(self):
+                return self.conn
+            def __exit__(self, exc_type, exc_val, exc_tb):
+                pass
+
+        # Simulate sqlite3 failure when accessing protected labels vault during rollback
+        with patch("safe_batch_ingest.get_db_connection", return_value=MockConnContext(self.conn)), \
+             patch("os.path.exists", return_value=True), \
+             patch("sqlite3.connect", side_effect=sqlite3.OperationalError("Vault locked or corrupted")):
+
+            success = rollback_batch(batch_id)
+            self.assertFalse(success, "Rollback must return False if protected label purge fails.")
+
+
 if __name__ == "__main__":
     unittest.main()
