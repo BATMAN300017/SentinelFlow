@@ -21,7 +21,7 @@ export function IntelligenceCard({
   samples,
 }: IntelligenceCardProps) {
   return (
-    <div className="p-6 rounded-2xl border border-slate-800/80 bg-[#111722] shadow-lg space-y-4">
+    <div className="p-6 rounded-2xl border border-slate-800/80 bg-[#121612] shadow-lg space-y-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-2.5">
           <div className="p-2 rounded-xl bg-slate-800/80 border border-slate-700 text-emerald-400">
@@ -39,11 +39,11 @@ export function IntelligenceCard({
       </div>
 
       <div className="grid grid-cols-2 gap-3 text-xs font-mono pt-2">
-        <div className="p-3 rounded-xl bg-[#0B0F17] border border-slate-800/80">
+        <div className="p-3 rounded-xl bg-[#0D100D] border border-slate-800/80">
           <span className="text-slate-500 text-[10px]">Evaluation Accuracy</span>
           <div className="text-xl font-bold text-slate-100 mt-1 tabular-nums">{(accuracy * 100).toFixed(1)}%</div>
         </div>
-        <div className="p-3 rounded-xl bg-[#0B0F17] border border-slate-800/80">
+        <div className="p-3 rounded-xl bg-[#0D100D] border border-slate-800/80">
           <span className="text-slate-500 text-[10px]">F1 Diagnostic Score</span>
           <div className="text-xl font-bold text-emerald-400 mt-1 tabular-nums">{(f1Score * 100).toFixed(1)}%</div>
         </div>

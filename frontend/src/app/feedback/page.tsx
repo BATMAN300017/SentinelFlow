@@ -106,7 +106,7 @@ export default function FeedbackLearningPage() {
           <div className="space-y-6">
             {/* Status Overview Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="p-5 rounded-2xl border border-slate-800/80 bg-[#111722] shadow-lg space-y-1">
+              <div className="p-5 rounded-2xl border border-slate-800/80 bg-[#121612] shadow-lg space-y-1">
                 <span className="text-slate-500 font-mono text-[10px] uppercase tracking-wider">
                   Active Production Model
                 </span>
@@ -116,7 +116,7 @@ export default function FeedbackLearningPage() {
                 <div className="text-[11px] font-mono text-emerald-400">Deployed & Monitored</div>
               </div>
 
-              <div className="p-5 rounded-2xl border border-slate-800/80 bg-[#111722] shadow-lg space-y-1">
+              <div className="p-5 rounded-2xl border border-slate-800/80 bg-[#121612] shadow-lg space-y-1">
                 <span className="text-slate-500 font-mono text-[10px] uppercase tracking-wider">
                   Training Readiness
                 </span>
@@ -128,7 +128,7 @@ export default function FeedbackLearningPage() {
                 </div>
               </div>
 
-              <div className="p-5 rounded-2xl border border-slate-800/80 bg-[#111722] shadow-lg space-y-1">
+              <div className="p-5 rounded-2xl border border-slate-800/80 bg-[#121612] shadow-lg space-y-1">
                 <span className="text-slate-500 font-mono text-[10px] uppercase tracking-wider">
                   Candidate Promotion Gate
                 </span>

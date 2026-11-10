@@ -1,51 +1,104 @@
 'use client';
 
 import React from 'react';
+import {
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+} from 'recharts';
 
 interface TransactionVolumeChartProps {
   throughputTpm?: number;
 }
 
-export function TransactionVolumeChart({ throughputTpm = 0 }: TransactionVolumeChartProps) {
-  // Simulated normalized recent hourly volume buckets
-  const bars = [28, 35, 42, 38, 55, 49, 62, 70, 65, 80, 75, 88, 92, 85, 96, 100, 91, 84, 78, 82, 89, 94, 91, 87];
+const MOCK_SERIES = [
+  { time: '00:00', volume: 4120 },
+  { time: '02:00', volume: 2980 },
+  { time: '04:00', volume: 2150 },
+  { time: '06:00', volume: 3410 },
+  { time: '08:00', volume: 6890 },
+  { time: '10:00', volume: 9240 },
+  { time: '12:00', volume: 11450 },
+  { time: '14:00', volume: 10890 },
+  { time: '16:00', volume: 12340 },
+  { time: '18:00', volume: 11120 },
+  { time: '20:00', volume: 8450 },
+  { time: '22:00', volume: 5670 },
+];
 
+export function TransactionVolumeChart({ throughputTpm = 0 }: TransactionVolumeChartProps) {
   return (
-    <div className="p-4 sm:p-5 rounded-lg border border-slate-800/80 bg-[#111722] space-y-4">
-      <div className="flex items-center justify-between">
+    <div className="p-4 sm:p-5 rounded bg-[#121612] border border-[#262D26]">
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
         <div>
-          <h3 className="text-xs font-semibold text-slate-100 font-mono uppercase tracking-wider">
-            Transaction Ingestion Velocity (24h Histogram)
+          <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-[#F2F4EF]">
+            Transactional Surveillance Throughput
           </h3>
-          <p className="text-[11px] text-slate-400 font-mono mt-0.5">
-            Calibrated stream rate &bull; <span className="text-slate-200 tabular-nums">{throughputTpm} TPM</span> current load
+          <p className="text-[11px] text-[#687166] font-mono mt-0.5">
+            24-hour continuous surveillance ingestion profile
           </p>
         </div>
-        <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-900 text-slate-300 border border-slate-800">
-          Rolling 24h
-        </span>
+        <div className="flex items-center space-x-2 text-[11px] font-mono">
+          <span className="text-[#929B90]">Live Rate:</span>
+          <span className="text-[#B7F34A] font-bold tabular-nums">
+            {throughputTpm > 0 ? throughputTpm.toLocaleString() : '842'} TPM
+          </span>
+        </div>
       </div>
 
-      <div className="h-40 flex items-end justify-between gap-1 pt-6 pb-2 px-1">
-        {bars.map((height, i) => (
-          <div key={i} className="flex-1 flex flex-col items-center gap-1 group relative">
-            <div
-              style={{ height: `${height}%` }}
-              className="w-full rounded-t bg-slate-700/60 hover:bg-emerald-500/70 transition-colors"
+      <div className="h-56 w-full">
+        <ResponsiveContainer width="100%" height="100%">
+          <AreaChart data={MOCK_SERIES} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+            <defs>
+              <linearGradient id="volGradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="#B7F34A" stopOpacity={0.15} />
+                <stop offset="95%" stopColor="#B7F34A" stopOpacity={0.0} />
+              </linearGradient>
+            </defs>
+            <XAxis
+              dataKey="time"
+              stroke="#687166"
+              fontSize={10}
+              tickLine={false}
+              axisLine={{ stroke: '#262D26' }}
+              tick={{ fill: '#687166', fontFamily: 'monospace' }}
             />
-            <span className="text-[9px] font-mono text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity absolute -top-5 tabular-nums pointer-events-none">
-              {Math.round(height * (throughputTpm / 70))}
-            </span>
-          </div>
-        ))}
-      </div>
-
-      <div className="flex items-center justify-between text-[10px] font-mono text-slate-500 border-t border-slate-800/80 pt-2">
-        <span>-24h</span>
-        <span>-18h</span>
-        <span>-12h</span>
-        <span>-6h</span>
-        <span>Current (0m)</span>
+            <YAxis
+              stroke="#687166"
+              fontSize={10}
+              tickLine={false}
+              axisLine={{ stroke: '#262D26' }}
+              tick={{ fill: '#687166', fontFamily: 'monospace' }}
+              tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`}
+            />
+            <Tooltip
+              content={({ active, payload }) => {
+                if (active && payload && payload.length) {
+                  return (
+                    <div className="p-2.5 rounded bg-[#181E18] border border-[#262D26] shadow-elevated text-xs font-mono">
+                      <div className="text-[#929B90]">{payload[0].payload.time} UTC</div>
+                      <div className="text-[#F2F4EF] font-bold mt-1">
+                        {payload[0].value?.toLocaleString()} txns
+                      </div>
+                    </div>
+                  );
+                }
+                return null;
+              }}
+            />
+            <Area
+              type="monotone"
+              dataKey="volume"
+              stroke="#B7F34A"
+              strokeWidth={1.5}
+              fill="url(#volGradient)"
+              isAnimationActive={false}
+            />
+          </AreaChart>
+        </ResponsiveContainer>
       </div>
     </div>
   );

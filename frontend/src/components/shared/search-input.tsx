@@ -1,11 +1,11 @@
 'use client';
 
 import React from 'react';
-import { Search, X } from 'lucide-react';
+import { Search } from 'lucide-react';
 
 interface SearchInputProps {
   value: string;
-  onChange: (val: string) => void;
+  onChange: (value: string) => void;
   placeholder?: string;
   className?: string;
 }
@@ -13,27 +13,19 @@ interface SearchInputProps {
 export function SearchInput({
   value,
   onChange,
-  placeholder = 'Search telemetry...',
+  placeholder = 'Filter records...',
   className = '',
 }: SearchInputProps) {
   return (
-    <div className={`relative flex items-center w-full ${className}`}>
-      <Search className="absolute left-3 w-4 h-4 text-slate-500 pointer-events-none" />
+    <div className={`relative flex items-center ${className}`}>
+      <Search className="w-3.5 h-3.5 text-[#687166] absolute left-3 pointer-events-none shrink-0" />
       <input
         type="text"
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="w-full pl-9 pr-8 py-1.5 rounded-lg text-xs font-mono bg-[#0B0F17] text-slate-200 border border-slate-700/80 placeholder-slate-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/30 transition"
+        className="w-full bg-[#121612] text-xs font-mono text-[#F2F4EF] placeholder-[#687166] pl-8 pr-3 py-1.5 rounded border border-[#262D26] hover:border-[#364036] focus:border-[#B7F34A] focus:outline-none transition-colors"
       />
-      {value && (
-        <button
-          onClick={() => onChange('')}
-          className="absolute right-2.5 p-0.5 rounded text-slate-500 hover:text-slate-300"
-        >
-          <X className="w-3.5 h-3.5" />
-        </button>
-      )}
     </div>
   );
 }

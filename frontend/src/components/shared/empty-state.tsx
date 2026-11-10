@@ -1,38 +1,27 @@
 'use client';
 
 import React from 'react';
-import { Database, Search } from 'lucide-react';
+import { Inbox } from 'lucide-react';
 
 interface EmptyStateProps {
   title?: string;
   description?: string;
-  icon?: 'search' | 'database';
-  actionLabel?: string;
-  onAction?: () => void;
+  action?: React.ReactNode;
 }
 
 export function EmptyState({
   title = 'No Records Found',
-  description = 'There are no items matching the selected parameters.',
-  icon = 'database',
-  actionLabel,
-  onAction,
+  description = 'No surveillance items match the specified filter criteria.',
+  action,
 }: EmptyStateProps) {
   return (
-    <div className="py-12 px-4 text-center flex flex-col items-center justify-center space-y-3">
-      <div className="p-3 rounded-xl bg-slate-800/80 text-slate-400 border border-slate-700/60">
-        {icon === 'search' ? <Search className="w-6 h-6" /> : <Database className="w-6 h-6" />}
+    <div className="py-12 px-4 text-center rounded bg-[#121612] border border-[#262D26]">
+      <div className="w-10 h-10 rounded bg-[#181E18] border border-[#262D26] text-[#687166] flex items-center justify-center mx-auto mb-3">
+        <Inbox className="w-5 h-5" />
       </div>
-      <h4 className="text-sm font-semibold text-slate-300 font-mono">{title}</h4>
-      <p className="text-xs text-slate-500 max-w-sm">{description}</p>
-      {actionLabel && onAction && (
-        <button
-          onClick={onAction}
-          className="mt-2 px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800/80 hover:bg-slate-700 text-emerald-400 border border-slate-700/80 transition"
-        >
-          {actionLabel}
-        </button>
-      )}
+      <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-[#F2F4EF]">{title}</h3>
+      <p className="text-[11px] font-mono text-[#687166] mt-1 max-w-sm mx-auto">{description}</p>
+      {action && <div className="mt-4">{action}</div>}
     </div>
   );
 }

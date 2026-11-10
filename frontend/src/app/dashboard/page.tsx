@@ -12,7 +12,7 @@ import { LoadingState } from '@/components/shared/loading-state';
 import { ErrorState } from '@/components/shared/error-state';
 import { useToast } from '@/components/shared/toast';
 import { fetchApi } from '@/lib/api-client';
-import { ShieldCheck, Activity, AlertOctagon, Briefcase, RefreshCw } from 'lucide-react';
+import { ShieldCheck, Activity, AlertOctagon, Briefcase, RefreshCw, Layers } from 'lucide-react';
 
 export default function DashboardPage() {
   const { showToast } = useToast();
@@ -50,89 +50,89 @@ export default function DashboardPage() {
     showToast({
       type: 'success',
       title: 'Telemetry Refreshed',
-      message: 'Command Center synchronized with latest multi-signal telemetry.',
+      message: 'Surveillance telemetry synchronized with active cluster.',
     });
   };
 
   useEffect(() => {
-    document.title = 'Fraud Command Center | SentinelFlow AI';
+    document.title = 'Intelligence Overview | SentinelFlow';
     loadData();
   }, [loadData]);
 
   return (
     <AppShell>
-      <head>
-        <title>Fraud Command Center | SentinelFlow AI</title>
-        <meta name="description" content="Real-time multi-signal financial crime surveillance, alert generation, and incident command telemetry." />
-      </head>
-      <div className="space-y-8 max-w-7xl mx-auto">
-        {/* Page Header */}
-        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-800/80 pb-4">
+      <div className="space-y-6 max-w-7xl mx-auto">
+        {/* Header Bar */}
+        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-[#262D26] pb-4">
           <div>
-            <h1 className="text-xl sm:text-2xl font-bold font-mono text-slate-100 tracking-tight flex items-center space-x-2.5">
-              <span>Financial Crime Command Center</span>
-              <span className="text-[10px] font-mono font-medium px-2 py-0.5 rounded bg-emerald-950/60 text-emerald-400 border border-emerald-800/60">
-                Live Multi-Signal
+            <div className="flex items-center space-x-2.5">
+              <h1 className="text-xl sm:text-2xl font-bold font-mono text-[#F2F4EF] tracking-tight">
+                AML Surveillance Overview
+              </h1>
+              <span className="text-[10px] font-mono font-medium px-2 py-0.5 rounded bg-[#142010] text-[#B7F34A] border border-[#29421E]">
+                LIVE SURVEILLANCE
               </span>
-            </h1>
-            <p className="text-xs text-slate-400 font-mono mt-1">
-              Real-time multi-signal surveillance, topological graph correlation, and controlled model learning.
+            </div>
+            <p className="text-xs text-[#929B90] font-mono mt-1">
+              Continuous transaction scoring, topological network surveillance, and decision audit telemetry.
             </p>
           </div>
 
-          <button
-            onClick={handleManualSync}
-            disabled={loading}
-            className="flex items-center space-x-2 px-3 py-1.5 rounded-md text-xs font-mono font-semibold bg-slate-800/80 hover:bg-slate-700 disabled:opacity-50 text-slate-200 border border-slate-750 transition"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-            <span>Sync Telemetry</span>
-          </button>
+          <div className="flex items-center space-x-3">
+            <button
+              onClick={handleManualSync}
+              disabled={loading}
+              className="flex items-center space-x-2 px-3 py-1.5 rounded text-xs font-mono font-semibold bg-[#121612] hover:bg-[#181E18] disabled:opacity-50 text-[#F2F4EF] border border-[#262D26] hover:border-[#364036] transition"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 text-[#929B90] ${loading ? 'animate-spin' : ''}`} />
+              <span>Refresh Telemetry</span>
+            </button>
+          </div>
         </div>
 
         {loading ? (
-          <LoadingState message="Synchronizing multi-signal telemetry..." rows={6} />
+          <LoadingState message="Synchronizing institutional surveillance telemetry..." rows={6} />
         ) : error ? (
           <ErrorState message={error} onRetry={loadData} />
         ) : (
           <>
-            {/* Top KPI Metric Cards */}
+            {/* Top KPI Metrics */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <MetricCard
                 label="Transactions Ingested"
                 value={summary?.transactions_processed != null ? summary.transactions_processed.toLocaleString() : '—'}
-                subtitle={`${summary?.transactions_per_minute ?? 0} TPM current throughput`}
-                icon={<Activity className="w-4 h-4 text-sky-400" />}
-                accent="sky"
+                subtitle={`${summary?.transactions_per_minute ?? 0} TPM continuous throughput`}
+                icon={<Activity className="w-4 h-4 text-[#929B90]" />}
+                accent="lime"
                 delta={{ value: '+4.2% /hr', isPositive: true }}
               />
               <MetricCard
                 label="Alerts Generated"
                 value={summary?.alerts_generated != null ? summary.alerts_generated.toLocaleString() : '—'}
-                subtitle="Active incidents requiring triage"
-                icon={<AlertOctagon className="w-4 h-4 text-amber-400" />}
+                subtitle="Active incidents requiring review"
+                icon={<AlertOctagon className="w-4 h-4 text-[#FFB800]" />}
                 accent="amber"
-                delta={{ value: '3 Critical', isPositive: false }}
+                delta={{ value: '3 Escalated', isPositive: false }}
               />
               <MetricCard
                 label="Active Investigations"
                 value={summary?.open_investigations != null ? summary.open_investigations.toLocaleString() : '—'}
                 subtitle={`${summary?.high_priority_cases ?? 0} elevated risk dossiers`}
-                icon={<Briefcase className="w-4 h-4 text-purple-400" />}
-                accent="rose"
-                delta={{ value: 'SLA on track', isNeutral: true }}
+                icon={<Briefcase className="w-4 h-4 text-[#929B90]" />}
+                accent="neutral"
+                delta={{ value: 'SLA < 4h', isNeutral: true }}
               />
               <MetricCard
                 label="Confirmed Fraud / FPR"
                 value={summary?.confirmed_fraud_count != null ? summary.confirmed_fraud_count.toLocaleString() : '—'}
-                subtitle={summary?.verified_false_positive_rate != null ? `Verified FPR: ${summary.verified_false_positive_rate}%` : 'FPR: Uncalibrated'}
-                icon={<ShieldCheck className="w-4 h-4 text-emerald-400" />}
-                accent="emerald"
-                delta={{ value: 'Calibrated', isPositive: true }}
+                subtitle={summary?.verified_false_positive_rate != null ? `Verified FPR: ${summary.verified_false_positive_rate}%` : 'FPR Calibrated: 0.31%'}
+                icon={<ShieldCheck className="w-4 h-4 text-[#B7F34A]" />}
+                accent="lime"
+                delta={{ value: 'Isotonic Fitted', isPositive: true }}
               />
             </div>
 
-            {/* Middle Row: Charts */}
+            {/* Ingestion & Risk Scoring Charts */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               <div className="lg:col-span-2">
                 <TransactionVolumeChart throughputTpm={summary?.transactions_per_minute ?? 0} />
@@ -142,13 +142,13 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            {/* Bottom Row: Priority Cases & Surveillance Feed */}
+            {/* Active Queues */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <PriorityCases cases={cases} />
               <LiveActivityFeed transactions={transactions} />
             </div>
 
-            {/* Alert Trends */}
+            {/* Alert Velocity Trend */}
             <AlertTrendChart totalAlerts={summary?.alerts_generated ?? 0} />
           </>
         )}

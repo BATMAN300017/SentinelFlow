@@ -16,59 +16,25 @@ import {
   ScrollText,
   Settings,
   Shield,
-  Activity,
   Workflow,
   X,
 } from 'lucide-react';
-import { APP_NAME, APP_TAGLINE } from '@/lib/constants';
+import { APP_NAME, APP_TAGLINE, NAVIGATION_SECTIONS } from '@/lib/constants';
 
 const ICON_MAP: Record<string, React.ReactNode> = {
-  LayoutDashboard: <LayoutDashboard className="w-4 h-4" />,
-  ArrowLeftRight: <ArrowLeftRight className="w-4 h-4" />,
-  ShieldAlert: <ShieldAlert className="w-4 h-4" />,
-  Briefcase: <Briefcase className="w-4 h-4" />,
-  Network: <Network className="w-4 h-4" />,
-  Users: <Users className="w-4 h-4" />,
-  BrainCircuit: <BrainCircuit className="w-4 h-4" />,
-  Cpu: <Cpu className="w-4 h-4" />,
-  FileCode2: <FileCode2 className="w-4 h-4" />,
-  ScrollText: <ScrollText className="w-4 h-4" />,
-  Settings: <Settings className="w-4 h-4" />,
-  Workflow: <Workflow className="w-4 h-4" />,
+  LayoutDashboard: <LayoutDashboard className="w-4 h-4 shrink-0" />,
+  ArrowLeftRight: <ArrowLeftRight className="w-4 h-4 shrink-0" />,
+  ShieldAlert: <ShieldAlert className="w-4 h-4 shrink-0" />,
+  Briefcase: <Briefcase className="w-4 h-4 shrink-0" />,
+  Network: <Network className="w-4 h-4 shrink-0" />,
+  Users: <Users className="w-4 h-4 shrink-0" />,
+  BrainCircuit: <BrainCircuit className="w-4 h-4 shrink-0" />,
+  Cpu: <Cpu className="w-4 h-4 shrink-0" />,
+  FileCode2: <FileCode2 className="w-4 h-4 shrink-0" />,
+  ScrollText: <ScrollText className="w-4 h-4 shrink-0" />,
+  Settings: <Settings className="w-4 h-4 shrink-0" />,
+  Workflow: <Workflow className="w-4 h-4 shrink-0" />,
 };
-
-const SECTIONS = [
-  {
-    title: 'OPERATIONS',
-    items: [
-      { name: 'Command Center', href: '/dashboard', icon: 'LayoutDashboard' },
-      { name: 'Live Transactions', href: '/transactions', icon: 'ArrowLeftRight' },
-      { name: 'Alerts Queue', href: '/alerts', icon: 'ShieldAlert' },
-      { name: 'Investigations', href: '/investigations', icon: 'Briefcase' },
-    ],
-  },
-  {
-    title: 'SURVEILLANCE & GRAPH',
-    items: [
-      { name: 'Fund Flow Tracing', href: '/fund-flow', icon: 'Workflow' },
-      { name: 'Network Intelligence', href: '/network', icon: 'Network' },
-      { name: 'Entity Profiles', href: '/entities', icon: 'Users' },
-    ],
-  },
-  {
-    title: 'MACHINE LEARNING & AUDIT',
-    items: [
-      { name: 'Model Intelligence', href: '/intelligence', icon: 'BrainCircuit' },
-      { name: 'Model Learning', href: '/feedback', icon: 'Cpu' },
-      { name: 'Detection Rules', href: '/rules', icon: 'FileCode2' },
-      { name: 'Audit Trail', href: '/audit', icon: 'ScrollText' },
-    ],
-  },
-  {
-    title: 'CONFIGURATION',
-    items: [{ name: 'System Settings', href: '/settings', icon: 'Settings' }],
-  },
-];
 
 interface SidebarProps {
   isOpen?: boolean;
@@ -79,26 +45,28 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const pathname = usePathname();
 
   const sidebarContent = (
-    <div className="flex flex-col h-full bg-[#0B0F17] border-r border-slate-800/80 select-none">
-      {/* Brand Header - Clickable Logo & Title to Dashboard */}
-      <div className="p-4 border-b border-slate-800/80 flex items-center justify-between">
+    <div className="flex flex-col h-full bg-[#0D100D] border-r border-[#262D26] select-none text-[#F2F4EF]">
+      {/* Brand Header */}
+      <div className="px-5 py-4 border-b border-[#262D26] flex items-center justify-between">
         <Link
           href="/dashboard"
           onClick={onClose}
-          className="flex items-center space-x-3 group transition"
-          title="Go to SentinelFlow Command Center"
+          className="flex items-center space-x-3 group"
+          title="SentinelFlow Platform Home"
         >
-          <div className="p-2 rounded-lg bg-slate-900 border border-emerald-500/30 text-emerald-400 group-hover:border-emerald-500/60 transition-colors">
+          <div className="w-8 h-8 rounded bg-[#121612] border border-[#262D26] flex items-center justify-center text-[#B7F34A] group-hover:border-[#B7F34A]/50 transition-colors">
             <Shield className="w-4 h-4" />
           </div>
           <div>
-            <div className="text-xs font-bold tracking-wider font-mono text-slate-100 flex items-center space-x-1.5 group-hover:text-emerald-300 transition-colors">
-              <span>{APP_NAME}</span>
-              <span className="text-[9px] px-1 py-0.2 rounded bg-emerald-950/60 text-emerald-400 border border-emerald-800/60 font-mono">
-                v2.0
+            <div className="flex items-center space-x-2">
+              <span className="text-xs font-semibold tracking-wider font-mono text-[#F2F4EF] uppercase group-hover:text-white transition-colors">
+                {APP_NAME}
+              </span>
+              <span className="text-[9px] px-1.5 py-0.2 rounded bg-[#181E18] text-[#B7F34A] border border-[#262D26] font-mono">
+                INSTITUTIONAL
               </span>
             </div>
-            <div className="text-[10px] text-slate-500 font-mono tracking-tight truncate max-w-[145px]">
+            <div className="text-[10px] text-[#687166] font-mono tracking-tight truncate max-w-[150px]">
               {APP_TAGLINE}
             </div>
           </div>
@@ -107,8 +75,8 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
           <button
             type="button"
             onClick={onClose}
-            className="md:hidden p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-900 transition"
-            aria-label="Close navigation menu"
+            className="md:hidden p-1.5 rounded text-[#929B90] hover:text-[#F2F4EF] hover:bg-[#181E18] transition"
+            aria-label="Close navigation"
           >
             <X className="w-4 h-4" />
           </button>
@@ -116,13 +84,13 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       </div>
 
       {/* Nav List */}
-      <nav className="flex-1 overflow-y-auto px-2.5 py-3 space-y-5">
-        {SECTIONS.map((section) => (
+      <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-6">
+        {NAVIGATION_SECTIONS.map((section) => (
           <div key={section.title} className="space-y-1">
-            <div className="px-2.5 text-[9px] font-bold font-mono text-slate-500 tracking-wider uppercase">
+            <div className="px-2 text-[9px] font-bold font-mono text-[#687166] tracking-widest uppercase">
               {section.title}
             </div>
-            <div className="space-y-0.5 pt-0.5">
+            <div className="space-y-0.5 pt-1">
               {section.items.map((item) => {
                 const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href));
                 return (
@@ -130,16 +98,21 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                     key={item.href}
                     href={item.href}
                     onClick={onClose}
-                    className={`flex items-center space-x-2.5 px-2.5 py-1.5 rounded-md text-xs font-mono font-medium transition-colors ${
+                    className={`flex items-center justify-between px-2.5 py-2 rounded text-xs font-mono font-medium transition-all ${
                       isActive
-                        ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/25'
-                        : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/70 border border-transparent'
+                        ? 'bg-[#181E18] text-[#F2F4EF] border-l-2 border-[#B7F34A] pl-2 border-y border-r border-[#262D26]'
+                        : 'text-[#929B90] hover:text-[#F2F4EF] hover:bg-[#121612] border border-transparent'
                     }`}
                   >
-                    <span className={isActive ? 'text-emerald-400' : 'text-slate-500'}>
-                      {ICON_MAP[item.icon]}
-                    </span>
-                    <span className="truncate">{item.name}</span>
+                    <div className="flex items-center space-x-2.5 truncate">
+                      <span className={isActive ? 'text-[#B7F34A]' : 'text-[#687166]'}>
+                        {ICON_MAP[item.icon]}
+                      </span>
+                      <span className="truncate">{item.name}</span>
+                    </div>
+                    {isActive && (
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#B7F34A] shrink-0" />
+                    )}
                   </Link>
                 );
               })}
@@ -148,22 +121,24 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         ))}
       </nav>
 
-      {/* System Telemetry & Copyright Footer */}
-      <div className="p-3 border-t border-slate-800/80 bg-[#0B0F17] space-y-2">
-        <div className="p-2.5 rounded-lg bg-slate-900/60 border border-slate-800/80 space-y-1">
-          <div className="flex items-center justify-between text-[10px] font-mono text-slate-400">
-            <span className="flex items-center space-x-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+      {/* System Status Telemetry */}
+      <div className="p-3 border-t border-[#262D26] bg-[#0A0D0A] space-y-2">
+        <div className="p-2.5 rounded bg-[#121612] border border-[#262D26] space-y-1.5">
+          <div className="flex items-center justify-between text-[10px] font-mono">
+            <span className="flex items-center space-x-1.5 text-[#929B90]">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#B7F34A]" />
               <span>Surveillance Engine</span>
             </span>
-            <span className="text-emerald-400 font-bold text-[9px]">ONLINE</span>
+            <span className="text-[#B7F34A] font-bold text-[9px] px-1 py-0.2 rounded bg-[#142010] border border-[#29421E]">
+              ONLINE
+            </span>
           </div>
-          <div className="text-[9px] text-slate-500 font-mono">
-            Workers Static Assets • Render API
+          <div className="text-[9px] text-[#687166] font-mono truncate">
+            Edge Ingestion • Real-Time Scoring
           </div>
         </div>
-        <div className="text-[9px] text-slate-600 font-mono text-center">
-          &copy; 2026 SentinelFlow AI
+        <div className="text-[9px] text-[#414840] font-mono text-center">
+          SentinelFlow Financial Intelligence v2.1
         </div>
       </div>
     </div>
@@ -176,16 +151,14 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         {sidebarContent}
       </aside>
 
-      {/* Mobile Drawer Navigation */}
+      {/* Mobile Navigation Drawer */}
       {isOpen && (
         <div className="fixed inset-0 z-50 md:hidden">
-          {/* Backdrop */}
           <div
-            className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm transition-opacity"
+            className="fixed inset-0 bg-[#080A08]/85 backdrop-blur-sm transition-opacity"
             onClick={onClose}
             aria-hidden="true"
           />
-          {/* Drawer */}
           <div className="fixed inset-y-0 left-0 w-72 max-w-[85vw] flex flex-col shadow-2xl animate-fade-in">
             {sidebarContent}
           </div>

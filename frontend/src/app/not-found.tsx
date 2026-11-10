@@ -11,7 +11,7 @@ export default function NotFound() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#0B0F17] text-slate-100 flex flex-col justify-between p-6 sm:p-12 font-sans select-none relative overflow-hidden">
+    <div className="min-h-screen bg-[#0D100D] text-slate-100 flex flex-col justify-between p-6 sm:p-12 font-sans select-none relative overflow-hidden">
       {/* Header with Clickable Logo */}
       <header className="flex items-center justify-between z-10">
         <Link href="/dashboard" className="flex items-center space-x-3 group">
@@ -30,14 +30,14 @@ export default function NotFound() {
             </div>
           </div>
         </Link>
-        <span className="text-xs font-mono px-2.5 py-1 rounded-full bg-[#111722] border border-slate-800/80 text-slate-400">
+        <span className="text-xs font-mono px-2.5 py-1 rounded-full bg-[#121612] border border-slate-800/80 text-slate-400">
           HTTP 404
         </span>
       </header>
 
       {/* Main 404 Card */}
       <main className="max-w-xl mx-auto my-auto text-center space-y-6 z-10 py-12">
-        <div className="inline-flex p-4 rounded-2xl bg-[#111722] border border-slate-800/80 text-rose-400 shadow-xl">
+        <div className="inline-flex p-4 rounded-2xl bg-[#121612] border border-slate-800/80 text-rose-400 shadow-xl">
           <ShieldAlert className="w-12 h-12" />
         </div>
 
@@ -57,7 +57,7 @@ export default function NotFound() {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-4 text-left">
           <Link
             href="/dashboard"
-            className="p-3.5 rounded-xl border border-slate-800/80 bg-[#111722] hover:bg-[#161F2E] hover:border-slate-700 transition group flex items-center justify-between"
+            className="p-3.5 rounded-xl border border-slate-800/80 bg-[#121612] hover:bg-[#181E18] hover:border-slate-700 transition group flex items-center justify-between"
           >
             <div className="flex items-center space-x-2.5">
               <LayoutDashboard className="w-4 h-4 text-emerald-400" />
@@ -73,7 +73,7 @@ export default function NotFound() {
 
           <Link
             href="/transactions"
-            className="p-3.5 rounded-xl border border-slate-800/80 bg-[#111722] hover:bg-[#161F2E] hover:border-slate-700 transition group flex items-center justify-between"
+            className="p-3.5 rounded-xl border border-slate-800/80 bg-[#121612] hover:bg-[#181E18] hover:border-slate-700 transition group flex items-center justify-between"
           >
             <div className="flex items-center space-x-2.5">
               <ArrowLeftRight className="w-4 h-4 text-emerald-400" />
@@ -89,7 +89,7 @@ export default function NotFound() {
 
           <Link
             href="/alerts"
-            className="p-3.5 rounded-xl border border-slate-800/80 bg-[#111722] hover:bg-[#161F2E] hover:border-slate-700 transition group flex items-center justify-between"
+            className="p-3.5 rounded-xl border border-slate-800/80 bg-[#121612] hover:bg-[#181E18] hover:border-slate-700 transition group flex items-center justify-between"
           >
             <div className="flex items-center space-x-2.5">
               <AlertIcon className="w-4 h-4 text-amber-400" />
@@ -105,7 +105,7 @@ export default function NotFound() {
 
           <Link
             href="/fund-flow"
-            className="p-3.5 rounded-xl border border-slate-800/80 bg-[#111722] hover:bg-[#161F2E] hover:border-slate-700 transition group flex items-center justify-between"
+            className="p-3.5 rounded-xl border border-slate-800/80 bg-[#121612] hover:bg-[#181E18] hover:border-slate-700 transition group flex items-center justify-between"
           >
             <div className="flex items-center space-x-2.5">
               <Network className="w-4 h-4 text-slate-300" />

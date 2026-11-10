@@ -75,7 +75,7 @@ export function RelationshipGraph({
   };
 
   return (
-    <div className="relative w-full h-[450px] rounded-2xl border border-slate-800/80 bg-[#0B0F17] overflow-hidden shadow-2xl flex items-center justify-center">
+    <div className="relative w-full h-[450px] rounded-2xl border border-slate-800/80 bg-[#0D100D] overflow-hidden shadow-2xl flex items-center justify-center">
       {/* Background grid */}
       <div className="absolute inset-0 bg-[radial-gradient(#1e293b_1px,transparent_1px)] [background-size:24px_24px] opacity-40 pointer-events-none" />
 

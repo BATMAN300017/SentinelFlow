@@ -231,7 +231,7 @@ function FundFlowContent() {
         </div>
 
         {/* Lucinity Reference: Date Presets & Custom Date Range Filter */}
-        <div className="p-4 rounded-lg bg-[#111722] border border-slate-800/80 space-y-3">
+        <div className="p-4 rounded-lg bg-[#121612] border border-slate-800/80 space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-3">
             {/* Presets */}
             <div className="flex items-center space-x-1 overflow-x-auto pb-1 sm:pb-0">
@@ -257,7 +257,7 @@ function FundFlowContent() {
               <select
                 value={currency}
                 onChange={(e) => setCurrency(e.target.value)}
-                className="bg-[#0B0F17] border border-slate-800 rounded px-2.5 py-1 text-slate-200 font-bold"
+                className="bg-[#0D100D] border border-slate-800 rounded px-2.5 py-1 text-slate-200 font-bold"
               >
                 <option value="INR">INR (₹)</option>
                 <option value="GBP">GBP (£)</option>
@@ -279,7 +279,7 @@ function FundFlowContent() {
                   placeholder="e.g. ACCT_000150"
                   value={searchAccount}
                   onChange={(e) => setSearchAccount(e.target.value)}
-                  className="w-full pl-8 pr-2.5 py-1 bg-[#0B0F17] border border-slate-800 rounded text-slate-200"
+                  className="w-full pl-8 pr-2.5 py-1 bg-[#0D100D] border border-slate-800 rounded text-slate-200"
                 />
               </div>
             </div>
@@ -290,7 +290,7 @@ function FundFlowContent() {
                 type="date"
                 value={customStart}
                 onChange={(e) => setCustomStart(e.target.value)}
-                className="w-full bg-[#0B0F17] border border-slate-800 rounded px-2 py-1 text-slate-200"
+                className="w-full bg-[#0D100D] border border-slate-800 rounded px-2 py-1 text-slate-200"
               />
             </div>
 
@@ -300,7 +300,7 @@ function FundFlowContent() {
                 type="date"
                 value={customEnd}
                 onChange={(e) => setCustomEnd(e.target.value)}
-                className="w-full bg-[#0B0F17] border border-slate-800 rounded px-2 py-1 text-slate-200"
+                className="w-full bg-[#0D100D] border border-slate-800 rounded px-2 py-1 text-slate-200"
               />
             </div>
 
@@ -327,21 +327,21 @@ function FundFlowContent() {
         {/* Workspace Period & KPI Bar */}
         {data && data.summary && (
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs font-mono">
-            <div className="p-3.5 rounded-lg bg-[#111722] border border-slate-800/80">
+            <div className="p-3.5 rounded-lg bg-[#121612] border border-slate-800/80">
               <div className="text-[10px] text-slate-400 uppercase tracking-wider">Gross Flow Volume</div>
               <div className="text-lg font-bold text-slate-100 mt-0.5 tabular-nums">
                 {currency} {Number(data.summary.total_volume).toLocaleString(undefined, { minimumFractionDigits: 0 })}
               </div>
             </div>
-            <div className="p-3.5 rounded-lg bg-[#111722] border border-slate-800/80">
+            <div className="p-3.5 rounded-lg bg-[#121612] border border-slate-800/80">
               <div className="text-[10px] text-slate-400 uppercase tracking-wider">Active Streams</div>
               <div className="text-lg font-bold text-emerald-400 mt-0.5 tabular-nums">{data.summary.flow_count} Empirical Flows</div>
             </div>
-            <div className="p-3.5 rounded-lg bg-[#111722] border border-slate-800/80">
+            <div className="p-3.5 rounded-lg bg-[#121612] border border-slate-800/80">
               <div className="text-[10px] text-slate-400 uppercase tracking-wider">Layering Switches</div>
               <div className="text-lg font-bold text-amber-400 mt-0.5 tabular-nums">{data.summary.intermediaries_count} Intermediary Mules</div>
             </div>
-            <div className="p-3.5 rounded-lg bg-[#111722] border border-slate-800/80">
+            <div className="p-3.5 rounded-lg bg-[#121612] border border-slate-800/80">
               <div className="text-[10px] text-slate-400 uppercase tracking-wider">Active Analysis Window</div>
               <div className="text-xs font-bold text-slate-300 mt-1.5">{data.period_label}</div>
             </div>

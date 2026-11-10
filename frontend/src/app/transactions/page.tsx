@@ -214,7 +214,7 @@ function TransactionsContent() {
         </div>
 
         {/* Reference Layout: Money Flow (Last 24 Hours) Overview */}
-        <div className="rounded-lg border border-slate-800/80 bg-[#111722] p-4 sm:p-5 relative overflow-hidden">
+        <div className="rounded-lg border border-slate-800/80 bg-[#121612] p-4 sm:p-5 relative overflow-hidden">
           <div className="flex items-center justify-between mb-3.5">
             <div className="flex items-center space-x-2">
               <span className="w-2 h-2 rounded-full bg-emerald-500" />
@@ -229,7 +229,7 @@ function TransactionsContent() {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4">
             {/* Source Accounts */}
-            <div className="p-3.5 rounded-md bg-[#0B0F17] border border-slate-800/80 space-y-1">
+            <div className="p-3.5 rounded-md bg-[#0D100D] border border-slate-800/80 space-y-1">
               <div className="text-[10px] font-mono uppercase text-slate-400 tracking-wider">1. Originator Accounts (Inflow)</div>
               <div className="text-lg sm:text-xl font-mono font-bold text-slate-100 tabular-nums">
                 ${summaryMetrics.sourceVolume.toLocaleString(undefined, { maximumFractionDigits: 0 })}
@@ -240,7 +240,7 @@ function TransactionsContent() {
             </div>
 
             {/* Intermediary Layering Accounts */}
-            <div className="p-3.5 rounded-md bg-[#0B0F17] border border-slate-800/80 space-y-1">
+            <div className="p-3.5 rounded-md bg-[#0D100D] border border-slate-800/80 space-y-1">
               <div className="text-[10px] font-mono uppercase text-slate-400 tracking-wider">2. Intermediary Routing Switches</div>
               <div className="text-lg sm:text-xl font-mono font-bold text-amber-300 tabular-nums">
                 ${summaryMetrics.intermediaryVolume.toLocaleString(undefined, { maximumFractionDigits: 0 })}
@@ -251,7 +251,7 @@ function TransactionsContent() {
             </div>
 
             {/* Destination Accounts */}
-            <div className="p-3.5 rounded-md bg-[#0B0F17] border border-slate-800/80 space-y-1">
+            <div className="p-3.5 rounded-md bg-[#0D100D] border border-slate-800/80 space-y-1">
               <div className="text-[10px] font-mono uppercase text-slate-400 tracking-wider">3. Beneficiary Accounts (Settlement)</div>
               <div className="text-lg sm:text-xl font-mono font-bold text-slate-100 tabular-nums">
                 ${summaryMetrics.destinationVolume.toLocaleString(undefined, { maximumFractionDigits: 0 })}
@@ -264,7 +264,7 @@ function TransactionsContent() {
         </div>
 
         {/* Reference Layout: Horizontal Flow Filter Tabs */}
-        <div className="flex flex-wrap items-center justify-between gap-3 bg-[#0B0F17] p-2 rounded-lg border border-slate-800/80">
+        <div className="flex flex-wrap items-center justify-between gap-3 bg-[#0D100D] p-2 rounded-lg border border-slate-800/80">
           <div className="flex items-center space-x-1 overflow-x-auto pb-1 sm:pb-0">
             {FLOW_STATUSES.map((fs) => (
               <button
@@ -296,20 +296,20 @@ function TransactionsContent() {
                   setSearch(e.target.value);
                   setPage(1);
                 }}
-                className="pl-8 pr-3 py-1.5 bg-[#111722] border border-slate-800 rounded-md text-xs font-mono text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-emerald-600 w-48 sm:w-64"
+                className="pl-8 pr-3 py-1.5 bg-[#121612] border border-slate-800 rounded-md text-xs font-mono text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-emerald-600 w-48 sm:w-64"
               />
             </div>
           </div>
         </div>
 
         {/* Detailed Secondary Filters Bar */}
-        <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 bg-[#111722] p-3 rounded-lg border border-slate-800/80 text-xs font-mono">
+        <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 bg-[#121612] p-3 rounded-lg border border-slate-800/80 text-xs font-mono">
           <div>
             <label className="text-slate-400 text-[10px] block mb-1 uppercase tracking-wider">Payment Channel</label>
             <select
               value={channel}
               onChange={(e) => { setChannel(e.target.value); setPage(1); }}
-              className="w-full bg-[#0B0F17] border border-slate-800 rounded px-2.5 py-1 text-slate-200"
+              className="w-full bg-[#0D100D] border border-slate-800 rounded px-2.5 py-1 text-slate-200"
             >
               <option value="">All Channels</option>
               <option value="ONLINE">ONLINE</option>
@@ -326,7 +326,7 @@ function TransactionsContent() {
             <select
               value={dataset}
               onChange={(e) => { setDataset(e.target.value); setPage(1); }}
-              className="w-full bg-[#0B0F17] border border-slate-800 rounded px-2.5 py-1 text-slate-200"
+              className="w-full bg-[#0D100D] border border-slate-800 rounded px-2.5 py-1 text-slate-200"
             >
               <option value="">All Registered Datasets</option>
               <option value="NFPC">NFPC Indian Banking</option>
@@ -341,7 +341,7 @@ function TransactionsContent() {
             <select
               value={minScore}
               onChange={(e) => { setMinScore(e.target.value); setPage(1); }}
-              className="w-full bg-[#0B0F17] border border-slate-800 rounded px-2.5 py-1 text-slate-200"
+              className="w-full bg-[#0D100D] border border-slate-800 rounded px-2.5 py-1 text-slate-200"
             >
               <option value="">Any Score</option>
               <option value="25">Low Risk (25+)</option>
@@ -368,10 +368,10 @@ function TransactionsContent() {
         </div>
 
         {/* Transactions Table */}
-        <div className="bg-[#111722] rounded-lg border border-slate-800/80 overflow-hidden shadow-lg">
+        <div className="bg-[#121612] rounded-lg border border-slate-800/80 overflow-hidden shadow-lg">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs font-mono">
-              <thead className="bg-[#0B0F17] text-slate-400 font-semibold border-b border-slate-800 uppercase tracking-wider text-[10px]">
+              <thead className="bg-[#0D100D] text-slate-400 font-semibold border-b border-slate-800 uppercase tracking-wider text-[10px]">
                 <tr>
                   <th className="px-3 py-3 w-8"></th>
                   <th className="px-3 py-3">Transaction ID</th>
@@ -489,7 +489,7 @@ function TransactionsContent() {
 
                         {/* Expandable Transaction Row Details */}
                         {isExpanded && (
-                          <tr className="bg-[#0B0F17] border-b border-slate-800/80">
+                          <tr className="bg-[#0D100D] border-b border-slate-800/80">
                             <td colSpan={10} className="p-4 pl-10 space-y-3">
                               <div className="grid grid-cols-1 md:grid-cols-4 gap-3 text-xs">
                                 <div className="p-3 rounded-lg bg-slate-900 border border-slate-800 space-y-1">

@@ -8,10 +8,10 @@ interface ConfirmationDialogProps {
   onClose: () => void;
   onConfirm: () => void;
   title: string;
-  description: string;
+  message: string;
   confirmLabel?: string;
   cancelLabel?: string;
-  isDestructive?: boolean;
+  destructive?: boolean;
 }
 
 export function ConfirmationDialog({
@@ -19,38 +19,44 @@ export function ConfirmationDialog({
   onClose,
   onConfirm,
   title,
-  description,
+  message,
   confirmLabel = 'Confirm Action',
   cancelLabel = 'Cancel',
-  isDestructive = false,
+  destructive = false,
 }: ConfirmationDialogProps) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-sm animate-fade-in overflow-y-auto">
-      <div className="w-full max-w-md max-h-[92vh] overflow-y-auto rounded-2xl border border-slate-800/80 bg-[#111722] p-4 sm:p-6 shadow-2xl space-y-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      {/* Backdrop */}
+      <div
+        className="fixed inset-0 bg-[#080A08]/85 backdrop-blur-sm transition-opacity"
+        onClick={onClose}
+      />
+
+      {/* Dialog Box */}
+      <div className="relative w-full max-w-md rounded bg-[#121612] border border-[#262D26] shadow-elevated p-6 z-10 animate-fade-in font-mono">
         <div className="flex items-start justify-between">
           <div className="flex items-center space-x-3">
-            <div
-              className={`p-2 rounded-xl ${
-                isDestructive ? 'bg-rose-950/80 text-rose-400 border border-rose-800/80' : 'bg-emerald-950/80 text-emerald-400 border border-emerald-800/80'
-              }`}
-            >
+            <div className={`p-2 rounded ${destructive ? 'bg-[#2A1414] text-[#FF4D4D] border border-[#5A2020]' : 'bg-[#181E18] text-[#B7F34A] border border-[#262D26]'}`}>
               <AlertTriangle className="w-5 h-5" />
             </div>
-            <h3 className="text-base font-semibold text-slate-100 font-mono">{title}</h3>
+            <h3 className="text-sm font-bold text-[#F2F4EF]">{title}</h3>
           </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-200">
-            <X className="w-5 h-5" />
+          <button
+            onClick={onClose}
+            className="text-[#687166] hover:text-[#F2F4EF] transition"
+          >
+            <X className="w-4 h-4" />
           </button>
         </div>
 
-        <p className="text-xs text-slate-400 font-mono leading-relaxed">{description}</p>
+        <p className="mt-4 text-xs text-[#929B90] leading-relaxed">{message}</p>
 
-        <div className="flex items-center justify-end space-x-3 pt-3 border-t border-slate-800/80">
+        <div className="mt-6 flex items-center justify-end space-x-3 text-xs">
           <button
             onClick={onClose}
-            className="px-4 py-2 rounded-lg text-xs font-mono font-medium text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 transition"
+            className="px-3 py-1.5 rounded bg-[#181E18] text-[#929B90] hover:text-[#F2F4EF] hover:bg-[#1F261F] border border-[#262D26] transition"
           >
             {cancelLabel}
           </button>
@@ -59,10 +65,10 @@ export function ConfirmationDialog({
               onConfirm();
               onClose();
             }}
-            className={`px-4 py-2 rounded-lg text-xs font-mono font-bold transition shadow-lg ${
-              isDestructive
-                ? 'bg-rose-600 hover:bg-rose-500 text-white shadow-rose-950/30'
-                : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-950/30'
+            className={`px-3 py-1.5 rounded font-semibold transition ${
+              destructive
+                ? 'bg-[#2A1414] text-[#FF6B6B] hover:bg-[#3D1A1A] border border-[#5A2020]'
+                : 'bg-[#B7F34A] text-[#080A08] hover:bg-[#C9FF65]'
             }`}
           >
             {confirmLabel}

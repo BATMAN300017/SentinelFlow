@@ -38,12 +38,12 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#0B0F17] p-4 font-mono">
+    <div className="min-h-screen flex items-center justify-center bg-[#0D100D] p-4 font-mono">
       <head>
         <title>Analyst Sign In | SentinelFlow AI</title>
         <meta name="description" content="Secure analyst authentication gateway to SentinelFlow AI financial crime surveillance platform." />
       </head>
-      <div className="w-full max-w-md p-8 rounded-3xl border border-slate-800/80 bg-[#111722] shadow-2xl space-y-6">
+      <div className="w-full max-w-md p-8 rounded-3xl border border-slate-800/80 bg-[#121612] shadow-2xl space-y-6">
         <div className="text-center space-y-2">
           <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/25 flex items-center justify-center text-emerald-400 mx-auto">
             <Shield className="w-6 h-6" />
@@ -68,7 +68,7 @@ export default function LoginPage() {
                 required
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-[#0B0F17] text-slate-100 border border-slate-700/80 focus:outline-none focus:border-emerald-500"
+                className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-[#0D100D] text-slate-100 border border-slate-700/80 focus:outline-none focus:border-emerald-500"
               />
             </div>
           </div>
@@ -82,7 +82,7 @@ export default function LoginPage() {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-[#0B0F17] text-slate-100 border border-slate-700/80 focus:outline-none focus:border-emerald-500"
+                className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-[#0D100D] text-slate-100 border border-slate-700/80 focus:outline-none focus:border-emerald-500"
               />
             </div>
           </div>

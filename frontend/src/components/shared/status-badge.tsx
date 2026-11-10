@@ -24,7 +24,7 @@ export function StatusBadge({ type, value, showLabel = true, className = '' }: S
         <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${band.dot}`} />
         <span className="tabular-nums font-bold">{score.toFixed(0)}</span>
         {showLabel && (
-          <span className="text-[10px] tracking-tight uppercase opacity-85">
+          <span className="text-[10px] tracking-tight uppercase opacity-90">
             {band.label}
           </span>
         )}
@@ -59,7 +59,7 @@ export function StatusBadge({ type, value, showLabel = true, className = '' }: S
   if (type === 'channel') {
     return (
       <span
-        className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-slate-900 text-slate-300 border border-slate-750 ${className}`}
+        className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-[#0D100D] text-[#F2F4EF] border border-[#262D26] ${className}`}
       >
         {String(value)}
       </span>
@@ -67,7 +67,7 @@ export function StatusBadge({ type, value, showLabel = true, className = '' }: S
   }
 
   return (
-    <span className={`px-2 py-0.5 rounded text-[11px] font-mono bg-slate-900 text-slate-300 border border-slate-800 ${className}`}>
+    <span className={`px-2 py-0.5 rounded text-[11px] font-mono bg-[#121612] text-[#929B90] border border-[#262D26] ${className}`}>
       {String(value)}
     </span>
   );

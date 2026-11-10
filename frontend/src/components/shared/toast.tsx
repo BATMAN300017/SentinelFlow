@@ -39,7 +39,6 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   return (
     <ToastContext.Provider value={{ showToast, dismissToast }}>
       {children}
-      {/* Toast Notification Container */}
       <aside
         aria-label="System notifications"
         aria-live="polite"
@@ -48,12 +47,12 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
         {toasts.map((toast) => {
           const borderClass =
             toast.type === 'success'
-              ? 'border-emerald-500/50 bg-emerald-950/90 text-emerald-200'
+              ? 'border-[#29421E] border-l-2 border-l-[#B7F34A] bg-[#142010] text-[#F2F4EF]'
               : toast.type === 'error'
-              ? 'border-rose-500/50 bg-rose-950/90 text-rose-200'
+              ? 'border-[#5A2020] border-l-2 border-l-[#FF4D4D] bg-[#2A1414] text-[#F2F4EF]'
               : toast.type === 'warning'
-              ? 'border-amber-500/50 bg-amber-950/90 text-amber-200'
-              : 'border-sky-500/50 bg-sky-950/90 text-sky-200';
+              ? 'border-[#5E4C1A] border-l-2 border-l-[#FFB800] bg-[#2A230F] text-[#F2F4EF]'
+              : 'border-[#262D26] border-l-2 border-l-[#929B90] bg-[#181E18] text-[#F2F4EF]';
 
           const IconComponent =
             toast.type === 'success'
@@ -68,17 +67,17 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
             <div
               key={toast.id}
               role="alert"
-              className={`pointer-events-auto p-4 rounded-xl border shadow-2xl backdrop-blur-md flex items-start space-x-3 text-xs font-mono transition-all animate-fade-in ${borderClass}`}
+              className={`pointer-events-auto p-3.5 rounded border shadow-elevated flex items-start space-x-3 text-xs font-mono transition-all animate-fade-in ${borderClass}`}
             >
               <IconComponent className="w-4 h-4 shrink-0 mt-0.5" />
               <div className="flex-1 min-w-0">
-                {toast.title && <div className="font-bold text-white mb-0.5">{toast.title}</div>}
-                <div className="leading-relaxed break-words">{toast.message}</div>
+                {toast.title && <div className="font-bold text-[#F2F4EF] mb-0.5">{toast.title}</div>}
+                <div className="leading-relaxed break-words text-[#929B90] text-[11px]">{toast.message}</div>
               </div>
               <button
                 type="button"
                 onClick={() => dismissToast(toast.id)}
-                className="shrink-0 p-1 rounded hover:bg-white/10 text-slate-400 hover:text-white transition"
+                className="shrink-0 p-1 rounded hover:bg-[#262D26] text-[#687166] hover:text-[#F2F4EF] transition"
                 aria-label="Dismiss notification"
               >
                 <X className="w-3.5 h-3.5" />
@@ -94,7 +93,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
 export function useToast(): ToastContextValue {
   const context = useContext(ToastContext);
   if (!context) {
-    // Graceful fallback if called outside provider
+    // Graceful fallback during static page prerendering
     return {
       showToast: () => {},
       dismissToast: () => {},

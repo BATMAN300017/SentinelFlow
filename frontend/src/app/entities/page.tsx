@@ -88,7 +88,7 @@ export default function EntitiesPage() {
             {filtered.map((e) => (
               <div
                 key={e.id}
-                className="p-5 rounded-2xl border border-slate-800/80 bg-[#111722] shadow-lg space-y-3 hover:border-slate-700 transition"
+                className="p-5 rounded-2xl border border-slate-800/80 bg-[#121612] shadow-lg space-y-3 hover:border-slate-700 transition"
               >
                 <div className="flex items-start justify-between">
                   <div className="space-y-0.5">

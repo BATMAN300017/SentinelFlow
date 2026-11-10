@@ -45,7 +45,7 @@ export function OutcomeForm() {
   };
 
   return (
-    <div className="p-6 rounded-2xl border border-slate-800/80 bg-[#111722] shadow-lg space-y-4">
+    <div className="p-6 rounded-2xl border border-slate-800/80 bg-[#121612] shadow-lg space-y-4">
       <div className="flex items-center space-x-2">
         <CheckCircle2 className="w-5 h-5 text-emerald-400" />
         <h3 className="text-sm font-semibold text-slate-100 font-mono">
@@ -68,7 +68,7 @@ export function OutcomeForm() {
               value={transactionId}
               onChange={(e) => setTransactionId(e.target.value)}
               placeholder="e.g. TXN_0000602333"
-              className="w-full px-3 py-2 rounded-xl text-xs font-mono bg-[#0B0F17] text-slate-200 border border-slate-700/80 focus:outline-none focus:border-emerald-500"
+              className="w-full px-3 py-2 rounded-xl text-xs font-mono bg-[#0D100D] text-slate-200 border border-slate-700/80 focus:outline-none focus:border-emerald-500"
             />
           </div>
 
@@ -79,7 +79,7 @@ export function OutcomeForm() {
             <select
               value={analystDecision}
               onChange={(e) => setAnalystDecision(e.target.value)}
-              className="w-full px-3 py-2 rounded-xl text-xs font-mono bg-[#0B0F17] text-slate-200 border border-slate-700/80 focus:outline-none focus:border-emerald-500"
+              className="w-full px-3 py-2 rounded-xl text-xs font-mono bg-[#0D100D] text-slate-200 border border-slate-700/80 focus:outline-none focus:border-emerald-500"
             >
               <option value="CONFIRMED_FRAUD">CONFIRMED_FRAUD (Positive Label)</option>
               <option value="FALSE_POSITIVE">FALSE_POSITIVE (Negative Label)</option>
@@ -97,7 +97,7 @@ export function OutcomeForm() {
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             placeholder="Document evidentiary proof or rationale..."
-            className="w-full p-3 rounded-xl text-xs font-mono bg-[#0B0F17] text-slate-200 border border-slate-700/80 focus:outline-none focus:border-emerald-500"
+            className="w-full p-3 rounded-xl text-xs font-mono bg-[#0D100D] text-slate-200 border border-slate-700/80 focus:outline-none focus:border-emerald-500"
           />
         </div>
 
