@@ -11,7 +11,13 @@ Endpoints for:
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from datetime import datetime, timezone
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, Tuple
+import threading
+import time
+
+_datasets_summary_cache: Optional[Tuple[float, Dict[str, Any]]] = None
+_datasets_cache_lock = threading.Lock()
+DATASETS_CACHE_TTL = 30.0
 from pydantic import BaseModel
 import os
 import sqlite3
@@ -58,22 +64,24 @@ def get_dataset_inventory_summary(conn=Depends(get_db)):
     and granular dataset inventory with clear distinctions across 9 lifecycle stages.
     Never substitutes fabricated or static numbers.
     """
+    global _datasets_summary_cache
+    now = time.time()
+    with _datasets_cache_lock:
+        if _datasets_summary_cache and (now - _datasets_summary_cache[0] < DATASETS_CACHE_TTL):
+            return _datasets_summary_cache[1]
     cursor = conn.cursor()
     cursor.execute("""
         SELECT 
             COUNT(*) as total_imported,
             COUNT(CASE WHEN scoring_status = 'CURRENT' THEN 1 END) as total_scored,
             COUNT(CASE WHEN scoring_status = 'FAILED' THEN 1 END) as total_failed,
-            COUNT(CASE WHEN scoring_status IS NULL OR scoring_status NOT IN ('CURRENT', 'FAILED') THEN 1 END) as total_unscored,
-            COUNT(DISTINCT source_account_id) as unique_sources,
-            COUNT(DISTINCT destination_account_id) as unique_dests
+            COUNT(CASE WHEN scoring_status IS NULL OR scoring_status NOT IN ('CURRENT', 'FAILED') THEN 1 END) as total_unscored
         FROM transactions;
     """)
     row_totals = cursor.fetchone()
     tot_d = dict(row_totals) if hasattr(row_totals, "keys") else {
         "total_imported": row_totals[0], "total_scored": row_totals[1],
-        "total_failed": row_totals[2], "total_unscored": row_totals[3],
-        "unique_sources": row_totals[4], "unique_dests": row_totals[5]
+        "total_failed": row_totals[2], "total_unscored": row_totals[3]
     }
     total_imported = int(tot_d["total_imported"] or 0)
     total_scored = int(tot_d["total_scored"] or 0)
@@ -164,23 +172,38 @@ def get_dataset_inventory_summary(conn=Depends(get_db)):
     samld_path = os.path.join(base_dir, "data", "saml_d", "SAML-D.csv")
     samld_downloaded = 9504852 if os.path.exists(samld_path) else None
 
-    # Protected vault labels (Pipeline B)
+    # Protected vault labels (Pipeline B): query connected database first for durability on Render
     vault_labels = {}
-    vault_db_path = os.path.join(base_dir, "data", "protected_labels", "protected_ground_truth.db")
-    if os.path.exists(vault_db_path):
-        try:
-            v_conn = sqlite3.connect(vault_db_path)
-            v_cur = v_conn.cursor()
-            v_cur.execute("SELECT dataset_name, count(*), sum(case when is_laundering = 1 then 1 else 0 end) FROM protected_transaction_labels GROUP BY dataset_name;")
-            for row in v_cur.fetchall():
-                vault_labels[row[0]] = {"txns": row[1], "positive": row[2]}
-            v_cur.execute("SELECT dataset_name, count(*), sum(case when is_mule = 1 then 1 else 0 end) FROM protected_account_labels GROUP BY dataset_name;")
-            for row in v_cur.fetchall():
-                vault_labels.setdefault(row[0], {})["accounts"] = row[1]
-                vault_labels[row[0]]["mules"] = row[2]
-            v_conn.close()
-        except Exception as e:
-            logger.warning(f"Could not query protected vault: {e}")
+    try:
+        cursor.execute("SELECT dataset_name, count(*), sum(case when is_laundering = 1 then 1 else 0 end) FROM protected_transaction_labels GROUP BY dataset_name;")
+        for row in cursor.fetchall():
+            ds_name = row[0] if not hasattr(row, "keys") else row["dataset_name"]
+            c_tx = row[1] if not hasattr(row, "keys") else row["count"]
+            s_pos = row[2] if not hasattr(row, "keys") else row["sum"]
+            vault_labels[ds_name] = {"txns": int(c_tx or 0), "positive": int(s_pos or 0)}
+        cursor.execute("SELECT dataset_name, count(*), sum(case when is_mule = 1 then 1 else 0 end) FROM protected_account_labels GROUP BY dataset_name;")
+        for row in cursor.fetchall():
+            ds_name = row[0] if not hasattr(row, "keys") else row["dataset_name"]
+            c_acc = row[1] if not hasattr(row, "keys") else row["count"]
+            s_mule = row[2] if not hasattr(row, "keys") else row["sum"]
+            vault_labels.setdefault(ds_name, {})["accounts"] = int(c_acc or 0)
+            vault_labels[ds_name]["mules"] = int(s_mule or 0)
+    except Exception:
+        vault_db_path = os.path.join(base_dir, "data", "protected_labels", "protected_ground_truth.db")
+        if os.path.exists(vault_db_path):
+            try:
+                v_conn = sqlite3.connect(vault_db_path)
+                v_cur = v_conn.cursor()
+                v_cur.execute("SELECT dataset_name, count(*), sum(case when is_laundering = 1 then 1 else 0 end) FROM protected_transaction_labels GROUP BY dataset_name;")
+                for row in v_cur.fetchall():
+                    vault_labels[row[0]] = {"txns": row[1], "positive": row[2]}
+                v_cur.execute("SELECT dataset_name, count(*), sum(case when is_mule = 1 then 1 else 0 end) FROM protected_account_labels GROUP BY dataset_name;")
+                for row in v_cur.fetchall():
+                    vault_labels.setdefault(row[0], {})["accounts"] = row[1]
+                    vault_labels[row[0]]["mules"] = row[2]
+                v_conn.close()
+            except Exception as e:
+                logger.warning(f"Could not query protected vault: {e}")
 
     def calc_storage_est(imported_cnt):
         if db_storage_mb is not None and total_imported > 0 and imported_cnt is not None:
@@ -200,8 +223,8 @@ def get_dataset_inventory_summary(conn=Depends(get_db)):
                 "5_scored_successfully": db_by_ds.get("NFPC", {}).get("scored"),
                 "5_scoring_failed": db_by_ds.get("NFPC", {}).get("failed", 0),
                 "5_unscored": db_by_ds.get("NFPC", {}).get("unscored", 0),
-                "6_eligible_for_training": 273667 if db_by_ds.get("NFPC", {}).get("imported") else None,
-                "7_eligible_for_evaluation": 228,
+                "6_eligible_for_training": None,  # Split-specific; unverified against live database
+                "7_eligible_for_evaluation": None,  # Evaluation split sealed and held offline
                 "8_labelled_accounts": nfpc_labeled_accs,
                 "8_confirmed_mules": nfpc_confirmed_mules,
                 "8_normal_accounts": nfpc_normal_accs,
@@ -217,8 +240,8 @@ def get_dataset_inventory_summary(conn=Depends(get_db)):
             "unscored": db_by_ds.get("NFPC", {}).get("unscored"),
             "labelled_accounts": nfpc_labeled_accs,
             "confirmed_mule_accounts": nfpc_confirmed_mules,
-            "eligible_for_training": 273667 if db_by_ds.get("NFPC", {}).get("imported") else None,
-            "eligible_for_evaluation": 228,
+            "eligible_for_training": None,
+            "eligible_for_evaluation": None,
             "earliest_date": str(db_by_ds.get("NFPC", {}).get("earliest_date")) if db_by_ds.get("NFPC") else None,
             "latest_date": str(db_by_ds.get("NFPC", {}).get("latest_date")) if db_by_ds.get("NFPC") else None,
             "ingestion_status": "IMPORTED_SCORED" if db_by_ds.get("NFPC", {}).get("imported") else "NOT_IMPORTED",
@@ -236,8 +259,8 @@ def get_dataset_inventory_summary(conn=Depends(get_db)):
                 "5_scored_successfully": db_by_ds.get("SAML_D", {}).get("scored"),
                 "5_scoring_failed": db_by_ds.get("SAML_D", {}).get("failed", 0),
                 "5_unscored": db_by_ds.get("SAML_D", {}).get("unscored", 0),
-                "6_eligible_for_training": 5702911,
-                "7_eligible_for_evaluation": 1900971,
+                "6_eligible_for_training": None,  # Full dataset source split not loaded in production
+                "7_eligible_for_evaluation": None,  # Full dataset source split not loaded in production
                 "8_labelled_positives_source": 9873,
                 "8_labelled_positives_vault": vault_labels.get("SAML_D", {}).get("positive"),
                 "9_duplicates_prevented": 0,
@@ -252,8 +275,8 @@ def get_dataset_inventory_summary(conn=Depends(get_db)):
             "unscored": db_by_ds.get("SAML_D", {}).get("unscored"),
             "labelled_positives_imported": vault_labels.get("SAML_D", {}).get("positive"),
             "total_positives_at_source": 9873,
-            "eligible_for_training": 5702911,
-            "eligible_for_evaluation": 1900971,
+            "eligible_for_training": None,
+            "eligible_for_evaluation": None,
             "earliest_date": str(db_by_ds.get("SAML_D", {}).get("earliest_date")) if db_by_ds.get("SAML_D") else None,
             "latest_date": str(db_by_ds.get("SAML_D", {}).get("latest_date")) if db_by_ds.get("SAML_D") else None,
             "ingestion_status": "IMPORTED_SCORED" if db_by_ds.get("SAML_D", {}).get("imported") else "NOT_IMPORTED",
@@ -272,9 +295,9 @@ def get_dataset_inventory_summary(conn=Depends(get_db)):
                 "5_scoring_failed": db_by_ds.get("INDIA_SIMULATOR", {}).get("failed", 0),
                 "5_unscored": db_by_ds.get("INDIA_SIMULATOR", {}).get("unscored", 0),
                 "6_eligible_for_training": None,
-                "7_eligible_for_evaluation": 302,
-                "8_labelled_mule_accounts": vault_labels.get("INDIA_SIMULATOR", {}).get("mules", 20),
-                "8_labelled_normal_accounts": 282,
+                "7_eligible_for_evaluation": None,  # Generative evaluation set dynamically isolated
+                "8_labelled_mule_accounts": vault_labels.get("INDIA_SIMULATOR", {}).get("mules"),
+                "8_labelled_normal_accounts": ((vault_labels.get("INDIA_SIMULATOR", {}).get("accounts") - vault_labels.get("INDIA_SIMULATOR", {}).get("mules")) if (vault_labels.get("INDIA_SIMULATOR", {}).get("accounts") and vault_labels.get("INDIA_SIMULATOR", {}).get("mules") is not None) else None),
                 "9_duplicates_prevented": 0,
                 "9_rejected_records": 0,
                 "9_rejection_reason": None
@@ -285,10 +308,10 @@ def get_dataset_inventory_summary(conn=Depends(get_db)):
             "validated": db_by_ds.get("INDIA_SIMULATOR", {}).get("imported"),
             "scored": db_by_ds.get("INDIA_SIMULATOR", {}).get("scored"),
             "unscored": db_by_ds.get("INDIA_SIMULATOR", {}).get("unscored"),
-            "labelled_mule_accounts": vault_labels.get("INDIA_SIMULATOR", {}).get("mules", 20),
-            "labelled_normal_accounts": 282,
+            "labelled_mule_accounts": vault_labels.get("INDIA_SIMULATOR", {}).get("mules"),
+            "labelled_normal_accounts": ((vault_labels.get("INDIA_SIMULATOR", {}).get("accounts") - vault_labels.get("INDIA_SIMULATOR", {}).get("mules")) if (vault_labels.get("INDIA_SIMULATOR", {}).get("accounts") and vault_labels.get("INDIA_SIMULATOR", {}).get("mules") is not None) else None),
             "eligible_for_training": None,
-            "eligible_for_evaluation": 302,
+            "eligible_for_evaluation": None,
             "earliest_date": str(db_by_ds.get("INDIA_SIMULATOR", {}).get("earliest_date")) if db_by_ds.get("INDIA_SIMULATOR") else None,
             "latest_date": str(db_by_ds.get("INDIA_SIMULATOR", {}).get("latest_date")) if db_by_ds.get("INDIA_SIMULATOR") else None,
             "ingestion_status": "SYNTHETIC_STRESS_TEST",
@@ -416,7 +439,7 @@ def get_dataset_inventory_summary(conn=Depends(get_db)):
         }
     ]
 
-    return {
+    result = {
         "status": "SUCCESS",
         "verified_database_counts": {
             "total_imported_transactions": total_imported,
@@ -429,6 +452,9 @@ def get_dataset_inventory_summary(conn=Depends(get_db)):
         },
         "datasets": inventory
     }
+    with _datasets_cache_lock:
+        _datasets_summary_cache = (now, result)
+    return result
 
 @router.get("/transactions", summary="Browse and explore all transaction data across datasets")
 def browse_dataset_transactions(
