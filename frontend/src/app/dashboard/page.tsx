@@ -100,15 +100,15 @@ export default function DashboardPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <MetricCard
                 label="Transactions Ingested"
-                value={summary?.transactions_processed || 482810}
-                subtitle={`${summary?.transactions_per_minute || 42.5} TPM current throughput`}
+                value={summary?.transactions_processed != null ? summary.transactions_processed.toLocaleString() : '—'}
+                subtitle={`${summary?.transactions_per_minute ?? 0} TPM current throughput`}
                 icon={<Activity className="w-4 h-4 text-sky-400" />}
                 accent="sky"
                 delta={{ value: '+4.2% /hr', isPositive: true }}
               />
               <MetricCard
                 label="Alerts Generated"
-                value={summary?.alerts_generated || 157}
+                value={summary?.alerts_generated != null ? summary.alerts_generated.toLocaleString() : '—'}
                 subtitle="Active incidents requiring triage"
                 icon={<AlertOctagon className="w-4 h-4 text-amber-400" />}
                 accent="amber"
@@ -116,16 +116,16 @@ export default function DashboardPage() {
               />
               <MetricCard
                 label="Active Investigations"
-                value={summary?.open_investigations || 6}
-                subtitle={`${summary?.high_priority_cases || 2} elevated risk dossiers`}
+                value={summary?.open_investigations != null ? summary.open_investigations.toLocaleString() : '—'}
+                subtitle={`${summary?.high_priority_cases ?? 0} elevated risk dossiers`}
                 icon={<Briefcase className="w-4 h-4 text-purple-400" />}
                 accent="rose"
                 delta={{ value: 'SLA on track', isNeutral: true }}
               />
               <MetricCard
                 label="Confirmed Fraud / FPR"
-                value={summary?.confirmed_fraud_count || 12}
-                subtitle={`Verified FPR: ${summary?.verified_false_positive_rate || '1.8'}%`}
+                value={summary?.confirmed_fraud_count != null ? summary.confirmed_fraud_count.toLocaleString() : '—'}
+                subtitle={summary?.verified_false_positive_rate != null ? `Verified FPR: ${summary.verified_false_positive_rate}%` : 'FPR: Uncalibrated'}
                 icon={<ShieldCheck className="w-4 h-4 text-emerald-400" />}
                 accent="emerald"
                 delta={{ value: 'Calibrated', isPositive: true }}
@@ -135,7 +135,7 @@ export default function DashboardPage() {
             {/* Middle Row: Charts */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               <div className="lg:col-span-2">
-                <TransactionVolumeChart throughputTpm={summary?.transactions_per_minute || 42.5} />
+                <TransactionVolumeChart throughputTpm={summary?.transactions_per_minute ?? 0} />
               </div>
               <div>
                 <RiskDistributionChart distribution={trends?.risk_score_distribution} />
@@ -149,7 +149,7 @@ export default function DashboardPage() {
             </div>
 
             {/* Alert Trends */}
-            <AlertTrendChart totalAlerts={summary?.alerts_generated || 157} />
+            <AlertTrendChart totalAlerts={summary?.alerts_generated ?? 0} />
           </>
         )}
       </div>

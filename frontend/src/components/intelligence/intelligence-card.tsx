@@ -18,7 +18,7 @@ export function IntelligenceCard({
   accuracy,
   f1Score,
   status = 'EVALUATED',
-  samples = 482810,
+  samples,
 }: IntelligenceCardProps) {
   return (
     <div className="p-6 rounded-2xl border border-slate-800/80 bg-[#111722] shadow-lg space-y-4">
@@ -50,7 +50,7 @@ export function IntelligenceCard({
       </div>
 
       <div className="text-[11px] font-mono text-slate-500 border-t border-slate-800/80 pt-2 flex justify-between">
-        <span>Evaluated on {samples.toLocaleString()} genuine records</span>
+        <span>{samples ? `Evaluated on ${samples.toLocaleString()} genuine records` : 'Dynamic telemetry'}</span>
         <span className="text-slate-400">Isolated Test Split</span>
       </div>
     </div>

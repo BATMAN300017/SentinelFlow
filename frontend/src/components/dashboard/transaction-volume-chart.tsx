@@ -6,7 +6,7 @@ interface TransactionVolumeChartProps {
   throughputTpm?: number;
 }
 
-export function TransactionVolumeChart({ throughputTpm = 42.5 }: TransactionVolumeChartProps) {
+export function TransactionVolumeChart({ throughputTpm = 0 }: TransactionVolumeChartProps) {
   // Simulated normalized recent hourly volume buckets
   const bars = [28, 35, 42, 38, 55, 49, 62, 70, 65, 80, 75, 88, 92, 85, 96, 100, 91, 84, 78, 82, 89, 94, 91, 87];
 

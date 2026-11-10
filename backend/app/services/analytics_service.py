@@ -1,175 +1,122 @@
 import sqlite3
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 from datetime import datetime, timezone, timedelta
 
 def get_kpi_summary(conn: sqlite3.Connection) -> Dict[str, Any]:
     cursor = conn.cursor()
+    # 1. Transaction count: fast count minus demo fixtures without unindexed scan
     try:
-        cursor.execute("""
-            SELECT COUNT(*) FROM transactions 
-            WHERE (dataset_source IS NULL OR dataset_source != 'DEMO_FIXTURE')
-              AND (scenario_id IS NULL OR scenario_id != 'DEMO_FIXTURE')
-        """)
-        txns_count = cursor.fetchone()[0]
-    except Exception:
         cursor.execute("SELECT COUNT(*) FROM transactions")
-        txns_count = cursor.fetchone()[0]
+        row_tx = cursor.fetchone()
+        total_txns = int((row_tx[0] if not hasattr(row_tx, "keys") else row_tx["count"]) or 0)
+        
+        cursor.execute("SELECT COUNT(*) FROM transactions WHERE dataset_source = 'DEMO_FIXTURE'")
+        row_demo = cursor.fetchone()
+        demo_txns = int((row_demo[0] if not hasattr(row_demo, "keys") else row_demo["count"]) or 0)
+        txns_count = max(0, total_txns - demo_txns)
+    except Exception:
+        txns_count = 0
     
+    # 2. Alerts count: direct count without heavy subquery across transaction table
     try:
         cursor.execute("""
             SELECT COUNT(*) FROM alerts 
             WHERE (is_demo IS NULL OR is_demo = 0)
               AND id NOT LIKE 'ALT-DEMO%'
               AND title NOT LIKE '[DEMO FIXTURE]%'
-              AND (transaction_id IS NULL OR transaction_id NOT IN (SELECT id FROM transactions WHERE dataset_source = 'DEMO_FIXTURE'))
         """)
-        alerts_count = cursor.fetchone()[0]
+        row_al = cursor.fetchone()
+        alerts_count = int((row_al[0] if not hasattr(row_al, "keys") else row_al["count"]) or 0)
     except Exception:
-        cursor.execute("""
-            SELECT COUNT(*) FROM alerts 
-            WHERE id NOT LIKE 'ALT-DEMO%'
-              AND title NOT LIKE '[DEMO FIXTURE]%'
-        """)
-        alerts_count = cursor.fetchone()[0]
+        alerts_count = 0
     
+    # 3. Investigations metrics: unified single query with conditional aggregation
     try:
         cursor.execute("""
-            SELECT COUNT(*) FROM investigations 
-            WHERE status != 'RESOLVED' 
-              AND (is_demo IS NULL OR is_demo = 0)
-              AND id NOT LIKE 'INV-DEMO%'
-              AND case_number NOT LIKE 'CASE-DEMO%'
-              AND title NOT LIKE '[DEMO FIXTURE]%'
-        """)
-        open_invs = cursor.fetchone()[0]
-    except Exception:
-        cursor.execute("""
-            SELECT COUNT(*) FROM investigations 
-            WHERE status != 'RESOLVED' 
-              AND id NOT LIKE 'INV-DEMO%'
-              AND case_number NOT LIKE 'CASE-DEMO%'
-              AND title NOT LIKE '[DEMO FIXTURE]%'
-        """)
-        open_invs = cursor.fetchone()[0]
-    
-    try:
-        cursor.execute("""
-            SELECT COUNT(*) FROM investigations 
-            WHERE priority = 'HIGH' 
-              AND status != 'RESOLVED' 
-              AND (is_demo IS NULL OR is_demo = 0)
-              AND id NOT LIKE 'INV-DEMO%'
-              AND case_number NOT LIKE 'CASE-DEMO%'
-              AND title NOT LIKE '[DEMO FIXTURE]%'
-        """)
-        high_priority = cursor.fetchone()[0]
-    except Exception:
-        cursor.execute("""
-            SELECT COUNT(*) FROM investigations 
-            WHERE priority = 'HIGH' 
-              AND status != 'RESOLVED' 
-              AND id NOT LIKE 'INV-DEMO%'
-              AND case_number NOT LIKE 'CASE-DEMO%'
-              AND title NOT LIKE '[DEMO FIXTURE]%'
-        """)
-        high_priority = cursor.fetchone()[0]
-    
-    try:
-        cursor.execute("""
-            SELECT COUNT(*) FROM investigations 
-            WHERE disposition = 'CONFIRMED_FRAUD' 
-              AND (is_demo IS NULL OR is_demo = 0)
-              AND id NOT LIKE 'INV-DEMO%'
-              AND case_number NOT LIKE 'CASE-DEMO%'
-              AND title NOT LIKE '[DEMO FIXTURE]%'
-        """)
-        confirmed_fraud = cursor.fetchone()[0]
-    except Exception:
-        cursor.execute("""
-            SELECT COUNT(*) FROM investigations 
-            WHERE disposition = 'CONFIRMED_FRAUD' 
-              AND id NOT LIKE 'INV-DEMO%'
-              AND case_number NOT LIKE 'CASE-DEMO%'
-              AND title NOT LIKE '[DEMO FIXTURE]%'
-        """)
-        confirmed_fraud = cursor.fetchone()[0]
-    
-    try:
-        cursor.execute("""
-            SELECT COUNT(*) FROM investigations 
-            WHERE disposition IN ('LEGITIMATE_ACTIVITY', 'FALSE_POSITIVE') 
-              AND (is_demo IS NULL OR is_demo = 0)
-              AND id NOT LIKE 'INV-DEMO%'
-              AND case_number NOT LIKE 'CASE-DEMO%'
-              AND title NOT LIKE '[DEMO FIXTURE]%'
-        """)
-        fps = cursor.fetchone()[0]
-    except Exception:
-        cursor.execute("""
-            SELECT COUNT(*) FROM investigations 
-            WHERE disposition IN ('LEGITIMATE_ACTIVITY', 'FALSE_POSITIVE') 
-              AND id NOT LIKE 'INV-DEMO%'
-              AND case_number NOT LIKE 'CASE-DEMO%'
-              AND title NOT LIKE '[DEMO FIXTURE]%'
-        """)
-        fps = cursor.fetchone()[0]
-    
-    try:
-        cursor.execute("""
-            SELECT COUNT(*) FROM investigations 
-            WHERE status = 'RESOLVED' 
-              AND (is_demo IS NULL OR is_demo = 0)
-              AND id NOT LIKE 'INV-DEMO%'
-              AND case_number NOT LIKE 'CASE-DEMO%'
-              AND title NOT LIKE '[DEMO FIXTURE]%'
-        """)
-        resolved = cursor.fetchone()[0]
-        cursor.execute("""
-            SELECT COUNT(*) FROM investigations 
+            SELECT 
+                COUNT(*) as total_invs,
+                COUNT(CASE WHEN status != 'RESOLVED' THEN 1 END) as open_invs,
+                COUNT(CASE WHEN priority = 'HIGH' AND status != 'RESOLVED' THEN 1 END) as high_priority,
+                COUNT(CASE WHEN disposition = 'CONFIRMED_FRAUD' THEN 1 END) as confirmed_fraud,
+                COUNT(CASE WHEN disposition IN ('LEGITIMATE_ACTIVITY', 'FALSE_POSITIVE') THEN 1 END) as fps,
+                COUNT(CASE WHEN status = 'RESOLVED' THEN 1 END) as resolved
+            FROM investigations 
             WHERE (is_demo IS NULL OR is_demo = 0)
               AND id NOT LIKE 'INV-DEMO%'
               AND case_number NOT LIKE 'CASE-DEMO%'
               AND title NOT LIKE '[DEMO FIXTURE]%'
         """)
-        total_invs = cursor.fetchone()[0]
+        inv_row = cursor.fetchone()
+        total_invs = int((inv_row["total_invs"] if hasattr(inv_row, "keys") else inv_row[0]) or 0)
+        open_invs = int((inv_row["open_invs"] if hasattr(inv_row, "keys") else inv_row[1]) or 0)
+        high_priority = int((inv_row["high_priority"] if hasattr(inv_row, "keys") else inv_row[2]) or 0)
+        confirmed_fraud = int((inv_row["confirmed_fraud"] if hasattr(inv_row, "keys") else inv_row[3]) or 0)
+        fps = int((inv_row["fps"] if hasattr(inv_row, "keys") else inv_row[4]) or 0)
+        resolved = int((inv_row["resolved"] if hasattr(inv_row, "keys") else inv_row[5]) or 0)
     except Exception:
-        cursor.execute("""
-            SELECT COUNT(*) FROM investigations 
-            WHERE status = 'RESOLVED' 
-              AND id NOT LIKE 'INV-DEMO%'
-              AND case_number NOT LIKE 'CASE-DEMO%'
-              AND title NOT LIKE '[DEMO FIXTURE]%'
-        """)
-        resolved = cursor.fetchone()[0]
-        cursor.execute("""
-            SELECT COUNT(*) FROM investigations 
-            WHERE id NOT LIKE 'INV-DEMO%'
-              AND case_number NOT LIKE 'CASE-DEMO%'
-              AND title NOT LIKE '[DEMO FIXTURE]%'
-        """)
-        total_invs = cursor.fetchone()[0]
+        total_invs = open_invs = high_priority = confirmed_fraud = fps = resolved = 0
     
     completion_rate = round((resolved / total_invs) * 100.0, 1) if total_invs > 0 else 0.0
     total_reviewed = confirmed_fraud + fps
     fpr = round((fps / total_reviewed) * 100.0, 1) if total_reviewed > 0 else 0.0
     
+    # 4. Total accounts: dynamic query, never hardcoded
+    total_accounts = None
     try:
         cursor.execute("SELECT COUNT(*) FROM accounts")
         row_acc = cursor.fetchone()
-        total_accounts = row_acc[0] if not hasattr(row_acc, "keys") else row_acc["count"]
+        if row_acc:
+            total_accounts = int(row_acc[0] if not hasattr(row_acc, "keys") else row_acc["count"])
     except Exception:
-        total_accounts = 27217
+        total_accounts = None
+
+    # 5. Dynamic average investigation age (hours) from open cases
+    avg_inv_age = None
+    try:
+        cursor.execute("""
+            SELECT created_at FROM investigations 
+            WHERE status != 'RESOLVED' 
+              AND (is_demo IS NULL OR is_demo = 0)
+              AND id NOT LIKE 'INV-DEMO%'
+              AND case_number NOT LIKE 'CASE-DEMO%'
+              AND title NOT LIKE '[DEMO FIXTURE]%'
+            LIMIT 100
+        """)
+        rows_age = cursor.fetchall()
+        now_utc = datetime.now(timezone.utc)
+        ages = []
+        for r in rows_age:
+            ca = r[0] if not hasattr(r, "keys") else r["created_at"]
+            if ca:
+                if isinstance(ca, str):
+                    try:
+                        dt = datetime.fromisoformat(ca.replace("Z", "+00:00"))
+                    except Exception:
+                        continue
+                elif isinstance(ca, datetime):
+                    dt = ca
+                else:
+                    continue
+                if dt.tzinfo is None:
+                    dt = dt.replace(tzinfo=timezone.utc)
+                ages.append((now_utc - dt).total_seconds() / 3600.0)
+        avg_inv_age = round(sum(ages) / len(ages), 1) if ages else None
+    except Exception:
+        avg_inv_age = None
+
+    # 6. Real-time streaming throughput: 0.0 when not actively streaming
+    current_tpm = 0.0
 
     return {
         "transactions_processed": txns_count,
         "scored_transactions": txns_count,
         "total_imported": txns_count,
         "total_unique_accounts": total_accounts,
-        "transactions_per_minute": 42.5,
+        "transactions_per_minute": current_tpm,
         "alerts_generated": alerts_count,
         "open_investigations": open_invs,
         "high_priority_cases": high_priority,
-        "avg_investigation_age_hours": 3.8,
+        "avg_investigation_age_hours": avg_inv_age,
         "verified_false_positive_rate": fpr,
         "confirmed_fraud_count": confirmed_fraud,
         "investigation_completion_rate": completion_rate
@@ -178,22 +125,21 @@ def get_kpi_summary(conn: sqlite3.Connection) -> Dict[str, Any]:
 def get_analytics_trends(conn: sqlite3.Connection) -> Dict[str, Any]:
     cursor = conn.cursor()
     
-    # Risk score distribution buckets
-    cursor.execute("""
-        SELECT 
-            SUM(CASE WHEN risk_score < 25 THEN 1 ELSE 0 END) as routine,
-            SUM(CASE WHEN risk_score >= 25 AND risk_score < 50 THEN 1 ELSE 0 END) as low,
-            SUM(CASE WHEN risk_score >= 50 AND risk_score < 75 THEN 1 ELSE 0 END) as elevated,
-            SUM(CASE WHEN risk_score >= 75 THEN 1 ELSE 0 END) as high
-        FROM transactions
-        WHERE dataset_source IS NULL OR dataset_source != 'DEMO_FIXTURE'
-    """)
-    b_row = cursor.fetchone()
+    # Risk score distribution buckets via indexed/indexed-equivalent risk_band
+    cursor.execute("SELECT risk_band, COUNT(*) as cnt FROM transactions GROUP BY risk_band")
+    b_rows = cursor.fetchall()
+    band_counts = {}
+    for r in b_rows:
+        band_name = r[0] if not hasattr(r, "keys") else r["risk_band"]
+        cnt = r[1] if not hasattr(r, "keys") else r["cnt"]
+        if band_name:
+            band_counts[str(band_name).upper()] = int(cnt or 0)
+
     risk_distribution = [
-        {"band": "Routine (0-24)", "count": int(b_row[0] or 0)},
-        {"band": "Low (25-49)", "count": int(b_row[1] or 0)},
-        {"band": "Elevated (50-74)", "count": int(b_row[2] or 0)},
-        {"band": "High (75-100)", "count": int(b_row[3] or 0)},
+        {"band": "Routine (0-24)", "count": band_counts.get("ROUTINE", 0)},
+        {"band": "Low (25-49)", "count": band_counts.get("LOW", 0)},
+        {"band": "Elevated (50-74)", "count": band_counts.get("ELEVATED", 0)},
+        {"band": "High (75-100)", "count": band_counts.get("HIGH", 0) + band_counts.get("CRITICAL", 0)},
     ]
     
     # Case outcomes (Excluding demo fixtures)
@@ -205,7 +151,7 @@ def get_analytics_trends(conn: sqlite3.Connection) -> Dict[str, Any]:
           AND case_number NOT LIKE 'CASE-DEMO%'
         GROUP BY disposition
     """)
-    outcomes = [{"disposition": r[0], "count": int(r[1])} for r in cursor.fetchall()]
+    outcomes = [{"disposition": r[0] if not hasattr(r, "keys") else r["disposition"], "count": int(r[1] if not hasattr(r, "keys") else r["cnt"])} for r in cursor.fetchall()]
     
     # Status breakdown (Excluding demo fixtures)
     cursor.execute("""
@@ -215,7 +161,7 @@ def get_analytics_trends(conn: sqlite3.Connection) -> Dict[str, Any]:
           AND case_number NOT LIKE 'CASE-DEMO%'
         GROUP BY status
     """)
-    status_breakdown = [{"status": r[0], "count": int(r[1])} for r in cursor.fetchall()]
+    status_breakdown = [{"status": r[0] if not hasattr(r, "keys") else r["status"], "count": int(r[1] if not hasattr(r, "keys") else r["cnt"])} for r in cursor.fetchall()]
     
     # Alert source counts (Excluding demo fixtures)
     cursor.execute("""
@@ -225,17 +171,16 @@ def get_analytics_trends(conn: sqlite3.Connection) -> Dict[str, Any]:
           AND description NOT LIKE '[DEMO FIXTURE]%'
         GROUP BY source
     """)
-    sources = [{"source": r[0], "count": int(r[1])} for r in cursor.fetchall()]
+    sources = [{"source": r[0] if not hasattr(r, "keys") else r["source"], "count": int(r[1] if not hasattr(r, "keys") else r["cnt"])} for r in cursor.fetchall()]
 
-    # Transaction types breakdown (Excluding demo fixtures)
+    # Transaction types breakdown
     cursor.execute("""
         SELECT transaction_type, COUNT(*) as cnt
         FROM transactions
-        WHERE dataset_source IS NULL OR dataset_source != 'DEMO_FIXTURE'
         GROUP BY transaction_type
         ORDER BY cnt DESC LIMIT 6
     """)
-    tx_types = [{"type": r[0], "count": int(r[1])} for r in cursor.fetchall()]
+    tx_types = [{"type": r[0] if not hasattr(r, "keys") else r["transaction_type"], "count": int(r[1] if not hasattr(r, "keys") else r["cnt"])} for r in cursor.fetchall()]
 
     # Top datasets
     cursor.execute("""
@@ -243,7 +188,7 @@ def get_analytics_trends(conn: sqlite3.Connection) -> Dict[str, Any]:
         FROM transactions
         GROUP BY dataset_source
     """)
-    ds_breakdown = [{"dataset": r[0], "count": int(r[1])} for r in cursor.fetchall()]
+    ds_breakdown = [{"dataset": r[0] if not hasattr(r, "keys") else r["dataset_source"], "count": int(r[1] if not hasattr(r, "keys") else r["cnt"])} for r in cursor.fetchall()]
     
     return {
         "risk_score_distribution": risk_distribution,
@@ -260,7 +205,9 @@ def get_rule_performance(conn: sqlite3.Connection) -> List[Dict[str, Any]]:
     rules = cursor.fetchall()
     results = []
     for r in rules:
-        r_id, code, name = r
+        r_id = r[0] if not hasattr(r, "keys") else r["id"]
+        code = r[1] if not hasattr(r, "keys") else r["rule_code"]
+        name = r[2] if not hasattr(r, "keys") else r["name"]
         cursor.execute("""
             SELECT 
                 COUNT(*) as total_trig,
@@ -273,9 +220,9 @@ def get_rule_performance(conn: sqlite3.Connection) -> List[Dict[str, Any]]:
             WHERE af.code = ?
         """, (code,))
         row = cursor.fetchone()
-        trig = int(row[0] or 0)
-        confirmed = int(row[1] or 0)
-        fp = int(row[2] or 0)
+        trig = int((row[0] if not hasattr(row, "keys") else row["total_trig"]) or 0)
+        confirmed = int((row[1] if not hasattr(row, "keys") else row["confirmed"]) or 0)
+        fp = int((row[2] if not hasattr(row, "keys") else row["fp"]) or 0)
         total_eval = confirmed + fp
         precision = round(confirmed / total_eval, 4) if total_eval > 0 else None
 
