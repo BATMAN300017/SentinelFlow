@@ -36,7 +36,7 @@ export default function SettingsPage() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Cloudflare Frontend Topology */}
-          <div className="p-6 rounded-2xl border border-slate-800/80 bg-[#111722] shadow-lg space-y-4">
+          <div className="p-6 rounded-2xl border border-slate-800/80 bg-[#121612] shadow-lg space-y-4">
             <div className="flex items-center space-x-2.5">
               <div className="p-2 rounded-xl bg-slate-800/80 border border-slate-700 text-emerald-400">
                 <Server className="w-5 h-5" />
@@ -62,7 +62,7 @@ export default function SettingsPage() {
           </div>
 
           {/* Render Backend API Topology */}
-          <div className="p-6 rounded-2xl border border-slate-800/80 bg-[#111722] shadow-lg space-y-4">
+          <div className="p-6 rounded-2xl border border-slate-800/80 bg-[#121612] shadow-lg space-y-4">
             <div className="flex items-center space-x-2.5">
               <div className="p-2 rounded-xl bg-slate-800/80 border border-slate-700 text-emerald-400">
                 <Database className="w-5 h-5" />
@@ -93,7 +93,7 @@ export default function SettingsPage() {
         </div>
 
         {/* Ensemble Weight Configuration */}
-        <div className="p-6 rounded-2xl border border-slate-800/80 bg-[#111722] shadow-lg space-y-4">
+        <div className="p-6 rounded-2xl border border-slate-800/80 bg-[#121612] shadow-lg space-y-4">
           <div className="flex items-center space-x-2">
             <Shield className="w-5 h-5 text-emerald-400" />
             <h3 className="text-sm font-bold font-mono text-slate-100">
@@ -101,22 +101,22 @@ export default function SettingsPage() {
             </h3>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs font-mono">
-            <div className="p-4 rounded-xl bg-[#0B0F17] border border-slate-800/80 space-y-1">
+            <div className="p-4 rounded-xl bg-[#0D100D] border border-slate-800/80 space-y-1">
               <span className="text-slate-500 text-[10px]">Deterministic Rules</span>
               <div className="text-lg font-bold text-slate-100 tabular-nums">30%</div>
               <p className="text-[10px] text-slate-500">Heuristic boundaries</p>
             </div>
-            <div className="p-4 rounded-xl bg-[#0B0F17] border border-slate-800/80 space-y-1">
+            <div className="p-4 rounded-xl bg-[#0D100D] border border-slate-800/80 space-y-1">
               <span className="text-slate-500 text-[10px]">Behavioral MAD</span>
               <div className="text-lg font-bold text-emerald-400 tabular-nums">25%</div>
               <p className="text-[10px] text-slate-500">Statistical dispersion</p>
             </div>
-            <div className="p-4 rounded-xl bg-[#0B0F17] border border-slate-800/80 space-y-1">
+            <div className="p-4 rounded-xl bg-[#0D100D] border border-slate-800/80 space-y-1">
               <span className="text-slate-500 text-[10px]">Supervised Models</span>
               <div className="text-lg font-bold text-slate-100 tabular-nums">25%</div>
               <p className="text-[10px] text-slate-500">Forest consensus</p>
             </div>
-            <div className="p-4 rounded-xl bg-[#0B0F17] border border-slate-800/80 space-y-1">
+            <div className="p-4 rounded-xl bg-[#0D100D] border border-slate-800/80 space-y-1">
               <span className="text-slate-500 text-[10px]">Graph Intelligence</span>
               <div className="text-lg font-bold text-slate-100 tabular-nums">20%</div>
               <p className="text-[10px] text-slate-500">Mule chains & cycles</p>
@@ -125,7 +125,7 @@ export default function SettingsPage() {
         </div>
 
         {/* Operational Contacts & Governance Support */}
-        <div className="p-6 rounded-2xl border border-slate-800/80 bg-[#111722] shadow-lg space-y-4">
+        <div className="p-6 rounded-2xl border border-slate-800/80 bg-[#121612] shadow-lg space-y-4">
           <div className="flex items-center space-x-2">
             <Lock className="w-5 h-5 text-emerald-400" />
             <h3 className="text-sm font-bold font-mono text-slate-100">
@@ -133,7 +133,7 @@ export default function SettingsPage() {
             </h3>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs font-mono">
-            <div className="p-4 rounded-xl bg-[#0B0F17] border border-slate-800/80 space-y-2">
+            <div className="p-4 rounded-xl bg-[#0D100D] border border-slate-800/80 space-y-2">
               <span className="text-slate-500 text-[10px] uppercase font-bold tracking-wider">
                 Financial Crime Operations Desk
               </span>
@@ -159,7 +159,7 @@ export default function SettingsPage() {
               </div>
             </div>
 
-            <div className="p-4 rounded-xl bg-[#0B0F17] border border-slate-800/80 space-y-2">
+            <div className="p-4 rounded-xl bg-[#0D100D] border border-slate-800/80 space-y-2">
               <span className="text-slate-500 text-[10px] uppercase font-bold tracking-wider">
                 Compliance &amp; Model Governance
               </span>

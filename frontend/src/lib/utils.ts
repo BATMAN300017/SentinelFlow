@@ -28,14 +28,50 @@ function resolveApiBaseUrl(): string {
 
 export const API_BASE_URL = resolveApiBaseUrl();
 
+// Institutional Risk Bands: Disciplined risk coloring, no green for fraud
 export const RISK_BANDS = {
-  CRITICAL: { label: 'Critical Risk', color: 'text-rose-400 bg-rose-950/40 border-rose-500/30', dot: 'bg-rose-500', tier: 'CRITICAL' },
-  HIGH: { label: 'High Risk', color: 'text-orange-400 bg-orange-950/40 border-orange-500/30', dot: 'bg-orange-500', tier: 'HIGH' },
-  MEDIUM: { label: 'Medium Risk', color: 'text-amber-400 bg-amber-950/40 border-amber-500/30', dot: 'bg-amber-500', tier: 'MEDIUM' },
-  ELEVATED: { label: 'Medium Risk', color: 'text-amber-400 bg-amber-950/40 border-amber-500/30', dot: 'bg-amber-500', tier: 'MEDIUM' },
-  LOW: { label: 'Low Risk', color: 'text-emerald-400 bg-emerald-950/40 border-emerald-500/30', dot: 'bg-emerald-500', tier: 'LOW' },
-  NEUTRAL: { label: 'Neutral', color: 'text-slate-400 bg-slate-900/60 border-slate-700/40', dot: 'bg-slate-500', tier: 'NEUTRAL' },
-  ROUTINE: { label: 'Neutral', color: 'text-slate-400 bg-slate-900/60 border-slate-700/40', dot: 'bg-slate-500', tier: 'NEUTRAL' },
+  CRITICAL: {
+    label: 'Critical Risk',
+    color: 'text-[#FF6B6B] bg-[#2A1414] border-[#5A2020]',
+    dot: 'bg-[#FF4D4D]',
+    tier: 'CRITICAL',
+  },
+  HIGH: {
+    label: 'High Risk',
+    color: 'text-[#FFA14A] bg-[#2E1A0F] border-[#663518]',
+    dot: 'bg-[#FF8833]',
+    tier: 'HIGH',
+  },
+  MEDIUM: {
+    label: 'Medium Risk',
+    color: 'text-[#FFD15C] bg-[#2A230F] border-[#5E4C1A]',
+    dot: 'bg-[#FFB800]',
+    tier: 'MEDIUM',
+  },
+  ELEVATED: {
+    label: 'Elevated Risk',
+    color: 'text-[#FFD15C] bg-[#2A230F] border-[#5E4C1A]',
+    dot: 'bg-[#FFB800]',
+    tier: 'MEDIUM',
+  },
+  LOW: {
+    label: 'Low Risk',
+    color: 'text-[#B7F34A] bg-[#142010] border-[#29421E]',
+    dot: 'bg-[#B7F34A]',
+    tier: 'LOW',
+  },
+  NEUTRAL: {
+    label: 'Routine',
+    color: 'text-[#929B90] bg-[#121612] border-[#262D26]',
+    dot: 'bg-[#687166]',
+    tier: 'NEUTRAL',
+  },
+  ROUTINE: {
+    label: 'Routine',
+    color: 'text-[#929B90] bg-[#121612] border-[#262D26]',
+    dot: 'bg-[#687166]',
+    tier: 'NEUTRAL',
+  },
 } as const;
 
 export function getRiskBand(score: number): 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW' | 'NEUTRAL' {

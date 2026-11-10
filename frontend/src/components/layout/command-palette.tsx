@@ -1,28 +1,14 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Search, ArrowRight, X } from 'lucide-react';
+import { NAVIGATION_SECTIONS } from '@/lib/constants';
 
 interface CommandPaletteProps {
   isOpen: boolean;
   onClose: () => void;
 }
-
-const COMMANDS = [
-  { name: 'Command Center', path: '/dashboard', section: 'Navigation' },
-  { name: 'Live Transactions & Flow Analyzer', path: '/transactions', section: 'Navigation' },
-  { name: 'Alerts Queue & Triage', path: '/alerts', section: 'Navigation' },
-  { name: 'Investigation Workspace', path: '/investigations', section: 'Navigation' },
-  { name: 'Fund Flow Tracing (Sankey)', path: '/fund-flow', section: 'Surveillance' },
-  { name: 'Network Intelligence Graph', path: '/network', section: 'Surveillance' },
-  { name: 'Entity Profiles & Accounts', path: '/entities', section: 'Surveillance' },
-  { name: 'Model Intelligence & Explainability', path: '/intelligence', section: 'Machine Learning' },
-  { name: 'Model Learning & Feedback Loop', path: '/feedback', section: 'Machine Learning' },
-  { name: 'Detection Rules & Heuristics', path: '/rules', section: 'Governance' },
-  { name: 'Audit Trail & Compliance', path: '/audit', section: 'Governance' },
-  { name: 'System Settings & Architecture', path: '/settings', section: 'Configuration' },
-];
 
 export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
   const router = useRouter();
@@ -32,8 +18,11 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
     function handleKeyDown(e: KeyboardEvent) {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
         e.preventDefault();
-        if (isOpen) onClose();
-        else onClose(); // parent handles toggle
+        if (isOpen) {
+          onClose();
+        } else {
+          // Trigger handled in parent
+        }
       }
       if (e.key === 'Escape' && isOpen) {
         onClose();
@@ -45,50 +34,80 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
 
   if (!isOpen) return null;
 
-  const filtered = COMMANDS.filter((cmd) =>
-    cmd.name.toLowerCase().includes(query.toLowerCase())
-  );
+  const allItems = NAVIGATION_SECTIONS.flatMap((s) => s.items);
+  const filtered = query.trim()
+    ? allItems.filter((i) =>
+        i.name.toLowerCase().includes(query.toLowerCase()) ||
+        i.href.toLowerCase().includes(query.toLowerCase())
+      )
+    : allItems;
 
-  const handleSelect = (path: string) => {
-    router.push(path);
+  const handleSelect = (href: string) => {
     onClose();
+    router.push(href);
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center pt-12 sm:pt-24 px-3 sm:px-4 bg-slate-950/80 backdrop-blur-sm">
-      <div className="w-full max-w-xl rounded-2xl border border-slate-800 bg-slate-900 shadow-2xl overflow-hidden animate-fade-in">
-        <div className="flex items-center px-4 py-3 border-b border-slate-800">
-          <Search className="w-5 h-5 text-slate-500 mr-3" />
+    <div className="fixed inset-0 z-50 flex items-start justify-center pt-20 p-4">
+      {/* Backdrop */}
+      <div
+        className="fixed inset-0 bg-[#080A08]/80 backdrop-blur-sm transition-opacity"
+        onClick={onClose}
+      />
+
+      {/* Palette Container */}
+      <div className="relative w-full max-w-xl rounded bg-[#121612] border border-[#262D26] shadow-elevated overflow-hidden z-10 animate-fade-in">
+        {/* Search Input Bar */}
+        <div className="flex items-center px-4 py-3 border-b border-[#262D26]">
+          <Search className="w-4 h-4 text-[#929B90] mr-3 shrink-0" />
           <input
             type="text"
-            autoFocus
+            placeholder="Type a destination or search entity, transaction, rule..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Type a page or command..."
-            className="flex-1 bg-transparent text-sm font-mono text-slate-100 placeholder-slate-500 focus:outline-none"
+            autoFocus
+            className="w-full bg-transparent text-sm font-mono text-[#F2F4EF] placeholder-[#687166] focus:outline-none"
           />
-          <button onClick={onClose} className="text-slate-500 hover:text-slate-300">
+          <button
+            onClick={onClose}
+            className="p-1 rounded text-[#929B90] hover:text-[#F2F4EF] hover:bg-[#181E18]"
+          >
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        <div className="max-h-72 overflow-y-auto p-2 divide-y divide-slate-850">
-          {filtered.length > 0 ? (
-            filtered.map((cmd) => (
-              <button
-                key={cmd.path}
-                onClick={() => handleSelect(cmd.path)}
-                className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-mono text-left text-slate-300 hover:bg-slate-800 hover:text-sky-400 transition group"
-              >
-                <span>{cmd.name}</span>
-                <ArrowRight className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition text-sky-400" />
-              </button>
-            ))
+        {/* Results List */}
+        <div className="max-h-80 overflow-y-auto p-2">
+          <div className="px-2 py-1 text-[10px] font-mono uppercase tracking-wider text-[#687166]">
+            Navigation Destinations
+          </div>
+          {filtered.length === 0 ? (
+            <div className="p-4 text-center text-xs font-mono text-[#687166]">
+              No matching routes found
+            </div>
           ) : (
-            <div className="p-4 text-center text-xs font-mono text-slate-500">
-              No matching commands found.
+            <div className="space-y-0.5">
+              {filtered.map((item) => (
+                <button
+                  key={item.href}
+                  onClick={() => handleSelect(item.href)}
+                  className="w-full flex items-center justify-between px-3 py-2 rounded text-xs font-mono text-[#929B90] hover:text-[#F2F4EF] hover:bg-[#181E18] group text-left transition"
+                >
+                  <span className="group-hover:text-[#F2F4EF]">{item.name}</span>
+                  <div className="flex items-center space-x-2 text-[10px] text-[#687166]">
+                    <span>{item.href}</span>
+                    <ArrowRight className="w-3 h-3 group-hover:text-[#B7F34A] transition" />
+                  </div>
+                </button>
+              ))}
             </div>
           )}
+        </div>
+
+        {/* Footer shortcuts */}
+        <div className="px-4 py-2 border-t border-[#262D26] bg-[#0D100D] flex items-center justify-between text-[10px] font-mono text-[#687166]">
+          <span>Use arrows to navigate</span>
+          <span>ESC to close</span>
         </div>
       </div>
     </div>

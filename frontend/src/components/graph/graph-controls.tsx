@@ -15,7 +15,7 @@ export function GraphControls({
   onResetView,
 }: GraphControlsProps) {
   return (
-    <div className="flex items-center space-x-3 p-3 rounded-xl border border-slate-800/80 bg-[#111722] shadow-md">
+    <div className="flex items-center space-x-3 p-3 rounded-xl border border-slate-800/80 bg-[#121612] shadow-md">
       <div className="flex items-center space-x-1.5 text-xs font-mono text-slate-300">
         <Layers className="w-3.5 h-3.5 text-emerald-400" />
         <span>Hop Depth:</span>

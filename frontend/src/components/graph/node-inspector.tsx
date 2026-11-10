@@ -14,14 +14,14 @@ interface NodeInspectorProps {
 export function NodeInspector({ node, onClose }: NodeInspectorProps) {
   if (!node) {
     return (
-      <div className="p-6 rounded-2xl border border-slate-800/80 bg-[#111722] text-center py-12 text-xs font-mono text-slate-500">
+      <div className="p-6 rounded-2xl border border-slate-800/80 bg-[#121612] text-center py-12 text-xs font-mono text-slate-500">
         Select a node in the graph constellation to inspect entity properties and structural centrality.
       </div>
     );
   }
 
   return (
-    <div className="p-6 rounded-2xl border border-slate-800/80 bg-[#111722] shadow-lg space-y-4">
+    <div className="p-6 rounded-2xl border border-slate-800/80 bg-[#121612] shadow-lg space-y-4">
       <div className="flex items-center justify-between border-b border-slate-800/80 pb-3">
         <div className="space-y-0.5">
           <div className="flex items-center space-x-2">
@@ -39,11 +39,11 @@ export function NodeInspector({ node, onClose }: NodeInspectorProps) {
 
       <div className="space-y-3 text-xs font-mono">
         <div className="grid grid-cols-2 gap-3">
-          <div className="p-3 rounded-lg bg-[#0B0F17] border border-slate-800/80">
+          <div className="p-3 rounded-lg bg-[#0D100D] border border-slate-800/80">
             <span className="text-slate-500 text-[10px]">Entity Classification</span>
             <div className="font-bold text-slate-200 mt-0.5">{node.type}</div>
           </div>
-          <div className="p-3 rounded-lg bg-[#0B0F17] border border-slate-800/80">
+          <div className="p-3 rounded-lg bg-[#0D100D] border border-slate-800/80">
             <span className="text-slate-500 text-[10px]">Ledger Balance</span>
             <div className="font-bold text-emerald-400 mt-0.5 tabular-nums">
               INR {(node.properties?.balance || 145000).toLocaleString()}
@@ -51,7 +51,7 @@ export function NodeInspector({ node, onClose }: NodeInspectorProps) {
           </div>
         </div>
 
-        <div className="p-3.5 rounded-xl bg-[#0B0F17] border border-slate-800/80 space-y-1.5">
+        <div className="p-3.5 rounded-xl bg-[#0D100D] border border-slate-800/80 space-y-1.5">
           <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
             Graph Topology Metrics
           </div>

@@ -83,7 +83,7 @@ export default function IntelligencePage() {
             </div>
 
             {/* Datasets Laboratory Section */}
-            <div className="p-6 rounded-2xl border border-slate-800/80 bg-[#111722] shadow-lg space-y-4">
+            <div className="p-6 rounded-2xl border border-slate-800/80 bg-[#121612] shadow-lg space-y-4">
               <div className="flex items-center space-x-2">
                 <Database className="w-5 h-5 text-emerald-400" />
                 <h3 className="text-base font-bold font-mono text-slate-100">
@@ -98,7 +98,7 @@ export default function IntelligencePage() {
                 {datasets.map((d) => (
                   <div
                     key={d.id}
-                    className="p-4 rounded-xl border border-slate-800/80 bg-[#0B0F17] space-y-2 hover:border-slate-700 transition"
+                    className="p-4 rounded-xl border border-slate-800/80 bg-[#0D100D] space-y-2 hover:border-slate-700 transition"
                   >
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-mono font-bold text-emerald-400">{d.id}</span>

@@ -25,7 +25,7 @@ export function AnalystCopilot({
   };
 
   return (
-    <div className="p-6 rounded-2xl border border-slate-800/80 bg-[#111722] shadow-xl space-y-4">
+    <div className="p-6 rounded-2xl border border-slate-800/80 bg-[#121612] shadow-xl space-y-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-2">
           <Sparkles className="w-4 h-4 text-emerald-400" />
@@ -42,7 +42,7 @@ export function AnalystCopilot({
         </button>
       </div>
 
-      <div className="p-4 rounded-xl bg-[#0B0F17] border border-slate-800/80 text-xs font-mono text-slate-300 leading-relaxed">
+      <div className="p-4 rounded-xl bg-[#0D100D] border border-slate-800/80 text-xs font-mono text-slate-300 leading-relaxed">
         {narrative}
       </div>
 

@@ -66,10 +66,10 @@ export default function RulesPage() {
         ) : error ? (
           <ErrorState message={error} onRetry={loadRules} />
         ) : (
-          <div className="bg-[#111722] rounded-2xl border border-slate-800/80 overflow-hidden shadow-xl">
+          <div className="bg-[#121612] rounded-2xl border border-slate-800/80 overflow-hidden shadow-xl">
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs font-mono">
-              <thead className="bg-[#0B0F17] text-slate-400 font-semibold border-b border-slate-800/80 uppercase tracking-wider text-[11px]">
+              <thead className="bg-[#0D100D] text-slate-400 font-semibold border-b border-slate-800/80 uppercase tracking-wider text-[11px]">
                 <tr>
                   <th className="px-5 py-3.5">Rule Code</th>
                   <th className="px-5 py-3.5">Rule Description</th>

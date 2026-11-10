@@ -162,7 +162,7 @@ function InvestigationsContent() {
               /* Full Case Dossier Workspace */
               <div className="space-y-6 animate-in fade-in">
                 {/* Header Banner */}
-                <div className="p-5 sm:p-6 rounded-lg border border-slate-800/80 bg-[#111722] space-y-4">
+                <div className="p-5 sm:p-6 rounded-lg border border-slate-800/80 bg-[#121612] space-y-4">
                   <div className="flex flex-wrap items-start justify-between gap-4">
                     <div className="space-y-2">
                       <div className="flex items-center space-x-2.5">
@@ -193,19 +193,19 @@ function InvestigationsContent() {
                   </div>
 
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-3 border-t border-slate-800/80 text-xs font-mono">
-                    <div className="bg-[#0B0F17] p-2.5 rounded-md border border-slate-800/80">
+                    <div className="bg-[#0D100D] p-2.5 rounded-md border border-slate-800/80">
                       <span className="text-slate-500 text-[10px] uppercase">Assigned Investigator</span>
                       <div className="font-bold text-slate-200 mt-0.5">{activeCase.assigned_investigator_id || 'Marcus Vance (Lead)'}</div>
                     </div>
-                    <div className="bg-[#0B0F17] p-2.5 rounded-md border border-slate-800/80">
+                    <div className="bg-[#0D100D] p-2.5 rounded-md border border-slate-800/80">
                       <span className="text-slate-500 text-[10px] uppercase">Supervisory Review</span>
                       <div className="font-bold text-amber-300 mt-0.5">{activeCase.peer_review_status || 'REQUESTED'}</div>
                     </div>
-                    <div className="bg-[#0B0F17] p-2.5 rounded-md border border-slate-800/80">
+                    <div className="bg-[#0D100D] p-2.5 rounded-md border border-slate-800/80">
                       <span className="text-slate-500 text-[10px] uppercase">Model Version</span>
                       <div className="font-bold text-slate-200 mt-0.5">{activeCase.model_version || 'v2.0-consensus'}</div>
                     </div>
-                    <div className="bg-[#0B0F17] p-2.5 rounded-md border border-slate-800/80">
+                    <div className="bg-[#0D100D] p-2.5 rounded-md border border-slate-800/80">
                       <span className="text-slate-500 text-[10px] uppercase">Created Date</span>
                       <div className="font-bold text-slate-200 mt-0.5 tabular-nums">
                         {new Date(activeCase.created_at || Date.now()).toLocaleDateString([], { month: 'short', day: '2-digit', year: 'numeric' })}
@@ -217,7 +217,7 @@ function InvestigationsContent() {
                 {/* Evidence & Findings Breakdown */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {/* Evidentiary Items */}
-                  <div className="p-4 sm:p-5 rounded-lg bg-[#111722] border border-slate-800/80 space-y-4">
+                  <div className="p-4 sm:p-5 rounded-lg bg-[#121612] border border-slate-800/80 space-y-4">
                     <div className="flex items-center justify-between border-b border-slate-800/80 pb-3">
                       <h3 className="text-xs font-bold font-mono text-slate-100 uppercase tracking-wider flex items-center space-x-2">
                         <FileText className="w-3.5 h-3.5 text-slate-400" />
@@ -227,7 +227,7 @@ function InvestigationsContent() {
                     </div>
 
                     <div className="space-y-2">
-                      <div className="p-3 rounded-md bg-[#0B0F17] border border-slate-800/80 text-xs font-mono space-y-1">
+                      <div className="p-3 rounded-md bg-[#0D100D] border border-slate-800/80 text-xs font-mono space-y-1">
                         <div className="flex items-center justify-between font-bold text-slate-200">
                           <span>Primary Settlement Record</span>
                           <span className="text-emerald-400 text-[10px]">VERIFIED</span>
@@ -237,7 +237,7 @@ function InvestigationsContent() {
                         </p>
                       </div>
 
-                      <div className="p-3 rounded-md bg-[#0B0F17] border border-slate-800/80 text-xs font-mono space-y-1">
+                      <div className="p-3 rounded-md bg-[#0D100D] border border-slate-800/80 text-xs font-mono space-y-1">
                         <div className="flex items-center justify-between font-bold text-slate-200">
                           <span>Graph Topology & Centrality</span>
                           <span className="text-emerald-400 text-[10px]">CALIBRATED</span>
@@ -247,7 +247,7 @@ function InvestigationsContent() {
                         </p>
                       </div>
 
-                      <div className="p-3 rounded-md bg-[#0B0F17] border border-slate-800/80 text-xs font-mono space-y-1">
+                      <div className="p-3 rounded-md bg-[#0D100D] border border-slate-800/80 text-xs font-mono space-y-1">
                         <div className="flex items-center justify-between font-bold text-slate-200">
                           <span>Model Consensus Evaluation</span>
                           <span className="text-amber-400 text-[10px]">5-MODEL SIGNAL</span>
@@ -339,7 +339,7 @@ function InvestigationsContent() {
             </div>
 
             {/* Filter Tabs */}
-            <div className="flex flex-wrap items-center justify-between gap-3 bg-[#0B0F17] p-2.5 rounded-lg border border-slate-800/80">
+            <div className="flex flex-wrap items-center justify-between gap-3 bg-[#0D100D] p-2.5 rounded-lg border border-slate-800/80">
               <div className="flex flex-wrap items-center gap-1">
                 {['ALL', 'UNDER_INVESTIGATION', 'PENDING_PEER_REVIEW', 'RESOLVED'].map(st => (
                   <button
@@ -374,10 +374,10 @@ function InvestigationsContent() {
             </div>
 
             {/* Cases Table */}
-            <div className="bg-[#111722] rounded-lg border border-slate-800/80 overflow-hidden shadow-lg">
+            <div className="bg-[#121612] rounded-lg border border-slate-800/80 overflow-hidden shadow-lg">
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs font-mono">
-                <thead className="bg-[#0B0F17] text-slate-400 font-semibold border-b border-slate-800 uppercase tracking-wider text-[10px]">
+                <thead className="bg-[#0D100D] text-slate-400 font-semibold border-b border-slate-800 uppercase tracking-wider text-[10px]">
                   <tr>
                     <th className="px-4 py-3">Case Number</th>
                     <th className="px-4 py-3">Investigation Title</th>

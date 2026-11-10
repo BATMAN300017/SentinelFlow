@@ -137,7 +137,7 @@ function AlertsContent() {
         </div>
 
         {/* Filter Controls Bar */}
-        <div className="flex flex-wrap items-center justify-between gap-3 bg-[#0B0F17] p-2.5 rounded-lg border border-slate-800/80">
+        <div className="flex flex-wrap items-center justify-between gap-3 bg-[#0D100D] p-2.5 rounded-lg border border-slate-800/80">
           <div className="flex items-center space-x-1">
             {['ALL', 'CRITICAL', 'HIGH', 'MEDIUM'].map(sev => (
               <button
@@ -160,15 +160,15 @@ function AlertsContent() {
               placeholder="Filter Alert, Account, or Txn ID..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="px-3 py-1 bg-[#111722] border border-slate-800 rounded-md text-xs font-mono text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-rose-600 w-48 sm:w-64"
+              className="px-3 py-1 bg-[#121612] border border-slate-800 rounded-md text-xs font-mono text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-rose-600 w-48 sm:w-64"
             />
           </div>
         </div>
 
         {/* Alerts Table */}
-        <div className="bg-[#111722] rounded-lg border border-slate-800/80 overflow-hidden shadow-lg">
+        <div className="bg-[#121612] rounded-lg border border-slate-800/80 overflow-hidden shadow-lg">
           <table className="w-full text-left text-xs font-mono">
-            <thead className="bg-[#0B0F17] text-slate-400 font-semibold border-b border-slate-800 uppercase tracking-wider text-[10px]">
+            <thead className="bg-[#0D100D] text-slate-400 font-semibold border-b border-slate-800 uppercase tracking-wider text-[10px]">
               <tr>
                 <th className="px-4 py-3">Alert Ref</th>
                 <th className="px-4 py-3">Severity</th>

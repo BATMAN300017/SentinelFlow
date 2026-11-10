@@ -3,16 +3,26 @@
 @tailwind utilities;
 
 :root {
-  --foreground-rgb: 241, 245, 249;
-  --background-rgb: 11, 15, 23;
+  --bg-main: #080A08;
+  --bg-sidebar: #0D100D;
+  --bg-surface: #121612;
+  --bg-elevated: #181E18;
+  --border-color: #262D26;
+  --text-primary: #F2F4EF;
+  --text-secondary: #929B90;
+  --text-muted: #687166;
+  --accent-lime: #B7F34A;
+  --accent-lime-hover: #C9FF65;
 }
 
 body {
-  color: rgb(var(--foreground-rgb));
-  background: #0B0F17;
+  color: var(--text-primary);
+  background: var(--bg-main);
   font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11', 'tnum';
   font-variant-numeric: tabular-nums;
   overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 /* Institutional Command Center Scrollbar */
@@ -22,16 +32,16 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  background: #0B0F17;
+  background: #080A08;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #1C2638;
-  border-radius: 4px;
+  background: #262D26;
+  border-radius: 2px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #2D3D58;
+  background: #364036;
 }
 
 /* Tabular Numerals helper */
@@ -39,16 +49,20 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
-/* Hairline border utilities */
-.border-hairline {
-  border-color: rgba(255, 255, 255, 0.07);
+/* Institutional hairline borders */
+.border-subtle {
+  border-color: #1F261F;
 }
 
-.border-hairline-subtle {
-  border-color: rgba(255, 255, 255, 0.04);
+.border-panel {
+  border-color: #262D26;
 }
 
-/* Subtle transitions with strict reduced motion support */
+.border-highlight {
+  border-color: #364036;
+}
+
+/* Reduced motion support */
 @media (prefers-reduced-motion: reduce) {
   *, ::before, ::after {
     animation-duration: 0.01ms !important;

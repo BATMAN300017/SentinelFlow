@@ -12,7 +12,7 @@ export function GraphLegend() {
   ];
 
   return (
-    <div className="flex flex-wrap items-center gap-4 p-3 rounded-xl border border-slate-800/80 bg-[#111722] text-xs font-mono">
+    <div className="flex flex-wrap items-center gap-4 p-3 rounded-xl border border-slate-800/80 bg-[#121612] text-xs font-mono">
       <span className="text-slate-500 font-semibold uppercase text-[10px] tracking-wider">
         Node Classification:
       </span>

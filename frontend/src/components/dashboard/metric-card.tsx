@@ -13,7 +13,7 @@ interface MetricCardProps {
     isNeutral?: boolean;
   };
   icon?: React.ReactNode;
-  accent?: 'sky' | 'emerald' | 'amber' | 'rose';
+  accent?: 'lime' | 'amber' | 'rose' | 'neutral' | 'sky' | 'emerald';
 }
 
 export function MetricCard({
@@ -22,38 +22,41 @@ export function MetricCard({
   subtitle,
   delta,
   icon,
-  accent = 'sky',
+  accent = 'neutral',
 }: MetricCardProps) {
+  // Institutional border indicator (clean hairline accent)
   const accentBorder = {
-    sky: 'border-l-2 border-l-slate-700',
-    emerald: 'border-l-2 border-l-emerald-500/80',
-    amber: 'border-l-2 border-l-amber-500/80',
-    rose: 'border-l-2 border-l-rose-500/80',
+    lime: 'border-l-2 border-l-[#B7F34A]',
+    emerald: 'border-l-2 border-l-[#B7F34A]',
+    amber: 'border-l-2 border-l-[#FFB800]',
+    rose: 'border-l-2 border-l-[#FF4D4D]',
+    sky: 'border-l-2 border-l-[#929B90]',
+    neutral: 'border-l-2 border-l-[#364036]',
   }[accent];
 
   return (
     <div
-      className={`p-4 sm:p-5 rounded-lg border border-slate-800/80 bg-[#111722] hover:border-slate-700/90 transition-colors ${accentBorder}`}
+      className={`p-4 sm:p-5 rounded bg-[#121612] border border-[#262D26] hover:border-[#364036] transition-colors ${accentBorder}`}
     >
       <div className="flex items-center justify-between">
-        <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-slate-400">
+        <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-[#929B90]">
           {label}
         </span>
-        {icon && <div className="text-slate-500 shrink-0">{icon}</div>}
+        {icon && <div className="text-[#687166] shrink-0">{icon}</div>}
       </div>
 
       <div className="mt-2.5 flex items-baseline space-x-2">
-        <span className="text-2xl sm:text-3xl font-bold font-mono text-slate-100 tracking-tight tabular-nums">
+        <span className="text-2xl sm:text-3xl font-bold font-mono text-[#F2F4EF] tracking-tight tabular-nums">
           {typeof value === 'number' ? value.toLocaleString() : value}
         </span>
         {delta && (
           <span
             className={`inline-flex items-center text-xs font-mono font-medium ${
               delta.isNeutral
-                ? 'text-slate-400'
+                ? 'text-[#929B90]'
                 : delta.isPositive
-                ? 'text-emerald-400'
-                : 'text-rose-400'
+                ? 'text-[#B7F34A]'
+                : 'text-[#FF6B6B]'
             }`}
           >
             {delta.isNeutral ? (
@@ -68,7 +71,7 @@ export function MetricCard({
         )}
       </div>
 
-      {subtitle && <p className="mt-1 text-[11px] text-slate-400 font-mono">{subtitle}</p>}
+      {subtitle && <p className="mt-1.5 text-[11px] text-[#687166] font-mono truncate">{subtitle}</p>}
     </div>
   );
 }

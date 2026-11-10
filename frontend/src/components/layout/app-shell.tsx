@@ -17,14 +17,14 @@ export function AppShell({ children }: AppShellProps) {
 
   return (
     <ToastProvider>
-      <div className="flex h-screen w-full max-w-full overflow-hidden bg-[#0B0F17] text-slate-100 antialiased font-sans">
+      <div className="flex h-screen w-full max-w-full overflow-hidden bg-[#080A08] text-[#F2F4EF] antialiased font-sans">
         <Sidebar isOpen={mobileMenuOpen} onClose={() => setMobileMenuOpen(false)} />
-        <div className="flex-1 flex flex-col h-screen min-w-0 overflow-hidden bg-[#0B0F17]">
+        <div className="flex-1 flex flex-col h-screen min-w-0 overflow-hidden bg-[#080A08]">
           <Topbar
             onOpenCommandPalette={() => setCommandPaletteOpen(true)}
             onToggleMobileMenu={() => setMobileMenuOpen((prev) => !prev)}
           />
-          <main className="flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-6 lg:p-7 bg-[#0E1420]">
+          <main className="flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-6 lg:p-7 bg-[#080A08]">
             <Breadcrumb />
             {children}
           </main>
