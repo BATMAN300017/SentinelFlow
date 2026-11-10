@@ -83,6 +83,7 @@ class PolicyUpdateRequest(BaseModel):
 # Summary & High-Level Endpoints
 # -----------------------------------------------------------------------------
 @router.get("/summary", summary="Get top-level Model Intelligence summary banner metrics")
+@router.get("/status", summary="Get top-level Model Intelligence summary status (frontend alias)")
 def get_summary(db=Depends(get_db)):
     """Returns active models, scored transaction count, evaluation runs, and pending feedback."""
     return ModelIntelligenceService.get_learning_summary(db)
@@ -208,6 +209,7 @@ def prepare_dataset(db=Depends(get_db)):
 
 
 @router.post("/train", summary="Execute candidate model training run")
+@router.post("/retrain", summary="Trigger candidate model retraining cycle (frontend alias)")
 def train_candidate(req: TrainCandidateRequest = TrainCandidateRequest(), db=Depends(get_db)):
     """Trains candidate model; records in model_training_runs; registers with status TRAINED."""
     return ModelIntelligenceService.train_candidate_model(db, req.trainer_name or "Senior ML Engineer")
