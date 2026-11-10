@@ -70,3 +70,4 @@ data/saml_d/*.zip
 # Runtime batch checkpoints and manifests
 data/temp_manifests/batch_checkpoint.json
 data/temp_manifests/*.checkpoint.json
+*.tsbuildinfo

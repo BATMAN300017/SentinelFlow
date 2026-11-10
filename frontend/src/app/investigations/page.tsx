@@ -469,17 +469,6 @@ function InvestigationsContent() {
                 </table>
               </div>
             </div>
-                            <ScrollText className="w-3 h-3" />
-                            <span>Open Full Audit</span>
-                          </Link>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              </div>
-            </div>
           </>
         )}
       </div>

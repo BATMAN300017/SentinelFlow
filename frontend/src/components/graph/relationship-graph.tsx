@@ -58,7 +58,7 @@ export function RelationshipGraph({
   });
 
   const getNodeColor = (node: GraphNode) => {
-    switch (node.risk_level) {
+    switch (node.risk_level as string) {
       case 'CRITICAL':
         return '#f43f5e'; // rose-500
       case 'HIGH':
@@ -67,6 +67,7 @@ export function RelationshipGraph({
       case 'MEDIUM':
         return '#f59e0b'; // amber-500
       case 'LOW':
+      case 'ROUTINE':
         return '#10b981'; // emerald-500
       default:
         return '#94a3b8'; // slate-400
