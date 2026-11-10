@@ -64,7 +64,11 @@ CHECKPOINT_DIR = os.path.join(BASE_DIR, "data", "temp_manifests")
 CHECKPOINT_FILE = os.path.join(CHECKPOINT_DIR, "batch_checkpoint.json")
 DEFAULT_QUOTA_MB = float(os.getenv("SUPABASE_QUOTA_MB", "500.0"))
 DEFAULT_SAFETY_RESERVE_MB = float(os.getenv("SUPABASE_SAFETY_RESERVE_MB", "50.0"))
-ESTIMATED_KB_PER_TXN = 0.650  # Measured PostgreSQL table + 5 B-tree indexes + system catalog rate
+# Empirical per-transaction operational growth estimate (0.650 KB/txn)
+# Includes PostgreSQL heap tuple (~120 bytes), 5 B-tree index entries (~420 bytes),
+# WAL reservation, toast pointers, and database transaction overhead.
+# Note: This is an incremental projection factor, distinct from total physical DB size.
+ESTIMATED_KB_PER_TXN = 0.650
 
 
 def get_current_storage_mb(conn) -> Tuple[Optional[float], str]:
@@ -319,7 +323,27 @@ def execute_batch_ingest(
     else:
         raise ValueError(f"Unsupported dataset: {dataset_name}. Must be NFPC or SAML_D.")
 
-    batch_id = f"BATCH-{datetime.now(timezone.utc).strftime('%Y%m%d-%H%M%S')}-{uuid.uuid4().hex[:8]}"
+        batch_id = f"BATCH-{datetime.now(timezone.utc).strftime('%Y%m%d-%H%M%S')}-{uuid.uuid4().hex[:8]}"
+
+    batch_entry = {
+        "batch_id": batch_id,
+        "dataset_name": dataset_name,
+        "start_offset": start_offset,
+        "end_offset": start_offset,
+        "records_ingested": 0,
+        "duplicates_skipped": 0,
+        "alerts_generated": 0,
+        "scoring_failures": 0,
+        "created_accounts": [],
+        "created_customers": [],
+        "transaction_ids": [],
+        "status": "IN_PROGRESS",
+        "timestamp": utc_now_iso(),
+        "chunks": []
+    }
+    if not dry_run:
+        checkpoint.setdefault("batches", []).append(batch_entry)
+        save_checkpoint(checkpoint)
 
     total_ingested = 0
     total_duplicates = 0
@@ -359,6 +383,7 @@ def execute_batch_ingest(
 
             chunk_ingested = 0
             chunk_duplicates = 0
+            chunk_transaction_ids = []
 
             # Step B: Process records in current chunk
             for _, row in df_chunk.iterrows():
@@ -390,13 +415,18 @@ def execute_batch_ingest(
                 # Route protected ground-truth labels strictly to Pipeline B vault
                 if protected_labels and not dry_run:
                     is_laundering = 1 if protected_labels.get("is_laundering") in (1, "1", True) else 0
-                    store_protected_transaction_label(
-                        transaction_id=txn_id,
-                        dataset_name=dataset_name,
-                        is_laundering=is_laundering,
-                        laundering_type=str(protected_labels.get("laundering_type", "")),
-                        raw_labels=protected_labels
-                    )
+                    try:
+                        store_protected_transaction_label(
+                            transaction_id=txn_id,
+                            dataset_name=dataset_name,
+                            is_laundering=is_laundering,
+                            laundering_type=str(protected_labels.get("laundering_type", "")),
+                            raw_labels=protected_labels,
+                            conn=conn
+                        )
+                    except Exception as e_vault:
+                        logger.critical(f"Failed to persist protected label for {txn_id}: {e_vault}")
+                        raise RuntimeError(f"Vault storage failure: Could not safely persist protected label for {txn_id}. Ingestion aborted.") from e_vault
                     total_protected_labels += 1
 
                 # Point-in-time scoring payload
@@ -475,6 +505,7 @@ def execute_batch_ingest(
                         total_alerts_generated += 1
 
                     existing_in_chunk.add(event_id)
+                    chunk_transaction_ids.append(txn_id)
 
                 chunk_ingested += 1
                 total_ingested += 1
@@ -485,9 +516,25 @@ def execute_batch_ingest(
             if not dry_run:
                 conn.commit()
 
-                # Atomically update checkpoint after each committed chunk
+                # Atomically update checkpoint after each committed chunk with chunk-level metadata
                 ds_state["last_offset"] = current_offset
                 ds_state["total_ingested"] = ds_state["total_ingested"] + chunk_ingested
+                batch_entry["end_offset"] = current_offset
+                batch_entry["records_ingested"] = total_ingested
+                batch_entry["duplicates_skipped"] = total_duplicates
+                batch_entry["alerts_generated"] = total_alerts_generated
+                batch_entry["scoring_failures"] = total_scoring_failures
+                batch_entry["created_accounts"] = list(batch_created_accounts)
+                batch_entry["created_customers"] = list(batch_created_customers)
+                batch_entry["transaction_ids"].extend(chunk_transaction_ids)
+                batch_entry["chunks"].append({
+                    "chunk_number": chunk_num,
+                    "rows": chunk_rows,
+                    "ingested": chunk_ingested,
+                    "duplicates": chunk_duplicates,
+                    "offset": current_offset,
+                    "timestamp": utc_now_iso()
+                })
                 save_checkpoint(checkpoint)
 
             print(f"Chunk {chunk_num}: Processed {chunk_ingested:,} rows (Duplicates skipped: {chunk_duplicates:,}) | Current Offset: {current_offset:,}")
@@ -516,20 +563,8 @@ def execute_batch_ingest(
                 }
             )
 
-            checkpoint["batches"].append({
-                "batch_id": batch_id,
-                "dataset_name": dataset_name,
-                "records_ingested": total_ingested,
-                "duplicates_skipped": total_duplicates,
-                "alerts_generated": total_alerts_generated,
-                "scoring_failures": total_scoring_failures,
-                "start_offset": start_offset,
-                "end_offset": current_offset,
-                "created_accounts": list(batch_created_accounts),
-                "created_customers": list(batch_created_customers),
-                "timestamp": utc_now_iso(),
-                "status": "COMPLETED"
-            })
+            batch_entry["status"] = "COMPLETED"
+            batch_entry["completed_at"] = utc_now_iso()
             save_checkpoint(checkpoint)
             conn.commit()
             print(f"\n[SUCCESS] Batch {batch_id} fully committed. Checkpoint updated.")
@@ -588,13 +623,22 @@ def rollback_batch(batch_id: str) -> bool:
         # 1. Identify transactions stamped with this batch_id
         cursor.execute("SELECT id FROM transactions WHERE scenario_id = ?;", (batch_id,))
         txns = cursor.fetchall()
-        txn_ids = [t[0] if not hasattr(t, "keys") else t["id"] for t in txns]
+        db_txn_ids = [t[0] if not hasattr(t, "keys") else t["id"] for t in txns]
+        
+        # Merge with checkpoint-tracked transaction IDs for crash/re-try resilience
+        checkpoint_txn_ids = (batch_meta.get("transaction_ids", []) if batch_meta else [])
+        all_txn_ids = list(set(db_txn_ids + checkpoint_txn_ids))
 
-        if not txn_ids:
-            print(f"[WARN] No transactions found with scenario_id / batch_id = {batch_id}.")
-            return False
+        if not all_txn_ids and not db_txn_ids:
+            if batch_meta and batch_meta.get("status") == "ROLLED_BACK":
+                print(f"[INFO] Batch {batch_id} is already in ROLLED_BACK state (idempotent no-op).")
+                return True
+            if not batch_meta:
+                print(f"[WARN] No transactions found with scenario_id / batch_id = {batch_id}.")
+                return False
 
-        print(f"Found {len(txn_ids):,} transactions to roll back.")
+        print(f"Found {len(all_txn_ids):,} transactions ({len(db_txn_ids)} in DB) to roll back.")
+        txn_ids = db_txn_ids
 
         # 2. Delete alert findings and alerts
         for tid in txn_ids:
@@ -608,17 +652,27 @@ def rollback_batch(batch_id: str) -> bool:
         # 3. Delete transactions
         cursor.execute("DELETE FROM transactions WHERE scenario_id = ?;", (batch_id,))
 
-        # 4. Delete protected ground-truth labels from Pipeline B vault
+        # 4. Delete protected ground-truth labels from primary DB vault AND SQLite vault
+        purge_ids = all_txn_ids if all_txn_ids else txn_ids
+        if purge_ids:
+            try:
+                for i in range(0, len(purge_ids), 500):
+                    sub = purge_ids[i:i + 500]
+                    placeholders = ",".join(["?"] * len(sub))
+                    cursor.execute(f"DELETE FROM protected_transaction_labels WHERE transaction_id IN ({placeholders});", sub)
+            except Exception as e_db_purge:
+                logger.debug(f"Could not purge from primary DB vault: {e_db_purge}")
+
         vault_path = os.path.join(BASE_DIR, "data", "protected_labels", "protected_ground_truth.db")
-        if os.path.exists(vault_path) and txn_ids:
+        if os.path.exists(vault_path) and purge_ids:
             try:
                 with sqlite3.connect(vault_path) as vconn:
                     vcur = vconn.cursor()
-                    for i in range(0, len(txn_ids), 500):
-                        sub = txn_ids[i:i + 500]
+                    for i in range(0, len(purge_ids), 500):
+                        sub = purge_ids[i:i + 500]
                         vcur.executemany("DELETE FROM protected_transaction_labels WHERE transaction_id = ?;", [(t,) for t in sub])
                     vconn.commit()
-                print(f"[ROLLBACK] Cleanly removed protected labels for {len(txn_ids):,} transactions from Pipeline B vault.")
+                print(f"[ROLLBACK] Cleanly removed protected labels for {len(purge_ids):,} transactions from Pipeline B vault.")
             except Exception as e:
                 logger.error(f"Could not purge protected labels from vault during rollback: {e}")
                 print(f"[ERROR] Rollback failed: Could not purge protected labels from vault ({e}).")

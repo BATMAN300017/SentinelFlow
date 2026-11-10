@@ -317,5 +317,60 @@ class TestSafeBatchIngest(unittest.TestCase):
             self.assertFalse(success, "Rollback must return False if protected label purge fails.")
 
 
+    def test_11_rollback_is_idempotent_on_repeated_calls(self):
+        """Verifies rollback_batch can be called repeatedly and returns True idempotently."""
+        cursor = self.conn.cursor()
+        batch_id = f"BATCH-TEST-IDEM-{uuid.uuid4().hex[:6]}"
+        ensure_account_exists(self.conn, "ACC-IDEM-1")
+        ensure_account_exists(self.conn, "ACC-IDEM-2")
+
+        cursor.execute("""
+            INSERT INTO transactions (
+                id, event_id, source_account_id, destination_account_id,
+                customer_id, amount, currency, transaction_type, payment_channel,
+                status, scenario_id, dataset_source, risk_score, risk_band, scoring_status, created_at
+            ) VALUES ('T-IDEM-1', 'EVT-IDEM-1', 'ACC-IDEM-1', 'ACC-IDEM-2', 'CUST-IDEM-1', 100.0, 'USD',
+                      'TRANSFER', 'ONLINE', 'COMPLETED', ?, 'DS-1', 10.0, 'ROUTINE', 'CURRENT', '2023-01-01T00:00:00Z')
+        """, (batch_id,))
+        self.conn.commit()
+
+        mock_checkpoint = {
+            "datasets": {"NFPC": {"last_offset": 5, "total_ingested": 1}},
+            "batches": [{
+                "batch_id": batch_id,
+                "dataset_name": "NFPC",
+                "start_offset": 4,
+                "end_offset": 5,
+                "records_ingested": 1,
+                "transaction_ids": ["T-IDEM-1"],
+                "created_accounts": ["ACC-IDEM-1"],
+                "created_customers": ["CUST-IDEM-1"],
+                "status": "COMPLETED"
+            }]
+        }
+
+        class MockConnContext:
+            def __init__(self, conn):
+                self.conn = conn
+            def __enter__(self):
+                return self.conn
+            def __exit__(self, exc_type, exc_val, exc_tb):
+                pass
+
+        with patch("safe_batch_ingest.get_db_connection", return_value=MockConnContext(self.conn)), \
+             patch("safe_batch_ingest.load_checkpoint", return_value=mock_checkpoint), \
+             patch("safe_batch_ingest.save_checkpoint"):
+
+            # First rollback call should succeed
+            res1 = rollback_batch(batch_id)
+            self.assertTrue(res1)
+            self.assertEqual(mock_checkpoint["batches"][0]["status"], "ROLLED_BACK")
+
+            # Second rollback call on the already-rolled-back batch should succeed idempotently
+            res2 = rollback_batch(batch_id)
+            self.assertTrue(res2, "Second rollback call must return True idempotently.")
+
+
 if __name__ == "__main__":
     unittest.main()
+
