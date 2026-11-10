@@ -8,11 +8,11 @@ def get_kpi_summary(conn: sqlite3.Connection) -> Dict[str, Any]:
     try:
         cursor.execute("SELECT COUNT(*) FROM transactions")
         row_tx = cursor.fetchone()
-        total_txns = int((row_tx[0] if not hasattr(row_tx, "keys") else row_tx["count"]) or 0)
+        total_txns = int(row_tx[0] or 0)
         
         cursor.execute("SELECT COUNT(*) FROM transactions WHERE dataset_source = 'DEMO_FIXTURE'")
         row_demo = cursor.fetchone()
-        demo_txns = int((row_demo[0] if not hasattr(row_demo, "keys") else row_demo["count"]) or 0)
+        demo_txns = int(row_demo[0] or 0)
         txns_count = max(0, total_txns - demo_txns)
     except Exception:
         txns_count = 0
@@ -26,7 +26,7 @@ def get_kpi_summary(conn: sqlite3.Connection) -> Dict[str, Any]:
               AND title NOT LIKE '[DEMO FIXTURE]%'
         """)
         row_al = cursor.fetchone()
-        alerts_count = int((row_al[0] if not hasattr(row_al, "keys") else row_al["count"]) or 0)
+        alerts_count = int(row_al[0] or 0)
     except Exception:
         alerts_count = 0
     
@@ -66,7 +66,7 @@ def get_kpi_summary(conn: sqlite3.Connection) -> Dict[str, Any]:
         cursor.execute("SELECT COUNT(*) FROM accounts")
         row_acc = cursor.fetchone()
         if row_acc:
-            total_accounts = int(row_acc[0] if not hasattr(row_acc, "keys") else row_acc["count"])
+            total_accounts = int(row_acc[0] or 0)
     except Exception:
         total_accounts = None
 
